@@ -102,7 +102,13 @@
    "uvjet": {
     "fakultet": [
      "fpzg"
-    ]
+    ],
+    "tipovi": [
+     "zavrsni",
+     "diplomski"
+    ],
+    "izvan_uvjeta": "za seminarski/esej kućni stil fpzg-diplomski se NE poziva: .docx ide kroz izrada.docx (rad-docx gradi.py), a bez motora kroz rezervu scripts/build_docx.py + rad-docx/scripts/arhiva.py",
+    "$comment": "v1.9 (nalaz 5): satelit fpzg-diplomski je kućni stil ZAVRŠNOG/DIPLOMSKOG rada; `tipovi` je novo, unatrag kompatibilno polje (bez njega ili bez konteksta tipa vrijedi kao prije). vjestine.py tip čita iz --tip ili .katedra/stanje.json."
    },
    "entrypoints": {
     "graditelj": "scripts/build_docx.py",

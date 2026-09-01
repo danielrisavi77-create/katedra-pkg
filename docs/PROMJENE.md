@@ -1,3 +1,10 @@
+# v1.9 — popravci nalaza 2/4/5/7 (rujan 2026.)
+
+* **Nalaz 4, `check_rules.py`** — izlazni kod 1 samo zbog ❌; na profilu `nepotvrdeno` ❌ zadržavaju samo pravila s provenance `explicit` (iz resolvera ili sidecara `<profil>.provenance.json`), ostala kršenja daju ⚠️ i ne blokiraju (pravilo 18).
+* **Nalaz 7, `provjeri_literaturu.py`** — prepoznaje i naslove „Popis citirane literature", „Citirana literatura", „Literatura i izvori", „Reference", „Bibliografija", „Korištena literatura" (lokalni `NASLOV_LIT_PROSIREN` uz `H.NASLOV_LIT`).
+* **Nalaz 2, `vjestine.py`** — sateliti se traže i u `~/.claude/skills/synced/*/<slug>` i `/root/.claude/skills/synced/*/<slug>` (Cowork); env `<SLUG>_HOME` i dalje ima prednost.
+* **Nalaz 5, `vjestine.json` + `vjestine.py`** — `uvjet.tipovi` (novo, unatrag kompatibilno): `stil.kucni`/fpzg-diplomski vrijedi za `zavrsni|diplomski`; za seminarski/esej .docx ide kroz `izrada.docx` (rad-docx) odn. rezervu `build_docx.py` + `rad-docx/scripts/arhiva.py`; tip iz `--tip` ili `.katedra/stanje.json`.
+
 # v1.8 — jezik rada, trag nalaza, fusnote (kolovoz 2026.)
 
 > Tri stavke iz zadnjeg pregleda rupa. Certificirani release ostaje **v1.0.1**.

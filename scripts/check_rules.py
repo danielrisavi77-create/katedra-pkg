@@ -71,7 +71,31 @@ def nadi_profil(fakultet, putanja, tip=None):
     except ProfileRuleError as exc:
         greska(str(exc))
     slug = resolved.context["faculty"]
+    # v1.9 (nalaz 4): provenance po pravilu ostaje dostupan Izvjestaju da ❌
+    # zadrže samo pravila koja stvarno stoje u službenim uputama (type=explicit).
+    global _PROVENANCE
+    _PROVENANCE = dict(getattr(resolved, "provenance", None) or {})
     return resolved.profile, os.path.join(FAKULTETI, f"{slug}.json")
+
+
+# v1.9 (nalaz 4): sidecar provenance za trenutačni profil — puni ga nadi_profil
+# (resolver) ili, za --profil, datoteka `<ime>.provenance.json` uz profil
+# (tako .katedra/resolved_profile.json nosi resolved_profile.provenance.json).
+_PROVENANCE = {}
+
+
+def _ucitaj_provenance_sidecar(put_profila):
+    if not put_profila or not str(put_profila).endswith(".json"):
+        return {}
+    sidecar = str(put_profila)[:-5] + ".provenance.json"
+    if not os.path.isfile(sidecar):
+        return {}
+    try:
+        with open(sidecar, encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
 
 
 def ucitaj_json(put):
@@ -690,6 +714,41 @@ class Izvjestaj:
         self.advisory = (profil.get("admisija") == "nije-admitiran"
                          or profil.get("nalazi") == "advisory")
         self.nepoznata = nepoznata_pravila(profil)
+        # v1.9 (nalaz 4): provenance po pravilu — iz resolvera ili iz sidecara
+        # uz profil. Bez njega na nepotvrđenom profilu nijedno pravilo nije
+        # „potvrđeno" pa sve daje ⚠️ (pravilo 18 paketa).
+        self.provenance = dict(_PROVENANCE) or _ucitaj_provenance_sidecar(put_profila)
+
+    def pravilo_potvrdeno(self, rule_id):
+        """Stoji li pravilo stvarno u službenim uputama (provenance type=explicit).
+
+        Na potvrđenom profilu vrijedi sve; na nepotvrđenom samo ono što
+        provenance izrijekom potvrđuje. Pointer i rule_id se uspoređuju kao
+        segmenti (jedan je uređeni podniz drugoga), jer se korijeni povijesno
+        razlikuju („/struktura/prikazi/natpis" ↔ „prikazi.natpis") i jer opseg
+        nosi tip rada u pointeru („/struktura/opseg/seminarski/rijeci").
+        """
+        if not self.za_potvrdu:
+            return True
+
+        def podniz(kraci, dulji):
+            it = iter(dulji)
+            return all(any(s == d for d in it) for s in kraci)
+
+        rid = [s for s in str(rule_id or "").split(".") if s]
+        # točan/podnizni pogodak, pa najbliži roditelj („format.odlomak" za
+        # „format.odlomak.min_recenica" — provenance je tamo po retcima)
+        for pointer, meta in self.provenance.items():
+            if (meta or {}).get("type") != "explicit":
+                continue
+            seg = [s for s in pointer.strip("/").split("/") if s]
+            if not seg or not rid:
+                continue
+            if podniz(seg, rid) or podniz(rid, seg):
+                return True
+            if len(rid) > 2 and (seg == rid[:-1] or seg[-len(rid) + 1:] == rid[:-1]):
+                return True
+        return False
 
     def dodaj(self, pravilo, trazeno, nadjeno, stanje, detalji=None,
               rule_id=None, lokacije=None):
@@ -722,6 +781,12 @@ class Izvjestaj:
             detalji.append("Što napraviti: ispravi tu vrijednost u profilu "
                            "fakulteta ili je ukloni ako fakultet pravilo ne "
                            "propisuje — prazno i „ne propisuje\" nije isto.")
+        if stanje == LOSE and not self.pravilo_potvrdeno(rid):
+            # v1.9 (nalaz 4), pravilo 18: crveno samo za pravila koja stvarno
+            # stoje u službenim uputama; nepotvrđeno pravilo daje ⚠️, ne ❌.
+            stanje = UPOZ
+            detalji.append("pravilo nije potvrđeno u službenim uputama (status "
+                           "profila: nepotvrdeno) — ⚠️ umjesto ❌, ne blokira")
         self.redci.append({
             "rule_id": rid,
             "pravilo": pravilo,
@@ -1702,8 +1767,8 @@ def ispis(iz, rad, tip):
     if not nalazi:
         print("  Nema nalaza: dokument odgovara profilu u svemu što se iz .docx-a može očitati.")
     elif not lose:
-        print("  Nema kršenja (❌). Izlazni kod je 1 zbog stavki za provjeru (⚠️) — "
-              "one traže oko, ne nužno ispravak.")
+        print("  Nema kršenja (❌). Izlazni kod je 0 — stavke za provjeru (⚠️) "
+              "traže oko, ne nužno ispravak, i ne blokiraju (v1.9, nalaz 4).")
     if any(r["pravilo"].startswith("broj stranica") for r in iz.redci):
         print("  Broj stranica nije mjeren nego procijenjen — .docx ga ne sadrži.")
     print()
@@ -1825,10 +1890,13 @@ def main():
                 "broj_nalaza": len(iz.nalazi),
                 "admisija": profil.get("admisija") or "admitiran",
                 "nalazi_su_advisory": bool(iz.advisory and not a.strogo),
+                "broj_krsenja": sum(1 for r in iz.redci if r["stanje"] == LOSE),
             }, f, ensure_ascii=False, indent=1)
         print(f"[nalazi → {a.json_out}]")
 
-    if not iz.nalazi:
+    # v1.9 (nalaz 4): izlazni kod 1 samo zbog ❌ (potvrđeno kršenje); ⚠️ „za
+    # potvrdu" / nepotvrđen profil ne blokira (pravilo 18 paketa).
+    if not any(r["stanje"] == LOSE for r in iz.redci):
         return 0
     if iz.advisory and not a.strogo:
         print()

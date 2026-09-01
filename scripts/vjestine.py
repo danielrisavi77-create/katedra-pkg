@@ -74,7 +74,14 @@ def kandidati(slug: str) -> list[str]:
         f"/root/.claude/skills/{slug}",
         f"/home/claude/.claude/skills/{slug}",
     ]
-    for uzorak in (os.path.expanduser(f"~/.claude/plugins/*/skills/{slug}"),
+    # v1.9 (nalaz 2): u Cowork sesiji sinkronizirani skillovi žive u
+    # ~/.claude/skills/synced/<hash>/<slug> — bez ovog uzorka satelit koji je
+    # instaliran prolazi kao „nije pronađen". Sortirano, prvi postojeći pobjeđuje;
+    # env `<SLUG>_HOME` i dalje ima prednost (v. nadi_vjestinu).
+    for uzorak in (os.path.expanduser(f"~/.claude/skills/synced/*/{slug}"),
+                   f"/root/.claude/skills/synced/*/{slug}",
+                   f"/home/claude/.claude/skills/synced/*/{slug}",
+                   os.path.expanduser(f"~/.claude/plugins/*/skills/{slug}"),
                    f"/root/.claude/plugins/*/skills/{slug}"):
         popis.extend(sorted(glob.glob(uzorak)))
     return [p for p in popis if p]
@@ -108,18 +115,36 @@ def ucitaj_registar(put: str = REGISTAR) -> dict:
     return registar
 
 
-def _primjenjivo(zapis: dict, fakultet: str | None) -> bool:
-    """Vrijedi li sposobnost u ovom kontekstu (npr. samo za jedan fakultet)."""
-    uvjet = (zapis.get("uvjet") or {}).get("fakultet")
-    if not uvjet:
-        return True
-    if not fakultet:
-        return True          # bez konteksta se ne isključuje ništa
-    return fakultet.strip().lower() in [str(x).lower() for x in uvjet]
+def _primjenjivo(zapis: dict, fakultet: str | None, tip: str | None = None) -> bool:
+    """Vrijedi li sposobnost u ovom kontekstu (npr. samo za jedan fakultet / tip rada).
+
+    v1.9 (nalaz 5): `uvjet.tipovi` (npr. ["zavrsni","diplomski"]) ograničava
+    sposobnost na vrstu rada; bez polja ili bez konteksta ne isključuje se ništa.
+    """
+    uvjet = zapis.get("uvjet") or {}
+    fak = uvjet.get("fakultet")
+    if fak and fakultet and fakultet.strip().lower() not in [str(x).lower() for x in fak]:
+        return False
+    tipovi = uvjet.get("tipovi")
+    if tipovi and tip and tip.strip().lower() not in [str(x).lower() for x in tipovi]:
+        return False
+    return True
+
+
+def tip_iz_stanja(kat: str | None = None, project_root: str | None = None) -> str | None:
+    """Tip rada iz .katedra/stanje.json (kad --tip nije zadan); None ako ga nema."""
+    try:
+        import context
+        put = context.resolve_state_file("stanje.json", kat=kat, project_root=project_root)
+        with open(put, encoding="utf-8") as f:
+            tip = json.load(f).get("tip")
+        return str(tip).strip().lower() if tip else None
+    except Exception:  # noqa: BLE001 — bez stanja nema konteksta, i to je u redu
+        return None
 
 
 def razrijesi(sposobnost: str, registar: dict | None = None,
-              fakultet: str | None = None) -> dict:
+              fakultet: str | None = None, tip: str | None = None) -> dict:
     """Stanje jedne sposobnosti: tko ju nudi, gdje je i je li upotrebljiva."""
     registar = registar or ucitaj_registar()
     zapis = (registar.get("sposobnosti") or {}).get(sposobnost)
@@ -133,7 +158,8 @@ def razrijesi(sposobnost: str, registar: dict | None = None,
         "vjestina": slug,
         "razina_povjerenja": zapis.get("razina_povjerenja", "radno"),
         "modovi": list(zapis.get("modovi") or []),
-        "primjenjivo": _primjenjivo(zapis, fakultet),
+        "primjenjivo": _primjenjivo(zapis, fakultet, tip),
+        "izvan_uvjeta": (zapis.get("uvjet") or {}).get("izvan_uvjeta", ""),
         "putanja": None,
         "stanje": "nema",
         "nedostaju": [],
@@ -179,9 +205,10 @@ def _naredba(korijen: str, rel: str) -> str:
     return f"python3 {os.path.join(korijen, rel)}" if rel else ""
 
 
-def pregled(registar: dict | None = None, fakultet: str | None = None) -> list[dict]:
+def pregled(registar: dict | None = None, fakultet: str | None = None,
+            tip: str | None = None) -> list[dict]:
     registar = registar or ucitaj_registar()
-    return [razrijesi(ime, registar, fakultet)
+    return [razrijesi(ime, registar, fakultet, tip)
             for ime in sorted(registar.get("sposobnosti") or {})]
 
 
@@ -204,7 +231,9 @@ def _ispis(redci: list[dict]) -> None:
               f"[{r['razina_povjerenja']}, mod {modovi}]")
         print(f"   {r['opis']}")
         if not r["primjenjivo"]:
-            print("   (ne odnosi se na ovaj fakultet)")
+            print("   (ne odnosi se na ovaj fakultet / tip rada)")
+            if r.get("izvan_uvjeta"):
+                print(f"   {r['izvan_uvjeta']}")
         if r["stanje"] == "razrjesitelj":
             print(f"   razrješava: {r['razrjesitelj']} — provjeri s: {r.get('provjera','')}")
         elif r["stanje"] == "dostupno":
@@ -241,16 +270,21 @@ def main(argv=None) -> int:
     ap.add_argument("--provjeri", action="store_true", help="pregled svih sposobnosti")
     ap.add_argument("--sposobnost", help="razriješi jednu sposobnost (npr. izrada.docx)")
     ap.add_argument("--fakultet", help="kontekst fakulteta (utječe na uvjetovane sposobnosti)")
+    ap.add_argument("--tip", help="tip rada (seminarski|esej|zavrsni|diplomski); "
+                                  "default: .katedra/stanje.json ako postoji")
+    ap.add_argument("--kat", help="putanja do .katedra/ (za tip rada)")
+    ap.add_argument("--project-root", dest="project_root")
     ap.add_argument("--registar", default=REGISTAR)
     ap.add_argument("--json", dest="kao_json", action="store_true")
     a = ap.parse_args(argv)
 
+    tip = (a.tip or "").strip().lower() or tip_iz_stanja(a.kat, a.project_root)
     try:
         registar = ucitaj_registar(a.registar)
         if a.sposobnost:
-            redci = [razrijesi(a.sposobnost, registar, a.fakultet)]
+            redci = [razrijesi(a.sposobnost, registar, a.fakultet, tip)]
         else:
-            redci = pregled(registar, a.fakultet)
+            redci = pregled(registar, a.fakultet, tip)
     except RegistarError as exc:
         print(f"❌ {exc}", file=sys.stderr)
         return 2

@@ -77,6 +77,22 @@ def _tekst(p):
     return (p.text or "").strip()
 
 
+# v1.9 (nalaz 7): H.NASLOV_LIT zna samo „Literatura/Popis literature/Reference/
+# Bibliografija/Popis izvora/Izvori". Radovi u praksi nose i „POPIS CITIRANE
+# LITERATURE", „Citirana literatura", „Literatura i izvori", „Popis referenci",
+# „Korištena literatura" — bez ovoga alat javlja „nema popisa literature" na
+# radu koji ga ima (75 stavki). Neosjetljivo na velika slova i na numeraciju.
+NASLOV_LIT_PROSIREN = re.compile(
+    r"(?i)^\s*(?:\d+\.?\s*)?(?:POPIS\s+)?(?:CITIRANE\s+|KORI[SŠ]TENE\s+|KORI[SŠ]TENA\s+|"
+    r"CITIRANA\s+)?(?:LITERATURA|LITERATURE|REFERENC[EI]|REFERENCIJ[AE]|BIBLIOGRAFIJ[AE]|"
+    r"IZVORA|IZVORI)(?:\s+I\s+(?:IZVORA|IZVORI|LITERATURE|LITERATURA))?\s*[:.]?\s*$"
+)
+
+
+def je_naslov_literature(t):
+    return bool(H.NASLOV_LIT.match(t) or NASLOV_LIT_PROSIREN.match(t))
+
+
 def izvuci_popis(put):
     """(odlomci_literature, python-docx odlomci) — od naslova popisa do kraja/idućeg H1.
 
@@ -93,7 +109,7 @@ def izvuci_popis(put):
         if not t:
             continue
         _stil, je_naslov, je_h1 = H._stil_i_razina(p)
-        if H.NASLOV_LIT.match(t):
+        if je_naslov_literature(t):
             unutra = True
             continue
         if unutra and (je_h1 or (je_naslov and len(t) < 80)):
@@ -314,7 +330,8 @@ def main(argv=None) -> int:
 
     if not r["jedinica"]:
         print("❌ nijedna jedinica nije nađena — ima li rad naslov "
-              "„Literatura”/„Popis literature”/„Popis izvora”?", file=sys.stderr)
+              "„Literatura”/„Popis literature”/„Popis citirane literature”/"
+              "„Popis izvora”/„Reference”/„Bibliografija”?", file=sys.stderr)
         return 2
 
     ispisi(r)
