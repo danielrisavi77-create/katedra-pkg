@@ -20,6 +20,18 @@ Thomas Cook Boz (2016.)…" gdje regex zahvati i imena poduzeća). Skripta sama 
 da je heuristika i traži ručnu provjeru — to je sada istina, prije je bila poplava
 lažnih alarma.
 
+## v1.9 — Vancouver dijalekt (rujan 2026.)
+
+| datoteka | promjena |
+|---|---|
+| `common.py` | `VANCOUVER_CITE_RE`, `vancouver_is_decimal`, `parse_vancouver_citations`, `LIT_HEADING_RE` (i „Popis citirane literature", „Literatura i izvori"…), `NUMBERED_ITEM_RE`; `detect_citation_style` vraća i `vancouver` |
+| `check_citations.py` | drugi argument `ieee\|vancouver` (inače po tekstu); Vancouver: siročad, bez reference, redoslijed, razmak iza zareza, en-crtica, citat prije interpunkcije, „i sur." nakon 6 autora |
+| `audit_all.py`, `generate_report.py` | faza B pokreće Vancouver granu; `mixed` uz Vancouver signal pokreće i nju |
+| `katedra_adapter.py`, `engine_contract.json` | capability `hr.citations.vancouver.v1`, novi otisak motora |
+| `tests/` | fixture `vancouver.docx` + skupina R16 (15 provjera) |
+
+**Učinak na HKS-FZS radu (75 referenci):** kritično **1 → 0** (lažni `Rec(2003)24`), popis 75/75, 0 siročadi.
+
 ## Izmjene u dokumentaciji
 
 - `SKILL.md` — `apply_safe_fixes.py` više ne uklanja prijelome po defaultu; dodan `--strip-breaks` i objašnjenje kad se smije koristiti; faza F preformulirana (prijelom se skida s natpisa prikaza, ne s naslova poglavlja).

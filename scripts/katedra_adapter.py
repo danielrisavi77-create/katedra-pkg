@@ -25,6 +25,9 @@ IZVOĐENJEM (21. 8. 2026.):
                                     findings/counts/phase_exit_codes
   hr.citations.author-year.v1       tests/test_all.py 63/63, uključujući
                                     skupinu R13 (autor-godina citati i popis)
+  hr.citations.vancouver.v1         v1.9: tests/test_all.py skupina R16 +
+                                    HKS-FZS rad (75 referenci, 96 citata,
+                                    0 siročadi, 0 lažnih kritičnih)
   hr.typography.numbers.v1          isti paket, skupina R8 (tipografija i
                                     brojčani inventar)
   safe-fixes.preserve-page-breaks   apply_safe_fixes.py nad stvarnim radom:
@@ -54,6 +57,7 @@ ENGINE = "rad-audit"
 CAPABILITIES = [
     "audit.report-json.v1",
     "hr.citations.author-year.v1",
+    "hr.citations.vancouver.v1",
     "hr.typography.numbers.v1",
     "safe-fixes.preserve-page-breaks.v1",
     "phase.G",

@@ -79,6 +79,27 @@ def build(out_dir):
     doc.add_paragraph('[3] Autor, C. Naslov. Zagreb, 2018.')
     doc.save(os.path.join(out_dir, "ieee_numbered_heading.docx"))
 
+    # 2b) Vancouver (N): siroče 5, citat bez reference 6, redoslijed prekršen (3 prije 2),
+    #     decimale u tablici „158 (77,8)" NISU citati, „(67,68)" jest (bez razmaka),
+    #     „Rec(2003)24" nije autor-godina citat, stavka 4 ima 7 autora bez „i sur."
+    doc = Document()
+    doc.add_paragraph('Palijativna skrb je pristup (1). Prema Recommendation Rec(2003)24 to vrijedi (3). '
+                      'Udio od 12,5 % (2) je nizak, a drugi to potvrđuju (3–4) i (67,68). Nedostaje (6).')
+    t = doc.add_table(rows=1, cols=2)
+    t.rows[0].cells[0].text = '158 (77,8)'
+    t.rows[0].cells[1].text = '12 (5,9)'
+    doc.add_paragraph('8. POPIS CITIRANE LITERATURE')
+    doc.add_paragraph('1. Kellehear A. Compassionate cities. Prog Palliat Care. 2020;28(2):115-9.')
+    doc.add_paragraph('2. Connor SR, urednik. Global atlas. 2. izd. London: WHPCA; 2020.')
+    doc.add_paragraph('3. Knaul FM, Arreola H, Kwete XJ, Bhadelia A, Rodriguez NM, Vargas V i sur. Evolution. Lancet. 2020;8(1):e1.')
+    doc.add_paragraph('4. Aa B, Cc D, Ee F, Gg H, Ii J, Kk L, Mm N. Sedam autora bez i sur. Časopis. 2019;3(4):5-6.')
+    doc.add_paragraph('5. Abel J, Kellehear A. Nikad citirano. Ann Palliat Med. 2018;7(2):S3-14.')
+    doc.add_paragraph('67. Prvi P. Naslov. Časopis. 2021;1:1.')
+    doc.add_paragraph('68. Drugi D. Naslov. Časopis. 2021;1:2.')
+    doc.add_paragraph('9. PRILOZI')
+    doc.add_paragraph('1. Prilog koji nije referenca.')
+    doc.save(os.path.join(out_dir, "vancouver.docx"))
+
     # 3) autor-godina: siroče (Horvat 2018) + citat bez reference (Kovač 2021)
     doc = Document()
     doc.add_paragraph('Prema istraživanju (Ivić, 2020) utvrđeno je da postoji značajan utjecaj.')

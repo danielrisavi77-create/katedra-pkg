@@ -238,6 +238,32 @@ def main():
     check("generate_report: siroče/citat-bez-reference u KRITIČNO bucketu",
           payload["counts"]["kritično"] >= 2, payload["counts"])
 
+    # --- R16 (v1.9): Vancouver (N) dijalekt ---
+    from common import parse_vancouver_citations, vancouver_is_decimal
+    body16, cells16, _ = load_docx_text(os.path.join(fx, "vancouver.docx"), include_tables=True)
+    style16, counts16 = detect_citation_style(body16 + "\n" + "\n".join(cells16))
+    check("R16: detect_citation_style prepoznaje vancouver", style16 == "vancouver", (style16, counts16))
+    check("R16: autor-godina NE vidi Rec(2003)24 kao citat", counts16["authoryear"] == 0, counts16)
+    check("R16: tablična ćelija „158 (77,8)\" nije citat",
+          vancouver_is_decimal("77,8", "158 ") and parse_vancouver_citations("158 (77,8)") == [])
+    check("R16: „(67,68)\" jest citat, „(12,35)\" iza brojke nije",
+          parse_vancouver_citations("drugdje (67,68)")[0][2] == {67, 68}
+          and parse_vancouver_citations("158 (12,35)") == [])
+    check("R16: svezak(broj) „53(3-4)\" nije citat", parse_vancouver_citations("2013;53(3-4):367") == [])
+    check("R16: raspon „(3–7)\" se širi", parse_vancouver_citations("x (3–7)")[0][2] == {3, 4, 5, 6, 7})
+    txt16, code16 = capture(check_citations.main, os.path.join(fx, "vancouver.docx"))
+    check("R16: check_citations bira Vancouver", "[Vancouver (N)]" in txt16, txt16)
+    check("R16: popis 1..68 prepoznat, prilog NIJE stavka", "Definirano u LITERATURI: 7" in txt16, txt16)
+    check("R16: siroče 5", "SIROČAD (u popisu, ne citirano): [5]" in txt16, txt16)
+    check("R16: citat bez reference 6", "CITAT BEZ REFERENCE: [6]" in txt16, txt16)
+    check("R16: redoslijed prekršen (3 prije 2)", "krši rastući redoslijed" in txt16, txt16)
+    check("R16: bez razmaka iza zareza „67,68\"", "bez razmaka iza zareza" in txt16 and "67,68" in txt16, txt16)
+    check("R16: sedam autora bez „i sur.\" → stavka 4", "bez „i sur.\"/„et al.\": stavke [4]" in txt16, txt16)
+    check("R16: exit code != 0 (ima nalaza)", code16 != 0)
+    # IEEE fixture i dalje prolazi kroz istu skriptu s eksplicitnim stilom
+    txt16b, code16b = capture(check_citations.main, os.path.join(fx, "ieee_numbered_heading.docx"), "ieee")
+    check("R16: IEEE fixture s eksplicitnim stilom bez nalaza", code16b == 0 and "[IEEE [N]]" in txt16b, txt16b)
+
     shutil.rmtree(tmp, ignore_errors=True)
 
     # --- R13: zakrpe nađene na obranjenom FPZG radu (kolovoz 2026.) ---

@@ -118,7 +118,7 @@ def parse_citation_group(inner):
     nums = set()
     for part in re.split(r",", inner):
         part = part.strip()
-        rng = re.split(r"[–\-]", part)
+        rng = re.split(r"[–—\-]", part)
         if len(rng) == 2 and rng[0].strip().isdigit() and rng[1].strip().isdigit():
             nums.update(range(int(rng[0]), int(rng[1]) + 1))
         elif part.isdigit():
@@ -131,6 +131,66 @@ def parse_citation_group(inner):
 # ---------------------------------------------------------------------------
 
 IEEE_CITE_RE = re.compile(r"\[\d{1,3}(?:[\s,–\-]+\d{1,3})*\]")
+
+# ---------------------------------------------------------------------------
+# Vancouver (n) — numerički stil zdravstvenih fakulteta (HKS-FZS, MEF, ZVU…):
+# „(1)", „(2, 5)", „(3–7)", „(12,13)" u OVALNIM zagradama, popis numeriran
+# „1. Autor A, Autor B. Naslov. Časopis. 2020;12(3):45–50." po redoslijedu
+# prvog pojavljivanja. Prije v1.9 rad u tom stilu detektirao se kao „unknown,
+# 0 citata", IEEE checker javljao „popis nije prepoznat", a autor-godina checker
+# izmišljao citat iz „Recommendation Rec(2003)24" — jedan lažni kritični nalaz i
+# 96 stvarnih citata neprovjereno.
+# ---------------------------------------------------------------------------
+
+VANCOUVER_CITE_RE = re.compile(
+    r"\(\s*(\d{1,3}(?:\s*[,;]\s*\d{1,3}|\s*[–—-]\s*\d{1,3})*)\s*\)"
+)
+_VANC_DEC1 = re.compile(r"\d{1,3},\d")        # (77,8) — jedna znamenka iza zareza
+_VANC_DEC2 = re.compile(r"\d{1,3},\d{2}")     # (12,35) — decimala samo iza brojke: „158 (12,35)"
+
+
+def vancouver_is_decimal(inner, prefix):
+    """Je li „(inner)" decimala/postotak ili svezak(broj), a ne citat.
+
+    Pravila prenesena iz katedra-lite provjeri_vancouver.py (potvrđena na tablici
+    „n (%)" sa 75 ćelija): jedna znamenka iza zareza → decimala; dvije znamenke
+    iza zareza → decimala samo ako neposredno ispred zagrade stoji brojka; zagrada
+    zalijepljena za brojku („2013;53(3-4)") → svezak(broj) iz popisa literature.
+    """
+    if _VANC_DEC1.fullmatch(inner):
+        return True
+    if _VANC_DEC2.fullmatch(inner) and re.search(r"\d\s*$", prefix):
+        return True
+    if re.search(r"\d$", prefix):
+        return True
+    return False
+
+
+def parse_vancouver_citations(text):
+    """Popis (pozicija, sadržaj_zagrade, skup_brojeva) za svaki Vancouver citat u tekstu.
+
+    Rasponi se ekspandiraju („3–7" → 3,4,5,6,7); decimale i svezak(broj) se preskaču.
+    """
+    out = []
+    for m in VANCOUVER_CITE_RE.finditer(text or ""):
+        inner = m.group(1)
+        if vancouver_is_decimal(inner, text[:m.start()]):
+            continue
+        nums = parse_citation_group(inner.replace(";", ","))
+        if nums:
+            out.append((m.start(), inner, nums))
+    return out
+
+
+# Naslov popisa literature — isti popis oblika kao u check_citations*.py.
+LIT_HEADING_RE = re.compile(
+    r"(?im)^\s*(?:\d+\.?\s*)?("
+    r"(?:POPIS\s+)?(?:CITIRAN[AE]\s+|KORI[SŠ]TEN[AE]\s+)?LITERATUR[AE](?:\s+I\s+IZVOR[AI])?"
+    r"|POPIS\s+REFERENC[AEI]|REFERENCES?|BIBLIOGRAFIJA|POPIS\s+IZVORA|IZVORI"
+    r")\s*$"
+)
+# Stavka numeriranog popisa: „1. Autor", „1) Autor", „[1] Autor".
+NUMBERED_ITEM_RE = re.compile(r"(?m)^\s*(?:(\d{1,3})\s*[.)]|\[\s*(\d{1,3})\s*\])\s+(\S.*)$")
 
 # Lokator stranice iza godine: "(Becker, 2007: 45)", "(Streeck, 2014: xiv)".
 # FPZG Upute propisuju BAŠ taj oblik s dvotočkom. Bez njega ispada svaki citat sa
@@ -221,16 +281,24 @@ def parse_ay_citation_group(inner):
 
 
 def detect_citation_style(text):
-    """Heuristička detekcija: 'ieee' (numerički [N]), 'authoryear' (Prezime, GODINA),
-    'mixed' (oboje u sličnoj mjeri) ili 'unknown' (nema dovoljno signala).
-    Vraća (stil, {'ieee': n, 'authoryear': n})."""
+    """Heuristička detekcija: 'ieee' (numerički [N]), 'vancouver' (numerički (N)),
+    'authoryear' (Prezime, GODINA), 'mixed' (dva stila u sličnoj mjeri) ili
+    'unknown' (nema dovoljno signala).
+    Vraća (stil, {'ieee': n, 'authoryear': n, 'vancouver': n}).
+
+    Vancouver se broji SAMO u tekstu prije popisa literature: u samom popisu
+    „2013;53(3-4)" i „(Suppl 2)" nisu citati, a autor-godina popis nosi „(2020.)"
+    koji vancouver uzorak ionako ne hvata (četiri znamenke)."""
     ieee_n = len(IEEE_CITE_RE.findall(text))
     ay_n = sum(len(parse_ay_citation_group(m)) for m in CITE_AY_RE.findall(text))
-    counts = {"ieee": ieee_n, "authoryear": ay_n}
-    if ieee_n == 0 and ay_n == 0:
+    heads = list(LIT_HEADING_RE.finditer(text))
+    body_only = text[:heads[-1].start()] if heads else text
+    vanc_n = len(parse_vancouver_citations(body_only))
+    counts = {"ieee": ieee_n, "authoryear": ay_n, "vancouver": vanc_n}
+    if ieee_n == 0 and ay_n == 0 and vanc_n == 0:
         return "unknown", counts
-    if ieee_n >= ay_n * 1.5:
-        return "ieee", counts
-    if ay_n >= ieee_n * 1.5:
-        return "authoryear", counts
+    ranked = sorted(counts.items(), key=lambda kv: -kv[1])
+    (best, n1), (_, n2) = ranked[0], ranked[1]
+    if n1 >= n2 * 1.5:
+        return best, counts
     return "mixed", counts

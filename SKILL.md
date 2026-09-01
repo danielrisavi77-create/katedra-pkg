@@ -56,7 +56,8 @@ Kad se skripte promijene, otisak se promijeni — to je namjerno.
 Sposobnosti u manifestu potvrđene su **izvođenjem**, ne čitanjem koda:
 `audit.report-json.v1` (izlaz `generate_report.py --json`),
 `hr.citations.author-year.v1` i `hr.typography.numbers.v1`
-(`tests/test_all.py`, skupine R13 i R8), te
+(`tests/test_all.py`, skupine R13 i R8), `hr.citations.vancouver.v1`
+(skupina R16 + HKS-FZS rad sa 75 referenci), te
 `safe-fixes.preserve-page-breaks.v1` (`apply_safe_fixes.py` nad stvarnim radom:
 prijelomi, sekcije, odlomci, broj riječi i broj stranica nepromijenjeni).
 Ako dodaješ novu sposobnost u manifest, prvo je dokaži testom — Katedra
@@ -111,7 +112,7 @@ mod: audit
 opseg: <A-G|B|D|E|F>
 tip: <seminarski|zavrsni|diplomski>
 datoteke: rad<✅|❌> gradja<✅|❌> upute<✅|❌>
-citatni-stil: <auto-detektiran: IEEE|autor-godina>
+citatni-stil: <auto-detektiran: IEEE|Vancouver|autor-godina>
 domena: <celik|elektro|strojarstvo|it|generic>
 ogranicenja: <npr. nema izvorne građe → faza D preskočena>
 ```
@@ -158,6 +159,9 @@ python3 generate_report.py rad.docx --sources izvori_folder/   # ISTO + spremlje
 python3 check_citations.py rad.docx      # B: IEEE [N] — definirano/citirano, siročad, rupe, redoslijed;
                                           #    broji i citate u TABLICAMA i FUSNOTAMA; [2020] (godina u
                                           #    zagradi) se prijavi posebno, ne broji kao citat
+python3 check_citations.py rad.docx vancouver   # B: Vancouver (N) — isto + razmak iza zareza, en-crtica u
+                                          #    rasponu, citat prije interpunkcije, „i sur." nakon 6 autora;
+                                          #    decimale „158 (77,8)" i svezak(broj) „53(3-4)" nisu citati
 python3 check_citations_authoryear.py rad.docx  # B: autor-godina (Prezime, 2020) — HEURISTIKA, čitaj docstring;
                                                  #    fusnote/endnote uključene u "citirano"
 python3 check_fields.py    rad.docx      # A/F: fldChar balans, TOC/REF/SEQ, pageBreak, autofit, zaštita,
@@ -179,7 +183,7 @@ python3 check_overlap.py rad.docx izvori_folder/   # D: doslovno preklapanje (ve
 python3 extract_text.py rad.docx         # čist tekst (python-docx, bez XML smeća)
 ```
 
-Stil citiranja (IEEE `[N]` vs autor-godina) se auto-detektira (`common.detect_citation_style`)
+Stil citiranja (IEEE `[N]` vs Vancouver `(N)` vs autor-godina) se auto-detektira (`common.detect_citation_style`)
 u `audit_all.py`/`generate_report.py` — pokreće se odgovarajuća skripta. Domena rada (za
 `numbers_inventory.py`/`cross_check.py`) se auto-detektira preko `domains/` paketa (celik,
 elektro, strojarstvo, it; fallback = generički frekvencijski). `--domain`/override po potrebi.
@@ -235,8 +239,11 @@ python3 /root/.claude/skills/docx/scripts/accept_changes.py rad.docx out.docx   
 
 ## Poznati opseg (pročitaj prije nego zaključiš da nešto "ne radi")
 
-- `check_citations.py` je IEEE-only; za autor-godina koristi `check_citations_authoryear.py`
-  (obje su ožičene kroz auto-detekciju stila u `audit_all.py`/`generate_report.py`).
+- `check_citations.py` pokriva numeričke stilove IEEE `[N]` i (od v1.9) Vancouver `(N)`
+  — drugi argument `ieee|vancouver`, inače se bira po tekstu; za autor-godina koristi
+  `check_citations_authoryear.py` (sve je ožičeno kroz auto-detekciju stila u
+  `audit_all.py`/`generate_report.py`). Vancouver NE provjerava format same reference
+  (skraćeno ime časopisa, redoslijed polja) ni citate u eksponentu — samo ovalne zagrade.
   Autor-godina provjera je heuristika (v. docstring skripte) — čitaj kao popis za ručnu
   provjeru, ne kao konačnu presudu poput IEEE brojčane provjere.
 - `numbers_inventory.py`/`cross_check.py` domenski paketi pokrivaju celik/elektro/
@@ -292,6 +299,17 @@ odlomku već otvorenom hrvatskim `„` jedini preostali ravni `"` tretiran kao o
 `„Neovisno življenje„`. Ni čitanje stanja samo prije prvog navodnika nije dovoljno — odlomak
 s dva para ima između njih vlastiti `„`. Stanje se sada čita iz cijelog prefiksa, uključujući
 već obavljene zamjene. Mjereno: 11 otvarajućih / 1 zatvarajući → **6/6**.
+
+**R16 — Vancouver `(N)` dijalekt (rujan 2026., v1.9).** HKS-FZS diplomski (75 referenci,
+96 citata u ovalnim zagradama) detektirao se kao `unknown, 0 citata`: IEEE checker je javljao
+„popis nije prepoznat", a autor-godina checker izmislio citat iz „Recommendation
+Rec(2003)24" — **1 lažni kritični nalaz, 96 stvarnih citata neprovjereno**.
+`common.detect_citation_style` sada zna `vancouver`, a `check_citations.py` uz IEEE
+provjerava i Vancouver: siročad, citat bez reference, redoslijed prvog pojavljivanja,
+razmak iza zareza `(67, 68)`, en-crtica u rasponu, citat prije interpunkcije, „i sur."
+nakon šest autora. Decimale u tablicama `158 (77,8)` i svezak(broj) `53(3-4)` nisu citati.
+Mjereno: kritično **1 → 0**, popis **75/75**, 78/78 testova. Ne pokriva: citate u
+eksponentu, format polja same reference.
 
 Poznato ograničenje: marka pisana samo malim slovima (`touristik aktuell`) u
 narativnom položaju strukturno se ne razlikuje od proze i ne prepoznaje se. Zagradni
