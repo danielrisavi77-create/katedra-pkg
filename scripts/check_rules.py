@@ -98,6 +98,28 @@ def _ucitaj_provenance_sidecar(put_profila):
         return {}
 
 
+def _normaliziraj_provenance(prov):
+    """Svedi oba oblika provenance zapisa na {pointer: meta}.
+
+    Registry resolver daje ravni rječnik {pointer: meta}; profil po
+    `_schema.json` (i samostojni put resolvera, npr. hks-fzs) daje
+    {"default": meta, "rules": {pointer: meta}} — vrijednosti izvan `rules`
+    su nizovi/metapodaci, ne pravila. Nedostajući `type` u pravilu nasljeđuje
+    se iz `default`.
+    """
+    if not isinstance(prov, dict):
+        return {}
+    if isinstance(prov.get("rules"), dict):
+        default = prov.get("default") if isinstance(prov.get("default"), dict) else {}
+        out = {}
+        for pointer, meta in prov["rules"].items():
+            if not isinstance(meta, dict):
+                continue
+            out[pointer] = {**default, **meta}
+        return out
+    return {k: v for k, v in prov.items() if isinstance(v, dict)}
+
+
 def ucitaj_json(put):
     try:
         with open(put, encoding="utf-8") as f:
@@ -717,7 +739,8 @@ class Izvjestaj:
         # v1.9 (nalaz 4): provenance po pravilu — iz resolvera ili iz sidecara
         # uz profil. Bez njega na nepotvrđenom profilu nijedno pravilo nije
         # „potvrđeno" pa sve daje ⚠️ (pravilo 18 paketa).
-        self.provenance = dict(_PROVENANCE) or _ucitaj_provenance_sidecar(put_profila)
+        self.provenance = _normaliziraj_provenance(
+            dict(_PROVENANCE) or _ucitaj_provenance_sidecar(put_profila))
 
     def pravilo_potvrdeno(self, rule_id):
         """Stoji li pravilo stvarno u službenim uputama (provenance type=explicit).
