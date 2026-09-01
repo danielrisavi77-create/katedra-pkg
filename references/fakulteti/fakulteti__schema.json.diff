@@ -1,0 +1,22 @@
+--- /tmp/kl-skill/references/fakulteti/_schema.json	2026-09-01 19:20:35.713423424 +0000
++++ /home/claude/katedra-lite-rt/references/fakulteti/_schema.json	2026-09-01 19:45:11.020472283 +0000
+@@ -37,7 +37,7 @@
+       "type": "array",
+       "items": {
+         "enum": [
+-          "seminarski",
++          "esej", "seminarski",
+           "zavrsni",
+           "diplomski"
+         ]
+@@ -350,6 +350,10 @@
+         "type": "string"
+       }
+     },
++    "primjerci": {
++      "description": "Izmjereni obranjeni radovi (pravila 17/24, scripts/primjerci.py). Opservacija, ne norma.",
++      "type": ["object", "array"]
++    },
+     "provenance": {
+       "type": "object",
+       "required": [
