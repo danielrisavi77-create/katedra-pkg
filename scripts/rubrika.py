@@ -114,7 +114,7 @@ def citac_zadatak_komponente(_a, kat):
                         f"provjerava rad-docx/provjeri_predaju.py --zadatak")
 
 
-def citac_evidence(_a, kat):
+def citac_evidence(a, kat):
     eg = _ucitaj(os.path.join(kat, "evidence_gate.json"))
     if eg:
         s = eg.get("summary") or {}
@@ -126,6 +126,18 @@ def citac_evidence(_a, kat):
         return (NEISPUNJENO if blok else DJELOMICNO), dokaz
     izv = _ucitaj(os.path.join(kat, "izvori.json"))
     if not izv:
+        # v1.9 (nalaz 6): numerički dijalekt (vancouver/ieee) ima numeriran popis,
+        # pa check_argument u arg.json upisuje pokrivenost (siročad, citat bez
+        # reference). To je dokaz iste snage kao verify_sources --pokrivenost za
+        # autor-godina — slabiji od ledgera, i tako se prijavljuje. Bez toga je
+        # rad u Vancouver stilu ovdje uvijek bio „nepoznato" samo zbog dijalekta.
+        pokr = ((a or {}).get("citati") or {}).get("pokrivenost") if isinstance(a, dict) else None
+        if isinstance(pokr, dict) and pokr.get("popis_stavki"):
+            sir, bez = pokr.get("sirocad") or [], pokr.get("citat_bez_reference") or []
+            dokaz = (f"numerički popis ({pokr.get('stil')}): {pokr['popis_stavki']} stavki, "
+                     f"{len(sir)} siročadi, {len(bez)} citata bez reference — "
+                     f"bez claim ledgera, slabiji dokaz")
+            return (NEISPUNJENO if (sir or bez) else DJELOMICNO), dokaz
         return NEPOZNATO, "nema ni evidence_gate.json ni izvori.json"
     zapisi = izv if isinstance(izv, list) else (izv.get("izvori") or izv.get("sources") or [])
     if not isinstance(zapisi, list) or not zapisi:

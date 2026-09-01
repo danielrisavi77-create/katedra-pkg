@@ -51,7 +51,7 @@ RULE_ROOTS = ("citiranje", "format", "struktura", "predaja", "obrana")
 # ga moraju prikazati kao upozorenje, ne kao prolaz.
 UNKNOWN_RULES_KEY = "_nepoznata_pravila"
 ENUM_RULES: dict[str, tuple[str, ...]] = {
-    "/citiranje/stil": ("autor-godina", "ieee", "harvard", "apa", "apa-hr", "legal-footnote"),
+    "/citiranje/stil": ("autor-godina", "ieee", "vancouver", "harvard", "apa", "apa-hr", "legal-footnote"),
     "/format/poravnanje": ("obostrano", "lijevo"),
     "/format/lice": ("trece-jednina", "trece-mnozina", "prvo-mnozina"),
     "/struktura/prikazi/natpis": ("iznad", "ispod"),

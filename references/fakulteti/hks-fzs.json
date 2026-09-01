@@ -22,12 +22,12 @@
   "provjereno": "2026-09-01"
  },
  "citiranje": {
-  "stil": "ieee",
+  "stil": "vancouver",
   "u_tekstu": "(1) ili (1, 2) ili (3–5) — u ovalnim zagradama, u razini teksta, PRIJE zareza ili točke",
   "popis_primjer": "Kellehear A. Compassionate Cities: global significance and meaning for palliative care. Prog Palliat Care. 2020;28(2):115-9.",
   "tocka_iza_godine": false,
   "uvlaka_u_popisu": false,
-  "napomena": "VANCOUVER, ne IEEE: numerički stil po redoslijedu prvog pojavljivanja; brojevi u OVALNIM zagradama (n), ne uglatim [n] i ne u eksponentu; više referenci u JEDNOJ zagradi; ista referenca uvijek isti broj; prvih 6 autora pa „i sur.\"; naslov rada samo prvo slovo veliko; časopis skraćenim imenom. Paket nema vancouver dijalekt — 'ieee' je postavljen kao najbliži numerički; provjere na uglatim zagradama daju lažne nalaze, koristi scripts/provjeri_vancouver.py."
+  "napomena": "VANCOUVER, ne IEEE: numerički stil po redoslijedu prvog pojavljivanja; brojevi u OVALNIM zagradama (n), ne uglatim [n] i ne u eksponentu; više referenci u JEDNOJ zagradi; ista referenca uvijek isti broj; prvih 6 autora pa „i sur.\"; naslov rada samo prvo slovo veliko; časopis skraćenim imenom. Od v1.9 paket ima dijalekt 'vancouver' (citation_dialects.py): ovalne zagrade, rasponi, siročad, redoslijed prvog pojavljivanja; scripts/provjeri_vancouver.py ostaje kao samostalna provjera."
  },
  "format": {
   "font": [
@@ -150,11 +150,11 @@
    },
    "/citiranje/stil": {
     "source": "Upute FZS HKS 2026",
-    "locator": "str. 14, odj. 5.7 — „vancouverski stil citiranja\"; u shemi paketa nema 'vancouver' pa stoji 'ieee'",
+    "locator": "str. 14, odj. 5.7 — „vancouverski stil citiranja\"; od v1.9 shema ima 'vancouver'",
     "type": "derived",
     "confidence": 0.6,
     "verified_at": "2026-09-01",
-    "derivation": "Vancouver je numerički kao IEEE, ali s ovalnim zagradama i 'i sur.' — vidi napomena"
+    "derivation": "Vancouver: numerički, ovalne zagrade, 'i sur.' nakon 6 autora — dijalekt 'vancouver'"
    },
    "/struktura/obavezni_dijelovi": {
     "source": "Upute FZS HKS 2026",

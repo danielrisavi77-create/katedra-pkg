@@ -167,9 +167,19 @@ def _iz_markdowna(tekst):
     return odlomci, markeri
 
 
+# v1.9 (nalaz 6/7): uz osnovne oblike i „Popis citirane literature", „Citirana
+# literatura", „Korištena literatura", „Literatura i izvori", „Popis referenci",
+# „Bibliografija", „Reference(s)". Bez toga je check_argument HKS-FZS popis od
+# 75 stavki brojao kao poglavlje tijela s 2115 riječi i „1 citatom", a
+# verify_sources javljao da popisa nema. provjeri_literaturu.py nosi svoje
+# lokalno proširenje istog smisla (NASLOV_LIT_PROSIREN) i ostaje netaknut.
 NASLOV_LIT = re.compile(
-    r"(?i)^\s*(?:\d+\.?\s*)?(LITERATURA|POPIS LITERATURE|REFERENCE|"
-    r"BIBLIOGRAFIJA|POPIS IZVORA|IZVORI)\s*$"
+    r"(?i)^\s*(?:\d+\.?\s*)?("
+    r"(?:POPIS\s+)?(?:CITIRAN[AE]\s+|KORI[SŠ]TEN[AE]\s+)?"
+    r"(?:LITERATURA|LITERATURE)(?:\s+I\s+IZVOR[AI])?"
+    r"|POPIS\s+REFERENC[AEI]|REFERENCES?|REFERENCIJE|BIBLIOGRAFIJA"
+    r"|POPIS\s+IZVORA|IZVORI(?:\s+I\s+LITERATURA)?"
+    r")\s*$"
 )
 # v1.1-fix (drugi krug): i ovdje bez osjetljivosti na velika slova — verzalni
 # natpis („TABLICA 1. Kretanje noćenja") inače nije marker nego prolazi kao

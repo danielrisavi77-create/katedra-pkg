@@ -175,6 +175,7 @@ Format dolazi iz profila (`citiranje.u_tekstu`), ne iz navike. Dvije stvarne var
 | `autor-godina` (FPZG) | `(Lindblom, 1959, str. 81)` | s uvlakom, točka na kraju |
 | `apa-hr` (EFZG) | `(Čavlek, 1998., str. 41)` | bez uvlake, **zarez** iza godine, bez završne točke |
 | `ieee` | `[1]`, `[2, 3]`, `[4]–[6]` | brojčani popis prema redoslijedu citiranja |
+| `vancouver` (HKS-FZS, MEF) | `(1)`, `(2, 5)`, `(3–7)` — prije interpunkcije | `1. Autor A, Autor B. Naslov. Časopis. 2020;12(3):45–50.`, „i sur." nakon 6 autora, po redoslijedu prvog pojavljivanja |
 | `legal-footnote` | nadredni broj fusnote | fusnota može sadržavati literaturu, propis, sudsku odluku ili EU akt |
 
 Pravila koja vrijede svugdje:

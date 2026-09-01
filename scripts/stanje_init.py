@@ -42,7 +42,7 @@ VERZIJA = CURRENT_STATE_VERSION
 MODOVI = ("novi-rad", "pisanje", "poboljsanje", "audit", "obrana", "predaja")
 TIPOVI = ("seminarski", "zavrsni", "diplomski", "esej")
 DATOTEKE = ("upute", "predlozak", "draft", "literatura", "gradja", "rad_docx")
-STILOVI = ("autor-godina", "ieee", "harvard", "apa", "apa-hr")
+STILOVI = ("autor-godina", "ieee", "vancouver", "harvard", "apa", "apa-hr")
 VELIKI_RADOVI = ("zavrsni", "diplomski")
 
 # v1.1-advisory patch (Q10, rep 2): modovi u kojima veliki rad tvrdi da smije pisati

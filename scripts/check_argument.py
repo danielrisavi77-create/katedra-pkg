@@ -620,6 +620,53 @@ def dim_citati(oc, tijelo, citatni_stil="autor-godina"):
     return {"ukupno": ukupno, "bez_citata": [p["naslov"] for p in tvrdi], "tipovi_izvora": dict(tipovi)}
 
 
+def dim_pokrivenost_numericka(oc, put, citatni_stil):
+    """v1.9 (nalaz 6): u numeričkom dijalektu (vancouver/ieee) popis literature je
+    numeriran pa se pokrivenost može izmjeriti bez claim ledgera: svaki citat
+    ima stavku, svaka stavka je citirana, prvo pojavljivanje raste. Sva pravila
+    žive u citation_dialects.numeric_report (B10). Autor-godina i dalje ide kroz
+    verify_sources.py --pokrivenost."""
+    try:
+        if C.resolve_dialect(citatni_stil) not in C.NUMERIC_DIALECTS:
+            return None
+        r = C.numeric_report_file(put, citatni_stil)
+    except Exception as e:  # pragma: no cover - dijagnostika, ne presuda
+        oc.dodaj("pokrivenost popisa", UPOZ, "nije izmjereno", [str(e)], "")
+        return None
+    redci = [f"popis: {r['popis_stavki']} stavki (1..{r['N_max']}); citata u tekstu: "
+             f"{r['citata_u_tekstu']}, različitih brojeva: {r['razlicitih_citiranih']}"]
+    losi = []
+    if not r["popis_stavki"]:
+        losi.append("numerirani popis literature nije prepoznat (očekuje se „1. Autor…\" pod naslovom popisa)")
+    if r["sirocad"]:
+        losi.append(f"siročad (u popisu, necitirano): {r['sirocad'][:15]}")
+    if r["citat_bez_reference"]:
+        losi.append(f"citat bez reference: {r['citat_bez_reference'][:15]}")
+    if r["popis_prazni_brojevi"] or r["popis_dupli"]:
+        losi.append(f"popis: prazni brojevi {r['popis_prazni_brojevi'][:10]}, dupli {r['popis_dupli'][:10]}")
+    savjeti = []
+    if r["skokovi_redoslijeda"]:
+        s = r["skokovi_redoslijeda"][0]
+        savjeti.append(f"redoslijed prvog pojavljivanja nije uzlazan: prvi skok na {s[0]} "
+                       f"(očekivano {s[1]}), ukupno {len(r['skokovi_redoslijeda'])} skokova")
+    if r["raspon_sa_spojnicom"]:
+        savjeti.append(f"raspon sa spojnicom umjesto en-crtice: {r['raspon_sa_spojnicom'][:5]}")
+    if r["citat_bez_razmaka"]:
+        savjeti.append(f"bez razmaka iza zareza (Vancouver traži „(67, 68)\"): {r['citat_bez_razmaka'][:5]}")
+    if r["nabrajanje_umjesto_raspona"]:
+        savjeti.append(f"nabrajanje umjesto raspona: {r['nabrajanje_umjesto_raspona'][:5]}")
+    stanje = LOSE if losi else (UPOZ if savjeti else OK)
+    oc.dodaj("pokrivenost popisa", stanje,
+             f"{len(r['sirocad'])} siročadi, {len(r['citat_bez_reference'])} bez reference",
+             redci + losi + savjeti, "; ".join(losi))
+    return {"stil": citatni_stil, "popis_stavki": r["popis_stavki"],
+            "sirocad": r["sirocad"], "citat_bez_reference": r["citat_bez_reference"],
+            "skokovi_redoslijeda": len(r["skokovi_redoslijeda"]),
+            "stilski": {"raspon_sa_spojnicom": len(r["raspon_sa_spojnicom"]),
+                        "citat_bez_razmaka": len(r["citat_bez_razmaka"]),
+                        "nabrajanje_umjesto_raspona": len(r["nabrajanje_umjesto_raspona"])}}
+
+
 # --------------------------------------------------------------------- ispis
 
 def ispis(oc, naziv, pog, sadrzajna):
@@ -716,6 +763,9 @@ def main():
     dopr = dim_doprinos(oc, izvori, method_policy)
     desk = dim_deskriptivnost(oc, sadrzajna)
     cit = dim_citati(oc, tijelo, citation_style)
+    pokr = dim_pokrivenost_numericka(oc, a.rad, citation_style)
+    if pokr is not None:
+        cit["pokrivenost"] = pokr
 
     ispis(oc, os.path.basename(a.rad), pog, sadrzajna)
 

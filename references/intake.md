@@ -240,7 +240,7 @@ oslanjaju se na to da se markeri ne preformuliraju u prozu usred pisanja.
 | Završni | 25–30 stranica | 15–20 | uvod + teorijski okvir + razrada/analiza + zaključak |
 | Diplomski | 18.000–22.000 riječi | 30+ | uvod + teorijski/konceptualni okvir + metodologija/pristup + analiza/sinteza + rasprava + zaključak |
 
-Citatni stil dolazi iz resolved profila. Bez profila default je **autor-godina** `(Prezime, godina, str. X)`; izrazito tehnička tema može deklarirati `ieee` `[1]`, a rad čije službene upute traže pravne fusnote `legal-footnote`. Stil se nikad ne zaključuje iz samog izgleda teksta — odluči i **deklariraj**. Ciljana ocjena default: 5.
+Citatni stil dolazi iz resolved profila. Bez profila default je **autor-godina** `(Prezime, godina, str. X)`; izrazito tehnička tema može deklarirati `ieee` `[1]`, zdravstveni studiji `vancouver` `(1)`, a rad čije službene upute traže pravne fusnote `legal-footnote`. Stil se nikad ne zaključuje iz samog izgleda teksta — odluči i **deklariraj**. Ciljana ocjena default: 5.
 
 ### 0.9 Snapshot prije svake izmjene dokumenta
 

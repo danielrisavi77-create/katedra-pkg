@@ -18,7 +18,7 @@ import xml.etree.ElementTree as ET
 
 
 CITATION_STYLES = (
-    'autor-godina', 'apa', 'apa-hr', 'harvard', 'ieee', 'legal-footnote',
+    'autor-godina', 'apa', 'apa-hr', 'harvard', 'ieee', 'vancouver', 'legal-footnote',
 )
 STYLE_TO_DIALECT = {
     'autor-godina': 'author-year',
@@ -26,8 +26,13 @@ STYLE_TO_DIALECT = {
     'apa-hr': 'author-year',
     'harvard': 'author-year',
     'ieee': 'ieee',
+    'vancouver': 'vancouver',
     'legal-footnote': 'legal-footnote',
 }
+# v1.9 (nalaz 6): dijalekti čiji je ključ REDNI BROJ stavke u popisu literature.
+# Potrošači koji granaju „numerički vs. autor-godina" pitaju ovo, ne nabrajaju
+# dijalekte — inače svaki novi numerički dijalekt traži obilazak svih consumera.
+NUMERIC_DIALECTS = ('ieee', 'vancouver')
 SOURCE_TYPES = (
     'journal_article', 'book', 'chapter', 'law', 'regulation', 'court_decision',
     'eu_act', 'official_report', 'dataset', 'web_page', 'unknown',
@@ -112,6 +117,238 @@ _DVOSTRUKA_TOCKA = re.compile(r"((?:1[89]|20)\d{2}\.[a-z]?)\.+")
 
 IEEE_RANGE_SEPARATE = re.compile(r"\[(\d+)\]\s*[–—-]\s*\[(\d+)\]")
 IEEE_GROUP = re.compile(r"\[\s*(\d+(?:\s*[,;–—-]\s*\d+)*)\s*\]")
+
+# v1.9 (nalaz 6): Vancouver — brojevi u OVALNIM zagradama: „(1)", „(2, 5)",
+# „(3–7)", „(12,13)". Zdravstveni fakulteti (HKS-FZS, MEF, ZVU…) traže baš ovaj
+# oblik, a paket ga dosad nije poznavao pa je takav rad prolazio kao rad BEZ
+# citata. Najviše tri znamenke: „(2003)" je godina, ne citat.
+# Isti se uzorak koristi za tijelo, ćelije tablica i fusnote; iz njega se
+# izvode i sve stilske provjere (razmak iza zareza, spojnica u rasponu,
+# nabrajanje umjesto raspona) — B10: consumeri nemaju vlastite regexe.
+VANCOUVER_GROUP = re.compile(
+    r"\(\s*(\d{1,3}(?:\s*[,;]\s*\d{1,3}|\s*[–—-]\s*\d{1,3})*)\s*\)"
+)
+# Decimale u ovalnoj zagradi koje NISU citat (pravila prenesena iz
+# katedra-lite-dodaci/scripts/provjeri_vancouver.py, gdje su dokazana na radu
+# sa 75 referenci i tablicom „n (%)"):
+#   • jedna znamenka iza zareza — „(77,8)", „(50,0)" — uvijek decimala;
+#   • dvije znamenke iza zareza — „(12,35)" — decimala samo ako joj u istom
+#     odlomku/ćeliji NEPOSREDNO prethodi brojka: tablična ćelija „158 (12,35)".
+#     Bez te brojke „(67,68)" je citat bez razmaka iza zareza (stilski nalaz).
+#   • zagrada zalijepljena za brojku — „2013;53(3-4):367-76" — je svezak(broj)
+#     u popisu literature, ne citat.
+_VANC_DECIMAL_1 = re.compile(r"\d{1,3},\d")
+_VANC_DECIMAL_2 = re.compile(r"\d{1,3},\d{2}")
+_VANC_BROJKA_ISPRED = re.compile(r"\d\s*$")
+_VANC_ZALIJEPLJENA = re.compile(r"\d$")
+
+
+class VancouverGroup(NamedTuple):
+    """Jedna ovalna zagrada s citatima i sve što stilske provjere trebaju."""
+    start: int
+    raw: str                    # sadržaj zagrade, bez zagrada
+    nums: tuple                 # ekspandirani brojevi (raspon → svi članovi)
+    bez_razmaka: bool           # „(67,68)" — Vancouver traži „(67, 68)"
+    spojnica: bool              # „(5-7)" — raspon spojnicom umjesto en-crtice
+    nabrajanje: bool            # „(5, 6, 7)" — tri i više uzastopnih bez raspona
+
+
+def vancouver_je_decimala(sadrzaj: str, prefiks: str) -> bool:
+    """Je li „(sadrzaj)" decimala/postotak ili svezak(broj), a ne citat."""
+    if _VANC_DECIMAL_1.fullmatch(sadrzaj):
+        return True
+    if _VANC_DECIMAL_2.fullmatch(sadrzaj) and _VANC_BROJKA_ISPRED.search(prefiks):
+        return True
+    if _VANC_ZALIJEPLJENA.search(prefiks):
+        return True
+    return False
+
+
+def vancouver_groups(text: str) -> list[VancouverGroup]:
+    """Sve Vancouver zagrade u tekstu, bez decimala i bez svezak(broj) oblika."""
+    text = text or ''
+    out: list[VancouverGroup] = []
+    for m in VANCOUVER_GROUP.finditer(text):
+        g = m.group(1)
+        if vancouver_je_decimala(g, text[:m.start()]):
+            continue
+        nums: list[int] = []
+        for part in re.split(r'\s*[,;]\s*', g):
+            nums.extend(_expand_numeric_part(part))
+        if not nums:
+            continue
+        ns = [int(x) for x in re.findall(r'\d+', g)]
+        nabrajanje = (len(ns) >= 3 and not re.search(r'[–—-]', g)
+                      and ns == list(range(ns[0], ns[0] + len(ns))))
+        out.append(VancouverGroup(
+            m.start(), g, tuple(nums),
+            bool(re.search(r'\d,\d', g)),
+            bool(re.search(r'\d\s*-\s*\d', g)),
+            nabrajanje,
+        ))
+    return out
+
+
+def parse_vancouver(text: str) -> list[CitationRef]:
+    refs: list[CitationRef] = []
+    for grp in vancouver_groups(text):
+        raw = f'({grp.raw})'
+        for n in sorted(grp.nums):
+            refs.append(CitationRef('vancouver', str(n), raw))
+    return refs
+
+
+# Numerirani popis literature: „1. Autor A…", „1) Autor A…", „[1] Autor A…".
+# Vrijedi za oba numerička dijalekta; ključ stavke je isti kao ključ citata.
+NUMERIC_LIST_ITEM = re.compile(r"^\s*(?:(\d{1,3})\s*[.)]|\[\s*(\d{1,3})\s*\])\s+\S")
+# Sljedeći naslov prve razine iza popisa („9. PRILOZI", „ŽIVOTOPIS") — kraj popisa
+# kad struktura dokumenta ne nosi stilove naslova.
+_KRAJ_POPISA = re.compile(r"^\s*(?:\d{1,2}\.\s+)?[A-ZČĆŽŠĐ][A-ZČĆŽŠĐ ]{3,}$")
+
+
+def numeric_list_items(lines) -> tuple[dict[int, str], list[int]]:
+    """(stavke {broj: tekst}, dupli brojevi) iz redaka numeriranog popisa."""
+    stavke: dict[int, str] = {}
+    dupli: list[int] = []
+    for t in lines:
+        m = NUMERIC_LIST_ITEM.match(t or '')
+        if not m:
+            continue
+        n = int(m.group(1) or m.group(2))
+        if n in stavke:
+            dupli.append(n)
+        stavke[n] = t.strip()
+    return stavke, sorted(set(dupli))
+
+
+def split_reference_list(paragraphs, od_naslova: str | None = None):
+    """(tijelo, popis) po naslovu popisa literature (hr_text.NASLOV_LIT).
+
+    Popis završava na sljedećem verzalnom naslovu prve razine ili na kraju.
+    Ako naslova nema, sve je tijelo, a popis je prazan.
+    """
+    try:
+        import hr_text as H
+        naslov_lit = H.NASLOV_LIT
+    except Exception:  # pragma: no cover - samostalno pokretanje izvan scripts/
+        naslov_lit = re.compile(r"(?i)^\s*(?:\d+\.?\s*)?(?:popis\s+)?(?:citirane\s+)?"
+                                r"(?:literatura|literature|reference|references|bibliografija)\s*$")
+    paras = [(p or '') for p in paragraphs]
+    start = None
+    for i, t in enumerate(paras):
+        s = t.strip()
+        if od_naslova:
+            if s.upper().endswith(od_naslova.strip().upper()):
+                start = i
+                break
+        elif naslov_lit.match(s):
+            start = i
+            break
+    if start is None:
+        return paras, []
+    kraj = len(paras)
+    for j in range(start + 1, len(paras)):
+        s = paras[j].strip()
+        # Verzalni naslov („9. PRILOZI") jest oblika „N. tekst", ali referenca
+        # nikad nije cijela verzalna i bez interpunkcije — zato se ovdje NE
+        # isključuje ono što NUMERIC_LIST_ITEM prepoznaje.
+        if s and _KRAJ_POPISA.match(s):
+            kraj = j
+            break
+    return paras[:start] + paras[kraj:], paras[start + 1:kraj]
+
+
+def _ieee_groups(text: str) -> list[VancouverGroup]:
+    """IEEE „[n]" grupe u istom obliku kao Vancouver, da `numeric_report` radi
+    za oba numerička dijalekta. Stilske zastavice su specifične za Vancouver
+    (razmak iza zareza, en-crtica) pa ostaju False."""
+    out: list[VancouverGroup] = []
+    po_grupi: dict[tuple[int, str], list[int]] = {}
+    for r in parse_ieee(text):
+        po_grupi.setdefault((0, r.raw), []).append(int(r.key))
+    for (_, raw), nums in po_grupi.items():
+        out.append(VancouverGroup(0, raw.strip('[]'), tuple(nums), False, False, False))
+    return out
+
+
+def numeric_report(paragraphs, cells=(), footnotes=(), od_naslova: str | None = None,
+                   style: str = 'vancouver') -> dict:
+    """Numerički citati protiv numeriranog popisa, nad već pročitanim tekstom.
+
+    Ista pravila kao katedra-lite-dodaci/scripts/provjeri_vancouver.py:
+    siročad, citat bez reference, redoslijed prvog pojavljivanja, rasponi,
+    razmak iza zareza, prazni/dupli brojevi u popisu. Ne provjerava sadržaj
+    reference (verify_sources) ni „i sur." pravilo (kućni stil).
+    Bez ovisnosti o python-docx — pozivatelj daje odlomke, ćelije i fusnote.
+    """
+    dialect = resolve_dialect(style)
+    if dialect not in NUMERIC_DIALECTS:
+        raise CitationDialectError(f'numeric_report traži numerički dijalekt, ne {style}')
+    grupe_iz = vancouver_groups if dialect == 'vancouver' else _ieee_groups
+    tijelo, popis = split_reference_list(paragraphs, od_naslova)
+    popis_set = set(popis)
+    tekst_za_citate = [t for t in list(tijelo) + list(cells) + list(footnotes)
+                       if t and t not in popis_set]
+    redoslijed: list[int] = []
+    grupe: list[VancouverGroup] = []
+    for t in tekst_za_citate:
+        for grp in grupe_iz(t):
+            grupe.append(grp)
+            redoslijed.extend(grp.nums)
+    citirani = set(redoslijed)
+    stavke, dupli = numeric_list_items(popis)
+    n_max = max(stavke) if stavke else 0
+    prazni = [n for n in range(1, n_max + 1) if n not in stavke]
+    prvi_put: list[int] = []
+    videno: set[int] = set()
+    for n in redoslijed:
+        if n not in videno:
+            videno.add(n)
+            prvi_put.append(n)
+    skokovi: list[tuple[int, int]] = []
+    ocekivan = 1
+    for n in prvi_put:
+        if n > ocekivan:
+            skokovi.append((n, ocekivan))
+        ocekivan = max(ocekivan, n + 1) if n >= ocekivan else ocekivan
+    return {
+        'popis_stavki': len(stavke), 'N_max': n_max,
+        'popis_prazni_brojevi': prazni, 'popis_dupli': dupli,
+        'citata_u_tekstu': len(grupe), 'razlicitih_citiranih': len(citirani),
+        'sirocad': sorted(n for n in stavke if n not in citirani),
+        'citat_bez_reference': sorted(n for n in citirani if n not in stavke),
+        'prvo_pojavljivanje': prvi_put[:200],
+        'skokovi_redoslijeda': skokovi[:20],
+        'raspon_sa_spojnicom': [g.raw for g in grupe if g.spojnica],
+        'nabrajanje_umjesto_raspona': [g.raw for g in grupe if g.nabrajanje],
+        'citat_bez_razmaka': [g.raw for g in grupe if g.bez_razmaka],
+    }
+
+
+def vancouver_report(paragraphs, cells=(), footnotes=(), od_naslova: str | None = None) -> dict:
+    return numeric_report(paragraphs, cells, footnotes, od_naslova, 'vancouver')
+
+
+def numeric_report_file(path: str | Path, style: str = 'vancouver',
+                        od_naslova: str | None = None) -> dict:
+    """`numeric_report` nad .docx-om: odlomci + ćelije tablica + fusnote."""
+    p = Path(path)
+    if p.suffix.lower() != '.docx':
+        return numeric_report(p.read_text(encoding='utf-8').splitlines(), (), (), od_naslova, style)
+    from docx import Document
+    doc = Document(p)
+    paragraphs = [(x.text or '') for x in doc.paragraphs]
+    cells: list[str] = []
+
+    def _celije(tables):
+        for table in tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    cells.append(cell.text or '')
+                    _celije(cell.tables)
+    _celije(doc.tables)
+    footnotes = list(extract_docx_footnotes(p).values())
+    return numeric_report(paragraphs, cells, footnotes, od_naslova, style)
 
 _W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
 
@@ -413,6 +650,8 @@ def parse_citations(text: str, style: str = 'autor-godina') -> list[CitationRef]
         return parse_author_year(text)
     if dialect == 'ieee':
         return parse_ieee(text)
+    if dialect == 'vancouver':
+        return parse_vancouver(text)
     return parse_legal_text(text, strict=True)
 
 
