@@ -228,6 +228,11 @@
             },
             "po_stranici": {
               "type": "string"
+            },
+            "razmak_pt": {
+              "type": "number",
+              "minimum": 0,
+              "description": "v1.9 (nalaz 9): razmak IZA odlomka u točkama (space after), npr. 6. Provjerava provjeri_dijelove.py nad stilom Normal."
             }
           }
         }
@@ -268,6 +273,16 @@
                 },
                 "minItems": 2,
                 "maxItems": 2
+              },
+              "dijelovi": {
+                "type": "object",
+                "description": "v1.9 (nalaz 9): opseg po DIJELOVIMA rada. Ključ je slug dijela (uvod, metode, rezultati, rasprava, zakljucak, sazetak, summary, literatura, zivotopis…), vrijednost su pravila za taj dio. Zamjenjuje ručne napomene tipa „Uvod ≥ 3000 riječi\". Provjerava scripts/provjeri_dijelove.py.",
+                "propertyNames": {
+                  "pattern": "^[a-z0-9_-]+$"
+                },
+                "additionalProperties": {
+                  "$ref": "#/definitions/dioOpsega"
+                }
               }
             }
           }
@@ -403,6 +418,26 @@
     }
   },
   "definitions": {
+    "dioOpsega": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "v1.9 (nalaz 9): pravila za JEDAN dio rada. Sve je opcionalno; izostanak ključa znači „profil to ne propisuje\".",
+      "properties": {
+        "rijeci_min": {"type": "integer", "minimum": 0, "description": "najmanji broj riječi dijela"},
+        "rijeci_max": {"type": "integer", "minimum": 0, "description": "najveći broj riječi dijela"},
+        "udio_min": {"type": "number", "minimum": 0, "maximum": 1, "description": "najmanji udio dijela u tijelu teksta (0–1; tijelo = od Uvoda do popisa literature)"},
+        "udio_max": {"type": "number", "minimum": 0, "maximum": 1, "description": "najveći udio dijela u tijelu teksta (0–1); „ne smije prelaziti trećinu\" = 0.3333"},
+        "znakovi_max": {"type": "integer", "minimum": 0, "description": "najveći broj znakova s razmacima, npr. sažetak ≤ 1800"},
+        "obavezan": {"type": "boolean", "description": "true = dio mora postojati; izostanak je nalaz"},
+        "redoslijed": {"type": "integer", "minimum": 0, "description": "relativni redni broj dijela u radu; provjerava se samo poredak među dijelovima, ne apsolutna vrijednost"},
+        "podsekcije": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[a-z0-9-]+$"},
+          "description": "slugovi propisanih podnaslova, redoslijedom kojim moraju stajati (npr. metode: etika, ustroj-istrazivanja, …)"
+        },
+        "napomena": {"type": "string"}
+      }
+    },
     "provenanceEntry": {
       "type": "object",
       "required": [
