@@ -105,6 +105,17 @@ def evaluiraj(uvjet: str, kat: str) -> tuple[bool, str]:
             return True, "tip rada nije zadan — učitava se"
         return (t == arg), f"tip je {t}"
 
+    if vrsta == "fakultet":
+        # slug iz stanje.json (fakultet.slug ili fakultet kao string), rezerva
+        # resolved_profile.json → slug. Bez ijednog od toga se NE zna, pa se učitava.
+        s = _json(kat, "stanje.json") or {}
+        f = s.get("fakultet")
+        slug = (f.get("slug") if isinstance(f, dict) else f) or \
+            (_json(kat, "resolved_profile.json") or {}).get("slug")
+        if not slug:
+            return True, "fakultet nije zadan — učitava se"
+        return (str(slug).lower() == arg.lower()), f"fakultet je {slug}"
+
     if vrsta == "prazno":
         dat, _, kljuc = arg.partition(":")
         d = _json(kat, dat)
