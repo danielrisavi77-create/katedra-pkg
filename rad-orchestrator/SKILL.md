@@ -44,13 +44,13 @@ sljedeći alat. Slobodan markdown bez `.katedra/` stanja je kvar, ne rezultat.
      `references/fakulteti/hks-fzs.json`); inače formalni nalazi ostaju „preskočeno" (pravilo 8).
    - `project_root`: APSOLUTNA putanja mape rada (npr. `/home/claude/rad-<slug>`); agenti ne dijele cwd.
 4. **Pripremi skriptu tamo gdje je Workflow može čitati** (radna mapa). Prvi redak skripte nosi
-   verziju (`// rad-orchestrator v1.2`); redoslijed izvora: paket → synced skill → Dodatak A:
+   verziju (`// rad-orchestrator v1.2.1`); redoslijed izvora: paket → synced skill → Dodatak A:
    ```bash
    . "$KATEDRA_PKG/bin/env.sh" 2>/dev/null
    SRC="$RAD_ORCHESTRATOR_HOME/scripts/rad-orchestrator.js"; [ -f "$SRC" ] || SRC="$(ls /root/.claude/skills/synced/*/rad-orchestrator/scripts/rad-orchestrator.js 2>/dev/null | head -1)"
    head -1 "$SRC"; cp "$SRC" ./rad-orchestrator.js
    ```
-   Ako datoteke nema ili je starija od v1.2: zapiši **Dodatak A** (dolje) doslovno u `./rad-orchestrator.js`
+   Ako datoteke nema ili je starija od v1.2.1: zapiši **Dodatak A** (dolje) doslovno u `./rad-orchestrator.js`
    (Write alat) — to je ista skripta, i to je jedini razlog zašto je ovdje u cijelosti.
 
 ## 1. Poziv
@@ -90,6 +90,7 @@ prešućuje. `score`/`pokrivenost` dolaze iz `napredak.py`; score ispod pokriven
 5. **Alat koji je pukao nije provjera koja je prošla** — `naredbe_pale` se čitaju prije zaključka.
 6. Vancouver `(n)` citati: paket ih (još) ne prepoznaje — za zdravstvene fakultete pokreni
    `katedra-lite/scripts/provjeri_vancouver.py` i tretiraj „citatna gustoća 0" iz `check_argument` kao artefakt.
+- **Paket se ne mijenja iz workflowa.** Agent koji nađe kvar u katedra-lite/satelitu piše `.katedra/nalazi_paketa.md` (simptom, uzrok, predloženi diff, dokaz prije–poslije) i nastavlja u smanjenom opsegu; zakrpa ide kroz `katedra` (učenje) uz reviziju. U testnom runu 2. 9. 2026. sinteza je popravila `build_docx.py` izravno u paketu — popravak je bio dobar (SEQ natpisi, popis tablica, docDefaults), ali je prošao bez pregleda i bez dokaza u katalogu; zato ovo pravilo.
 
 ## 4. Što je gdje
 
@@ -100,10 +101,10 @@ prešućuje. `score`/`pokrivenost` dolaze iz `napredak.py`; score ispod pokriven
 
 ---
 
-## Dodatak A — `rad-orchestrator.js` v1.2 (zapiši doslovno ako paket nema tu verziju)
+## Dodatak A — `rad-orchestrator.js` v1.2.1 (zapiši doslovno ako paket nema tu verziju)
 
 ```js
-// rad-orchestrator v1.2 — 2026-09-02 (lens budget: leće se ponavljaju samo kad se gate promijenio ili su prošli put imale nalaze; args.lens_budget=false isključuje; katedra-pkg <SLUG>_HOME; tolerantan na katedra-lite < v1.9; rad_docx mod)
+// rad-orchestrator v1.2.1 — 2026-09-02 (paket se ne mijenja iz workflowa → .katedra/nalazi_paketa.md; lens budget: leće se ponavljaju samo kad se gate promijenio ili su prošli put imale nalaze; args.lens_budget=false isključuje; katedra-pkg <SLUG>_HOME; tolerantan na katedra-lite < v1.9; rad_docx mod)
 export const meta = {
   name: 'rad-orchestrator',
   description: 'Vođa kroz faze rada koji zove STVARNE katedra-lite skripte (stanje_init → plan_state → rukopis → build_docx → gate → napredak); paralelni audit, bidirekcionalni flow, ceka_autora umjesto ping-ponga',
@@ -173,6 +174,7 @@ ${RAD_DOCX_ULAZ ? `- POSTOJEĆI RAD (mod 4/6): ${PROJECT_ROOT}/rad.docx je IZVOR
   i u sazetak uključi score, pokrivenost i "najviše diže sljedeće". Ako ne postoji (katedra-lite < v1.9) → score=null, pokrivenost=null i zabilježi "napredak.py nedostaje" u naredbe_pale — NE izmišljaj score.
 - Pomoćne skripte v1.9 (provjeri_vancouver.py, provjeri_hks_fzs.py, sigurni_popravci_hr.py) koristi SAMO ako postoje u ${S}/; inače preskoči taj korak i zabilježi.
 - Željezna pravila katedra-lite vrijede: ništa se ne izmišlja; što nema izvor → [TREBA IZVOR]; stranica koja se ne može potvrditi → [PROVJERI STR.].
+- PAKET SE NE MIJENJA IZ WORKFLOWA: nikad ne uređuj datoteke u ${S}/ ni u ${SATELITI_DIR}/ (skripte, reference, profili). Ako je paket kriv (kvar, lažni nalaz, nedostajuća grana), zapiši u ${K}/nalazi_paketa.md (simptom / uzrok / predloženi diff / dokaz prije–poslije na ovom radu) i nastavi u smanjenom opsegu; zakrpa ide kroz skill katedra (učenje) poslije, uz reviziju. Popis takvih nalaza uključi u sazetak.
 ${config.odluke_autora ? `- ODLUKE AUTORA (odgovori korisnika na pitanja iz prethodnog kruga — PRIMIJENI ih prije bilo čega drugog, zabilježi u tablici PRETPOSTAVKI/ODLUKA i ne postavljaj ista pitanja ponovno):
 ${String(config.odluke_autora).split('\n').map((l) => '    ' + l).join('\n')}
 - Za [PROVJERI STR.]: smiješ preuzeti javno dostupan PDF izvora (Hrčak/DOI/službeni dokument) i pročitati ga s pdftotext; broj stranice upiši SAMO ako je vidljiv u zaglavlju/podnožju te stranice (pravilo 28). Ako se ne može potvrditi — marker ostaje.` : ''}

@@ -1,4 +1,4 @@
-// rad-orchestrator v1.2 — 2026-09-02 (lens budget: leće se ponavljaju samo kad se gate promijenio ili su prošli put imale nalaze; args.lens_budget=false isključuje; katedra-pkg <SLUG>_HOME; tolerantan na katedra-lite < v1.9; rad_docx mod)
+// rad-orchestrator v1.2.1 — 2026-09-02 (paket se ne mijenja iz workflowa → .katedra/nalazi_paketa.md; lens budget: leće se ponavljaju samo kad se gate promijenio ili su prošli put imale nalaze; args.lens_budget=false isključuje; katedra-pkg <SLUG>_HOME; tolerantan na katedra-lite < v1.9; rad_docx mod)
 export const meta = {
   name: 'rad-orchestrator',
   description: 'Vođa kroz faze rada koji zove STVARNE katedra-lite skripte (stanje_init → plan_state → rukopis → build_docx → gate → napredak); paralelni audit, bidirekcionalni flow, ceka_autora umjesto ping-ponga',
@@ -68,6 +68,7 @@ ${RAD_DOCX_ULAZ ? `- POSTOJEĆI RAD (mod 4/6): ${PROJECT_ROOT}/rad.docx je IZVOR
   i u sazetak uključi score, pokrivenost i "najviše diže sljedeće". Ako ne postoji (katedra-lite < v1.9) → score=null, pokrivenost=null i zabilježi "napredak.py nedostaje" u naredbe_pale — NE izmišljaj score.
 - Pomoćne skripte v1.9 (provjeri_vancouver.py, provjeri_hks_fzs.py, sigurni_popravci_hr.py) koristi SAMO ako postoje u ${S}/; inače preskoči taj korak i zabilježi.
 - Željezna pravila katedra-lite vrijede: ništa se ne izmišlja; što nema izvor → [TREBA IZVOR]; stranica koja se ne može potvrditi → [PROVJERI STR.].
+- PAKET SE NE MIJENJA IZ WORKFLOWA: nikad ne uređuj datoteke u ${S}/ ni u ${SATELITI_DIR}/ (skripte, reference, profili). Ako je paket kriv (kvar, lažni nalaz, nedostajuća grana), zapiši u ${K}/nalazi_paketa.md (simptom / uzrok / predloženi diff / dokaz prije–poslije na ovom radu) i nastavi u smanjenom opsegu; zakrpa ide kroz skill katedra (učenje) poslije, uz reviziju. Popis takvih nalaza uključi u sazetak.
 ${config.odluke_autora ? `- ODLUKE AUTORA (odgovori korisnika na pitanja iz prethodnog kruga — PRIMIJENI ih prije bilo čega drugog, zabilježi u tablici PRETPOSTAVKI/ODLUKA i ne postavljaj ista pitanja ponovno):
 ${String(config.odluke_autora).split('\n').map((l) => '    ' + l).join('\n')}
 - Za [PROVJERI STR.]: smiješ preuzeti javno dostupan PDF izvora (Hrčak/DOI/službeni dokument) i pročitati ga s pdftotext; broj stranice upiši SAMO ako je vidljiv u zaglavlju/podnožju te stranice (pravilo 28). Ako se ne može potvrditi — marker ostaje.` : ''}

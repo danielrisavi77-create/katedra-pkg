@@ -131,6 +131,46 @@ def _postavi_font_svugdje(run_ili_stil, ime: str) -> None:
         rFonts.set(qn(f"w:{slot}"), ime)
 
 
+def _postavi_doc_defaults(d, ime: str, velicina_pt: float) -> None:
+    """docDefaults (styles.xml) → font profila na svim slotovima i veličina.
+
+    Tema predloška (minorHAnsi = Cambria/Calibri) inače ostaje ispod stila
+    Normal i „curi" u tablice i polja koja nemaju vlastiti stil.
+    """
+    from docx.oxml.ns import qn
+
+    styles_el = d.styles.element
+    dd = styles_el.find(qn("w:docDefaults"))
+    if dd is None:
+        dd = _el("w:docDefaults")
+        styles_el.insert(0, dd)
+    rpd = dd.find(qn("w:rPrDefault"))
+    if rpd is None:
+        rpd = _el("w:rPrDefault")
+        dd.insert(0, rpd)
+    rpr = rpd.find(qn("w:rPr"))
+    if rpr is None:
+        rpr = _el("w:rPr")
+        rpd.append(rpr)
+    rfonts = rpr.find(qn("w:rFonts"))
+    if rfonts is None:
+        rfonts = _el("w:rFonts")
+        rpr.insert(0, rfonts)
+    for atr in list(rfonts.attrib):
+        # asciiTheme/hAnsiTheme… imaju prednost pred ascii/hAnsi — maknuti.
+        if atr.endswith("Theme"):
+            del rfonts.attrib[atr]
+    for slot in ("ascii", "hAnsi", "cs", "eastAsia"):
+        rfonts.set(qn(f"w:{slot}"), ime)
+    half = str(int(round(velicina_pt * 2)))
+    for tag in ("w:sz", "w:szCs"):
+        e = rpr.find(qn(tag))
+        if e is None:
+            e = _el(tag)
+            rpr.append(e)
+        e.set(qn("w:val"), half)
+
+
 def _drzi_uz_sljedeci(odlomak, cijepanje: bool = False) -> None:
     """keepNext (+ opcionalno keepLines) — natpis, prikaz i „Izvor:" ostaju skupa."""
     pf = odlomak.paragraph_format
@@ -156,8 +196,59 @@ def _je_popis_literature(naslov: str) -> bool:
     return n.startswith("popis") and any(k in n for k in ("literatur", "izvor", "bibliograf", "referenc"))
 
 
+# Natpis prikaza: „Tablica 3. Naziv" → vrsta + broj + ostatak. Isti oblik koji
+# `check_rules.natpis` prepoznaje; ovdje služi da broj postane SEQ polje.
+RE_NATPIS_PRIKAZA = re.compile(
+    r"^\s*(Tablica|Slika|Grafikon|Shema)\s+(\d+)(\.?)(\s.*)?$", re.S)
+
+
+def _natpis_sa_seq(odlomak, natpis: str) -> bool:
+    """Natpis prikaza upiši tako da je broj pravo Wordovo SEQ polje.
+
+    Popis tablica (obavezni dio profila) jest polje `TOC \\c "Tablica"`, a ono
+    skuplja SAMO natpise čiji je broj SEQ polje s istim identifikatorom. Natpis
+    natipkan kao čisti tekst u popis ne ulazi — dokument bi imao naslov „POPIS
+    TABLICA" i prazan popis. Tekst odlomka ostaje isti (broj iz rukopisa je
+    rezervna vrijednost polja), pa provjere koje čitaju tekst ne vide razliku.
+    Vraća False ako oblik nije natpis — tada ga pozivatelj upiše kao tekst.
+    """
+    m = RE_NATPIS_PRIKAZA.match(natpis or "")
+    if not m:
+        return False
+    vrsta, broj, tocka, ostatak = m.group(1), m.group(2), m.group(3), m.group(4) or ""
+    odlomak.add_run(f"{vrsta} ")
+    _polje(odlomak, f"SEQ {vrsta} \\* ARABIC", broj)
+    odlomak.add_run(f"{tocka}{ostatak}")
+    return True
+
+
+def _vrste_popisa_prikaza(dio: str) -> list[str]:
+    """Obavezni dio „popis tablica" / „popis slika i grafikona" → SEQ identifikatori."""
+    n = str(dio or "").lower()
+    if not n.startswith("popis") or _je_popis_literature(n):
+        return []
+    return [v for k, v in (("tablic", "Tablica"), ("slik", "Slika"),
+                           ("grafikon", "Grafikon"), ("shem", "Shema")) if k in n]
+
+
+def _vrste_prikaza_u_rukopisu(rukopis) -> set[str]:
+    """Koje vrste prikaza rukopis stvarno ima (po natpisima), npr. {'Tablica'}."""
+    vrste: set[str] = set()
+    for pog in (rukopis or []):
+        for b in (pog.get("blokovi") or []):
+            tekst = None
+            if b[0] == "tablica":
+                tekst = b[2]
+            elif b[0] == "odlomak":
+                tekst = "".join(str(x[0]) for x in b[1])
+            m = RE_NATPIS_PRIKAZA.match(tekst or "")
+            if m:
+                vrste.add(m.group(1))
+    return vrste
+
+
 def _renderiraj(d, blokovi, _poglavlje, prikazi_pravila, font, velicina,
-                meta=None, uvlaka_popisa=False):
+                meta=None, uvlaka_popisa=False, razmak_popisa=False):
     """Blokovi rukopisa → odlomci dokumenta.
 
     Naslov prve razine ide kroz `_poglavlje`, pa dobiva prijelom i stil koje
@@ -173,7 +264,8 @@ def _renderiraj(d, blokovi, _poglavlje, prikazi_pravila, font, velicina,
     from docx.shared import Cm, Pt
 
     meta = meta or {}
-    u_popisu = False
+    u_popisu = False          # viseća uvlaka jedinica (profil traži uvlaku)
+    u_literaturi = False      # razmak između jedinica (profil traži razmak)
 
     def _dodaj(odlomak, dijelovi):
         for tekst, podebljano, kurziv in dijelovi:
@@ -190,7 +282,8 @@ def _renderiraj(d, blokovi, _poglavlje, prikazi_pravila, font, velicina,
             razina, tekst = blok[1], blok[2]
             if razina == 1:
                 _poglavlje(tekst)
-                u_popisu = bool(uvlaka_popisa) and _je_popis_literature(tekst)
+                u_literaturi = _je_popis_literature(tekst)
+                u_popisu = bool(uvlaka_popisa) and u_literaturi
             else:
                 d.add_heading(tekst, level=min(razina, 4))
         elif vrsta == "odlomak":
@@ -199,6 +292,11 @@ def _renderiraj(d, blokovi, _poglavlje, prikazi_pravila, font, velicina,
                 p.paragraph_format.left_indent = Cm(1.25)
                 p.paragraph_format.first_line_indent = Cm(-1.25)
                 p.paragraph_format.space_after = Pt(6)
+            elif u_literaturi and razmak_popisa:
+                # Profil `citiranje.razmak_izmedu_jedinica`: Normal ima
+                # space_after=0, pa bi se jedinice slijevale u jedan blok, a
+                # provjeri_literaturu čita razmak iz oblikovanja odlomka.
+                p.paragraph_format.space_after = Pt(12)
         elif vrsta == "citat":
             # Stil „Quote" je STRUKTURNI signal da ovo nije prozni odlomak; sama
             # uvlaka nije, pa bi blok-citat inače padao na pravilu „najmanje dvije
@@ -227,7 +325,9 @@ def _renderiraj(d, blokovi, _poglavlje, prikazi_pravila, font, velicina,
             if not redci:
                 continue
             if natpis:
-                p = d.add_paragraph(natpis)
+                p = d.add_paragraph()
+                if not _natpis_sa_seq(p, natpis):
+                    p.add_run(natpis)
                 _drzi_uz_sljedeci(p)
             t = d.add_table(rows=len(redci), cols=max(len(r) for r in redci))
             try:
@@ -492,6 +592,23 @@ def gradi(profil: dict, meta: dict, poglavlja: list[dict], izlaz: str,
     normal.font.name = font
     normal.font.size = Pt(velicina)
     _postavi_font_svugdje(normal, font)
+    # docDefaults predloška python-docx-a su Cambria/Calibri 11 pt (tema).
+    # Stil Normal to nadjačava za prozu, ali sve što na Normal ne pada —
+    # ćelije tablica bez stila, natpisi, polja — vraća se na temu. Audit
+    # (check_rules „font") to javlja kao niži sloj izvan propisa, pa se
+    # zadani font i veličina postavljaju na razini dokumenta.
+    _postavi_doc_defaults(d, font, velicina)
+    try:
+        caption = d.styles["Caption"]
+    except KeyError:
+        caption = None
+    if caption is not None:
+        caption.font.name = font
+        caption.font.size = Pt(velicina)
+        caption.font.bold = False
+        caption.font.italic = False
+        caption.font.color.rgb = None
+        _postavi_font_svugdje(caption, font)
     pf = normal.paragraph_format
     pf.line_spacing = prored
     pf.space_after = Pt(0)
@@ -570,7 +687,7 @@ def gradi(profil: dict, meta: dict, poglavlja: list[dict], izlaz: str,
         d.add_heading(dio.upper(), level=1)
         if "izjava" in n:
             d.add_paragraph(
-                f"Izjavljujem da sam rad pod naslovom „{meta['tema']}” izradio/la "
+                f"Izjavljujem da sam rad pod naslovom „{meta['tema']}“ izradio/la "
                 f"samostalno, koristeći se navedenim izvorima, te da rad ne sadrži "
                 f"dijelove tuđih radova bez navođenja izvora."
             )
@@ -663,13 +780,21 @@ def gradi(profil: dict, meta: dict, poglavlja: list[dict], izlaz: str,
         n = dio.lower()
         if n.startswith(("zaključ", "zakljuc")):
             return any(t.startswith(("zaključ", "zakljuc")) for t in naslovi_rukopisa)
-        if n.startswith("popis") or n.startswith("literatura"):
+        if _je_popis_literature(n) or n.startswith("literatura"):
             return any(_je_popis_literature(t) for t in naslovi_rukopisa)
+        if n.startswith("popis"):
+            # „Popis tablica" / „popis slika i grafikona" NIJE popis literature:
+            # do ovog popravka svaki „popis*" je prolazio kao literatura iz
+            # rukopisa, pa se popis tablica nikad nije ni izgradio, a check_rules
+            # je blokirao na „obavezni dijelovi" (audit nalaz, EFZG završni).
+            return any(t.startswith(n[:12]) for t in naslovi_rukopisa)
         if "izjava" in n:
             return any(t.startswith("izjava") for t in naslovi_rukopisa)
         return False
 
     uvlaka_popisa = bool((profil.get("citiranje") or {}).get("uvlaka_u_popisu"))
+    razmak_popisa = bool((profil.get("citiranje") or {}).get("razmak_izmedu_jedinica"))
+    vrste_prikaza = _vrste_prikaza_u_rukopisu(rukopis)
 
     if rukopis:
         # Rukopis je izvor istine: poglavlja dolaze iz `.katedra/poglavlja/*.md`,
@@ -681,7 +806,8 @@ def gradi(profil: dict, meta: dict, poglavlja: list[dict], izlaz: str,
             if prvi_naslov is None:
                 _poglavlje(str(pog.get("naslov") or pog.get("kljuc") or "Poglavlje"))
             _renderiraj(d, blokovi, _poglavlje, prikazi_pravila, font, velicina,
-                        meta=meta, uvlaka_popisa=uvlaka_popisa)
+                        meta=meta, uvlaka_popisa=uvlaka_popisa,
+                        razmak_popisa=razmak_popisa)
         napravljeno.append(uvod_dio)
         # Tijelo teksta JEST rukopis; uvjetni dijelovi („ako postoje") ne dobivaju
         # prazan predložak kad ih rukopis nema.
@@ -779,13 +905,32 @@ def gradi(profil: dict, meta: dict, poglavlja: list[dict], izlaz: str,
             continue
         if any(k in n for k in _FRONT_MATTER_PRIJE_SADRZAJA) or _je_sadrzaj(dio):
             continue
+        vrste_dijela = _vrste_popisa_prikaza(dio)
+        seq = next((v for v in vrste_dijela if v in vrste_prikaza), None) \
+            or (vrste_dijela[0] if vrste_dijela else None)
+        if vrste_dijela and rukopis and not any(v in vrste_prikaza for v in vrste_dijela):
+            # Popis prikaza kojih u rukopisu nema (npr. „popis slika i
+            # grafikona" u radu bez ijedne slike) ne gradi se prazan — je li
+            # popis obvezan i kad prikaza nema, odlučuje autor s mentorom;
+            # check_rules će dio i dalje prijaviti kao nedostajući.
+            sys.stderr.write(f"⚠ „{dio}\" preskočen: rukopis nema prikaza vrste "
+                             f"{'/'.join(vrste_dijela)} (natpis „{seq} 1. …\").\n")
+            continue
         d.add_heading(dio.upper(), level=1)
         if n.startswith("popis izvora") or n.startswith("literatura"):
             primjer = (profil.get("citiranje") or {}).get("popis_primjer")
             d.add_paragraph(str(primjer) if primjer else "[Izvori abecedno.]")
         elif n.startswith("popis"):
             p = d.add_paragraph()
-            _polje(p, 'TOC \\h \\z \\c "Tablica"', "[Popis se generira iz natpisa.]")
+            if rukopis:
+                # Uz rukopis natpisi nose SEQ polje, pa se polje popunjava pri
+                # osvježavanju (F9); rezerva bez uglatih zagrada da ne ostane
+                # kao placeholder u predajnom dokumentu.
+                _polje(p, f'TOC \\h \\z \\c "{seq or "Tablica"}"',
+                       "Popis se popunjava osvježavanjem polja (F9).")
+            else:
+                _polje(p, f'TOC \\h \\z \\c "{seq or "Tablica"}"',
+                       "[Popis se generira iz natpisa.]")
         else:
             d.add_paragraph("[Sadržaj.]")
         napravljeno.append(dio)
