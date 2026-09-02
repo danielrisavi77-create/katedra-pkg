@@ -1,0 +1,11 @@
+--- /tmp/kl-skill/references/fakulteti/fpzg.json	2026-09-01 19:20:35.713790373 +0000
++++ /home/claude/katedra-lite-rt/references/fakulteti/fpzg.json	2026-09-01 19:45:11.019406043 +0000
+@@ -69,8 +69,6 @@
+     "izvori_min": 15
+    },
+    "esej": {
+-    "rijeci": null,
+-    "izvori_min": null,
+     "napomena": "Upute ne poznaju esej kao vrstu rada, a opseg zadaje silabus kolegija. Ako je korisnik zadao vlastiti raspon, mjeri se protiv njega; ako nije, opseg se NE mjeri i ne prijavljuje kao kršenje."
+    },
+    "_razina_nalaza": {
