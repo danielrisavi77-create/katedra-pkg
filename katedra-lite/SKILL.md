@@ -1,6 +1,6 @@
 ---
 name: katedra-lite
-description: "Dodaje željezno pravilo 28 (postojanje izvora nije potvrda sadržaja; odakle smije doći broj stranice) i uvodi provjeru zamki proze uz check_ai_style."
+description: "Kopilot za akademske radove (novi rad, plan, pisanje, poboljšanje, audit, obrana, predaja, povratak iz Worda; stanje u .katedra/). v1.9: §0.0 dohvat paketa iz git repoa katedra-pkg, Vancouver dijalekt, opseg po dijelovima, Upute → profil, provjera zamki proze, pravilo 29 (napredak)."
 ---
 
 # KATEDRA-LITE — kopilot za akademske radove
@@ -20,6 +20,29 @@ Jedan ulaz, sedam modova, jedan intake. Detaljni protokol je u `references/` i u
 ## 0. ULAZNI PROTOKOL — IZVRŠI PRIJE SVEGA OSTALOG
 
 **Wizard je prvi output samo u fresh i neodređenoj sesiji.** Ako guard ispod kaže resume/direct-mode/sufficient-context, wizard se preskače. Kad se wizard koristi: jedno pitanje po poruci, numerirane opcije, nikad zid teksta; intake gotov u **≤ 3 poruke**.
+
+### 0.0 Paket — dohvati skripte prije nego ih pozoveš
+
+SKILL.md je router; skripte, reference, profili i sateliti žive u git repou
+`katedra-pkg`. **Prvi bash poziv u sesiji** ga dohvati ili osvježi; **svaki idući**
+poziv koji zove skripte počinje s `. "$KATEDRA_PKG/bin/env.sh"` (Cowork kreće iz čiste
+ljuske pri svakom pozivu, pa se okolina ne pamti).
+
+```bash
+export KATEDRA_PKG="$HOME/.katedra-pkg"
+export KATEDRA_PKG_URL="UPIŠI_REMOTE_URL"    # jednom; npr. https://<token>@github.com/<user>/katedra-pkg.git
+if [ -d "$KATEDRA_PKG/.git" ]; then git -C "$KATEDRA_PKG" pull -q --ff-only 2>/dev/null || echo "⚠️ pull nije prošao — lokalna kopija";
+elif [ "$KATEDRA_PKG_URL" != "UPIŠI_REMOTE_URL" ]; then git clone -q --depth 1 "$KATEDRA_PKG_URL" "$KATEDRA_PKG" 2>/dev/null || echo "⚠️ clone nije prošao"; fi
+if [ -f "$KATEDRA_PKG/bin/env.sh" ]; then . "$KATEDRA_PKG/bin/env.sh"; echo "katedra-pkg $KATEDRA_PKG_VERZIJA";
+else KATEDRA_SKILL="$(ls -d /root/.claude/skills/synced/*/katedra-lite ~/.claude/skills/katedra-lite 2>/dev/null | head -1)"; echo "⚠️ paket nije dostupan — synced kopija: $KATEDRA_SKILL (skripte mogu biti starije od ovog SKILL.md-a)"; fi
+```
+
+Pravila za taj korak: (1) `<KATEDRA_SKILL>` u svim naredbama ispod je ono što je ovaj
+korak izvezao — ne pogađa se put; (2) ako paketa nema, radi se iz synced kopije i to se
+**kaže** (pravilo 8); skripta koju SKILL.md spominje a u kopiji je nema ne izmišlja se —
+korak se označi `preskočeno`; (3) sateliti se razrješavaju kroz `<SLUG>_HOME` koje
+`env.sh` izvozi, a `scripts/vjestine.py --provjeri` to potvrđuje; (4) verziju paketa
+(`KATEDRA_PKG_VERZIJA`) ispiši u prvoj poruci uz sažetak stanja.
 
 ### 0.1 Guard — pročitaj stanje s diska prije bilo čega
 
@@ -54,7 +77,7 @@ Razgovor nije memorija. Sve što treba preživjeti novu sesiju ide u datoteku, n
 | Mod | Učitaj | Napomena |
 |---|---|---|
 | 1 Novi rad | `references/plan.md` → pa `references/pisanje.md` | plan je obavezan checkpoint |
-| 2 Pisanje | `references/pisanje.md` | bez plana za završni/diplomski ne piši; izradu .docx-a razriješi kroz `scripts/vjestine.py` |
+| 2 Pisanje | `references/pisanje.md` (+ `references/glas_fpzg.md` kad je profil fpzg) | bez plana za završni/diplomski ne piši; izradu .docx-a razriješi kroz `scripts/vjestine.py` |
 | 3 Poboljšanje | `references/pisanje.md` → `references/stil_pipeline.md` | dijagnoza prije prepisivanja; neprihvaćene Track Changes → `revizije.py prihvati` prvo, v. § 0.7a |
 | 4 Audit | `references/audit.md` | **adapter na `rad-audit`** (dokument) i **`replikacija-pspp`** (brojke) — Katedra ne kopira ni jedno ni drugo |
 | 5 Obrana | `references/obrana.md` | traži finalni rad |
@@ -184,7 +207,7 @@ najskuplja greška u procesu.
 1. **Nijedno poglavlje završnog ili diplomskog prije odobrenog plana** (`plan_odobren: true`). Prije strukture mora postojati spreman `.katedra/perspectives.json`; zatim plan mora proći `plan_state.py odobri`. **Full auto nije iznimka od gatea** — samo koristi `--actor full-auto` nakon uspješnog gatea. Seminarski i esej: skraćeni plan u 5 redaka, pa piši.
 2. **Priložene datoteke su izvor istine.** Što nije u građi → `[TREBA IZVOR]`. Stranica koja se ne može potvrditi → `[PROVJERI STR.]`. **Ništa se ne izmišlja.**
 3. **Samo provjerljivi izvori**: bibliografski izvor je konkretan članak, knjiga, propis, odluka, dataset ili službeni dokument — ne discovery servis. Google Scholar, Crossref i slični servisi služe za **discovery**, a zapis se vodi uz stvarni izvor (`discovered_via`). `verify_sources.py` razlikuje `verified`, `unverified`, `conflict` i `invalid`: samo `conflict`/`invalid` blokiraju izvor dok se problem ne razriješi; `unverified` traži ručnu potvrdu i nije dokaz da izvor ne postoji. Quality taxonomy je `A/B/C/D/E/X`; automatika ne smije izmišljati klasu kad nema dovoljno dokaza.
-4. **Sve verificiraj neovisno, i to alatom.** Izvještaj subagenta nije dokaz. Za izmjenu dokumenta redoslijed je: strict `evidence_gate.py` → snapshot → rewrite → `verify_rewrite.py --evidence-gate --require-snapshot` s odgovarajućim `--zahvat` i `--profil .katedra/resolved_profile.json`. Time se istodobno čuvaju evidence preduvjeti, rollback, pravi citatni dialect (autor–godina / IEEE / legal-footnote), brojke i markeri. Izlazni kod 1 = prepisano se **NE** primjenjuje.
+4. **Sve verificiraj neovisno, i to alatom.** Izvještaj subagenta nije dokaz. Za izmjenu dokumenta redoslijed je: strict `evidence_gate.py` → snapshot → rewrite → `verify_rewrite.py --evidence-gate --require-snapshot` s odgovarajućim `--zahvat` i `--profil .katedra/resolved_profile.json`. Time se istodobno čuvaju evidence preduvjeti, rollback, pravi citatni dialect (autor–godina / IEEE / Vancouver / legal-footnote — uvijek iz `resolved_profile.json`, nikad iz izgleda teksta), brojke i markeri. Izlazni kod 1 = prepisano se **NE** primjenjuje.
 5. **Odvoji pogreške od stila.** Jasne pogreške ispravi odmah; stilske zahvate uz potvrdu tona.
 6. **Odstupanje od plana zapiši u `plan.json`** (polje `odstupanja`), ne samo spomeni. Nikad tiho.
 7. **Na kraju svake veće isporuke: tablica „RUČNO PROVJERI"** — sva `[PROVJERI STR.]`, pretpostavke za mentora, pravila fakulteta za potvrdu, otvorene zamjerke.

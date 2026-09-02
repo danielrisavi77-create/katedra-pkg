@@ -73,6 +73,21 @@ docs/v1_1_dodaci.md       v1.1 — opseg, status i ograničenja community dodata
 references/originality_schema.json      schema v1 za originality_check.py --json izlaz
 references/plan_stress_test_schema.json schema v1 za .katedra/plan_stress_test.json (grill_me.py)
 
+scripts/napredak.py             AGREGATOR napretka (pravilo 29): četiri faze, score uz
+                                pokrivenost, trend u .katedra/napredak_povijest.jsonl, --html
+scripts/provjeri_zamke_proze.py šest tihih zamki proze uz check_ai_style (SKILL.md §3);
+                                nikad blokira, --usporedi prije.json za prije/poslije
+scripts/provjeri_vancouver.py   referentna provjera Vancouver (n) citata: siročad, redoslijed,
+                                razmak; trajni dom dijalekta je citation_dialects.py
+scripts/provjeri_dijelove.py    opseg po dijelovima iz profila (struktura.opseg.<tip>.dijelovi):
+                                riječi, udio, znakovi sažetka, redoslijed, podsekcije, razmak_pt
+scripts/provjeri_hks_fzs.py     ono što shema ne nosi za HKS-FZS (font tablica, „Tablica N",
+                                Vancouver interpunkcija, N u sažetku, MeSH); ostalo → provjeri_dijelove
+scripts/upute_u_profil.py       Upute fakulteta (PDF/DOCX/TXT) → kandidati s lokatorom i
+                                confidence → skica profila po shemi; ništa bez citata.
+                                Tijek: references/upute_u_profil.md
+references/glas_fpzg.md         kućni glas FPZG-a (mod 2/3 kad je profil fpzg); bivši
+                                skill fpzg-skill-pisanje, sada referenca
 scripts/gate.py                 JEDAN ULAZ za provjere faze: --faza plan|pisanje|audit|predaja.
                                 Svaki korak je ok / nalaz / preskočeno / alat pukao — zadnja
                                 dva se izgovaraju, ne prešućuju (pravila 8 i 20). --suho
