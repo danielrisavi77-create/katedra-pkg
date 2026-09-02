@@ -1,6 +1,6 @@
 ---
 name: rad-audit
-description: "Ispravlja nepotpuno zlatno pravilo za updateFields, dodaje provjeru placeholdera u fazu A i upisuje R14/R15 (lažni „citat bez reference\" 11→0, navodnici 6/6)."
+description: "Motor audita akademskog rada u .docx-u, faze A–G: integritet, citati, brojke, cross-check s izvornom građom, jezik, Word polja, ispravci. Aktiviraj na 'audit rada', 'provjeri citate/literaturu', 'usporedi rad s izvorima', 'zašto je tablica zaključana'. Ne aktiviraj kao kopilot: u projektu s .katedra/ zove ga katedra-lite mod 4 kroz engine.py. (Zadnje: R16 Vancouver (N) dijalekt; R14/R15; placeholderi u fazi A.)"
 ---
 
 # Rad-audit — pipeline za provjeru akademskih radova
@@ -80,7 +80,7 @@ su odgovorena. Dupli wizard je najbrži način da rad izgleda neozbiljno.
 ### 0.1 Guard — spriječi dupli intake
 
 - Postoji blok `STANJE-RADA` (v. 0.4) ili je rad **već priložen** i opseg jasan? → **PRESKOČI wizard**, potvrdi jednom rečenicom i kreni na fazu A.
-- Intake već odradio **radpilot** ili **katedra** (v. 0.0)? → ne ponavljaj ga.
+- Intake već odradila **katedra-lite** (v. 0.0)? → ne ponavljaj ga.
 - Inače → 0.2.
 
 ### 0.2 Prva poruka (točno ovaj format)
@@ -126,9 +126,11 @@ ogranicenja: <npr. nema izvorne građe → faza D preskočena>
 ### 0.6 Isporuka i predaja (handoff)
 
 - Kraj audita: izvještaj razvrstan **Kritično / Srednje / Kozmetičko** (`generate_report.py`) + tablica **„RUČNO PROVJERI"** (sve [PROVJERI STR.], pretpostavke za mentora, pravila fakulteta).
-- Traži se prepisivanje većih dijelova → **fpzg-skill-pisanje**, uz identičan skup citata i brojki.
-- Rad ne postoji ili je tek u planu → **plan-i-program**.
-- Nakon audita ponudi pripremu obrane (**radpilot**, mod 4).
+- Traži se prepisivanje većih dijelova → **katedra-lite mod 3** (poboljšanje; za FPZG učitava
+  `references/glas_fpzg.md`), uz identičan skup citata i brojki.
+- Rad ne postoji ili je tek u planu → **katedra-lite mod 1** (plan).
+- Nakon audita ponudi pripremu obrane (**katedra-lite mod 5**).
+- Aliasi `fpzg-skill-pisanje`, `plan-i-program`, `radpilot` više ne postoje kao samostalni skillovi.
 
 ---
 
