@@ -313,7 +313,15 @@ najskuplja greška u procesu.
     Dva dohvata istog PDF-a dala su 445 i 446–447 za isti odlomak — točna je bila 446.
     Ako stranice PDF-a teku 1–N, to je otisak, a ne svezak: brojevi se **ne izvode računom**,
     koliko god pomak izgledao očito. Dok stranica nije potvrđena, u tekstu stoji
-    `[PROVJERI STR.]`. Isto vrijedi za **termin** i **doseg**: ako izvoru pripisuješ naziv,
+    `[PROVJERI STR.]` — ali samo dok stranica POSTOJI i čeka potvrdu. Izvor koji tiskanu
+    paginaciju nema (mrežni izvještaj, HTML članak, .txt/.md bez prijeloma) nema što čekati:
+    `evidence_ingest.py` mu daje `page_label: null` i `passage: N`, i to je **gotov, citabilan
+    lokator** — citira se po odlomku, `(N, odl. P)`. Privremena oznaka na trajnom stanju je
+    kvar sama po sebi: `[PROVJERI STR.]` ondje šalje studenta da traži broj kojeg nema, a
+    tablica „RUČNO PROVJERI" puni se recima koji se ne mogu zatvoriti. Razlika je dakle
+    „stranica postoji, nepotvrđena" (privremeno) naspram „izvor stranicu nema" (trajno) —
+    v. `references/pisanje.md` §2.1. Isto vrijedi za **termin** i **doseg**: ako izvoru
+    pripisuješ naziv,
     naziv mora u njemu postojati (inače navedi izvorni oblik u zagradi), a „jedini/svi/prvi"
     mora stati unutar uzorka izvora — v. `references/pisanje.md` §2.2.
 

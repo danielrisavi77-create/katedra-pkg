@@ -187,7 +187,12 @@ Pravila koja vrijede svugdje:
 - **Točan locator uz specifičnu tvrdnju.** Za literaturu je to najčešće stranica; za pravne izvore članak/stavak/točka ili oznaka odluke prema uputama fakulteta.
 - Citat ide **odmah uz tvrdnju**, ne na kraj odlomka.
 - `(ibid.)` se ne koristi u tekstu.
-- Stranica koja se ne može potvrditi → `[PROVJERI STR.]`, i završi u tablici „RUČNO PROVJERI".
+- **Stranica koja postoji, ali nije potvrđena → `[PROVJERI STR.]`**, i završi u tablici
+  „RUČNO PROVJERI". To je PRIVREMENO stanje: lokator čeka provjeru iz same datoteke.
+- **Izvor koji stranicu uopće nema se locira po odlomku** — `(Autor, godina: odl. 3)`,
+  odnosno `(N, odl. 3)` u numeričkim dijalektima. To je TRAJNO stanje i gotov lokator:
+  `[PROVJERI STR.]` ondje ne stoji jer nema što čekati. Vrijedi za mrežne izvještaje,
+  HTML članke, institucijske objave i svaki `.txt`/`.md` bez tiskanog prijeloma.
 - Tvrdnja koje nema u priloženoj građi → `[TREBA IZVOR]`. **Ništa se ne izmišlja.**
 
 Dozvoljeni izvori su konkretne bibliografske jedinice: recenzirani članci, knjige i
@@ -258,6 +263,24 @@ python3 <KATEDRA_SKILL>/scripts/claim_ledger.py link \
 python3 <KATEDRA_SKILL>/scripts/claim_ledger.py validate \
   --claims ./.katedra/claims.jsonl --evidence ./.katedra/evidence.jsonl
 ```
+
+**Izvor bez tiskane paginacije.** `page_label` je TISKANA oznaka stranice, ne redni broj
+koji bi alat sam dodijelio. Kad je izvor `.txt`/`.md` bez prijeloma stranice ili PDF bez
+oznaka, `evidence_ingest.py` upisuje `page_label: null` i `passage: N` — i tu ne nedostaje
+ništa. Redni broj koji bi alat izmislio student bi prepisao u citat, a čitatelj ga ne bi
+mogao naći ni u jednom otisku; zato je `null` točan podatak, a ne rupa.
+
+```
+$ evidence_ingest.py assets/fixture_izvor_bez_paginacije.txt --source-id src_test --out ev.jsonl
+[evidence → ev.jsonl] dodano 5 passage(s), zamijenjeno 0, source=src_test
+$ grep -c 'page_label": null' ev.jsonl
+5
+```
+
+Odlomak je stabilna jedinica: granice se izvode iz praznih redaka u normaliziranom tekstu,
+ne iz prijeloma retka, pa dva ingesta iste datoteke daju iste granice i isti `evidence_id`.
+Citat po odlomku zato je provjerljiv jednako kao citat po stranici, i evidence gate ga
+prihvaća bez iznimke. `[PROVJERI STR.]` na takvom izvoru je nalaz o doktrini, ne o izvoru.
 
 `contextualizes` nije isto što i `supports`; `contradicts` se čuva, ne briše.
 `claim_ledger.py report` samo opisuje ledger. Prije nego claim uđe u tekst, napravi

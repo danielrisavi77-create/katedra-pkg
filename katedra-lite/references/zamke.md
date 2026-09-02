@@ -262,3 +262,61 @@ $ ls rad-docx/scripts/provjeri_povratak.py katedra-lite/scripts/provjeri_zamke_p
 
 Popravak: `inventar_paketa.py`-tip provjere koja svaki `scripts/<ime>.py` spomenut u `SKILL.md` i
 `references/*.md` traži na disku i pada ako ga nema; sljedeća zakrpa `rad-docx` nosi `zamke.md` 24–31.
+
+## 38. Nepotvrđen izvor dobiva simbol i obrazloženje, ali nijednu naredbu čovjeku, pa se nalaz preskače
+
+Vlasnik: `katedra-lite`. `verify_sources.py` za ⚠️ `unverified` i ⏸ `unavailable` ispisuje
+simbol, redak literature i rečenicu zašto provjera nije uspjela — i tu stane. Na fixtureu od
+5 jedinica to je 5 redaka na koje student ne zna odgovoriti: „formalno uredno, ali bez DOI-ja
+i URL-a" opisuje stanje, ne kretnju. Sažetak je čak i tješio („⚠️ ne znači ne postoji"), pa je
+ishod bio predvidiv: nalaz koji ništa ne traži tretira se kao nalaz koji ništa ne znači, i
+cijela skupina ⚠️ ispada iz tablice „RUČNO PROVJERI" iz pravila 7. Kvar je tih dvostruko —
+izlazni kod je 0, jer `unverified` po pravilu 18 ispravno NE blokira, pa ni gate ne prosvjeduje.
+
+```
+$ verify_sources.py assets/fixture_zahtjevi_covjeka.md --offline
+⚠️  Čavlek   1998   Turoperatori i svjetski turizam
+     formalno uredno, ali bez DOI-ja i URL-a — knjiga je takva sasvim uredna, samo se ne može provjeriti automatski
+                                                          → 5 redaka, 0 radnji  [izlazni kod: 0]
+
+$ verify_sources.py assets/fixture_zahtjevi_covjeka.md --offline --zahtjevi-covjeka provjera.md
+[zahtjevi za čovjeka → provjera.md] 5 izvora traži ručnu provjeru
+$ grep -c "PROVJERI RUČNO\|HITNO" provjera.md
+5
+```
+
+Popravak: zastavica `--zahtjevi-covjeka PUT` (`radnja_za_izvor`, `zahtjevi_covjeka`,
+`zapisi_zahtjeve`) piše markdown checklistu samo za izvore koji nisu `verified`, i svakom
+dodjeljuje radnju po tome što jedinica ima: DOI → otvori `doi.org/<doi>` i usporedi autora,
+godinu i naslov; URL → otvori adresu i provjeri je li na njoj baš ta jedinica (200 nije dokaz
+o sadržaju); ni jedno ni drugo → NSK, Hrčak, CroRIS, pa mentor. `conflict`/`invalid` idu pod
+`HITNO` (blokiraju predaju), ostalo pod `PROVJERI RUČNO`; ⏸ prvo traži ponovljenu provjeru jer
+je nalaz o mreži, ne o izvoru. Ograda koje nema: nijedan test ne traži da nalaz koji ne blokira
+ipak imenuje sljedeću kretnju — to je pravilo za oko, ne za stroj, i stoji u `references/kvar.md`.
+
+## 39. Doktrina ne poznaje lokator koji kod već proizvodi, pa se gotov citat tretira kao nedovršen
+
+Vlasnik: `katedra-lite`. `evidence_ingest.py` od popravka Q19 za izvor bez tiskane paginacije
+ispravno upisuje `page_label: null` i `passage: N` — radije nego izmišljen redni broj koji bi
+student prepisao u citat. Kod je dakle bio točan i nije mijenjan. Kvar je bio u tome što ta
+odluka nigdje nije bila zapisana kao doktrina: `SKILL.md` pravilo 28 i `references/pisanje.md`
+§2.1 poznavali su samo jedno stanje stranice — „nije potvrđena" → `[PROVJERI STR.]`. Izvor koji
+stranicu NEMA padao je u istu kantu, pa je trajno stanje dobivalo privremenu oznaku: student
+šalje sam sebe da traži broj kojeg nema, redak u tablici „RUČNO PROVJERI" se ne može zatvoriti,
+a mrežni izvještaji i HTML članci u praksi ispadaju iz dokaznog sloja jer „nemaju stranicu".
+
+```
+$ evidence_ingest.py assets/fixture_izvor_bez_paginacije.txt --source-id src_test --out ev.jsonl
+[evidence → ev.jsonl] dodano 5 passage(s), zamijenjeno 0, source=src_test
+$ grep -c 'page_label": null' ev.jsonl
+5                                    ← kod je uvijek bio ovakav; doktrina to nije priznavala
+$ grep -c "locira po odlomku" references/pisanje.md
+0                                    → poslije zakrpe: 1
+```
+
+Popravak: pravilo 28 i `pisanje.md` §2 sada razlikuju „stranica postoji, nepotvrđena"
+(privremeno, `[PROVJERI STR.]`, ide u tablicu) od „izvor stranicu nema" (trajno, citira se po
+odlomku `(N, odl. P)`, gotov je lokator i ne ide u tablicu); §2.1 dobiva odjeljak o
+`page_label: null` s mjerom i obrazloženjem zašto je `null` točan podatak, a ne rupa. Ograda:
+`assets/fixture_izvor_bez_paginacije.txt` s pet odlomaka drži brojku 5 provjerljivom — ako se
+fixtureu doda odlomak, provjera pukne i tjera na usklađivanje umjesto da tiho prođe.

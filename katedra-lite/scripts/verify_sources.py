@@ -1065,6 +1065,135 @@ def spremi_json(put, podaci):
     os.replace(tmp, put)
 
 
+# --------------------------------------------- zahtjevi za čovjeka (kvar 38)
+
+HITNO, RUCNO = "HITNO", "PROVJERI RUČNO"
+
+# Redoslijed je namjeran i on je cijela logika ove zastavice: DOI je najjeftiniji
+# put do odgovora (jedan klik — razriješi se ili ne), URL je sljedeći (adresa
+# odgovara, sadržaj se i dalje gleda okom), a jedinica bez oba traži katalog ili
+# mentora. Alat NE zna postoji li izvor — zna samo da ga on nije našao, pa radnja
+# nikad ne glasi „makni izvor", nego „pogledaj ondje gdje ovaj alat ne gleda".
+KATALOZI = ("katalogu NSK (katalog.nsk.hr)", "Hrčku (hrcak.srce.hr)",
+            "CroRIS-u (croris.hr)")
+
+
+def radnja_za_izvor(zapis):
+    """(oznaka, radnja) za jedan izvor koji nije `verified`.
+
+    Vraća konkretnu sljedeću kretnju, ne dijagnozu. Do ove zastavice izvještaj je
+    za ⚠️/⏸ ispisivao simbol i obrazloženje pa stao — student je ostajao s „nije
+    potvrđeno" i bez ijedne radnje, a takav se nalaz u praksi preskače.
+    """
+    ver = zapis["verification"]
+    oznaka = HITNO if ver["status"] in (CONFLICT, INVALID) else RUCNO
+
+    if zapis.get("doi"):
+        radnja = (f"otvori https://doi.org/{zapis['doi']} — ako se razriješi, prepiši autora, "
+                  f"godinu i naslov s te stranice u popis; ako ne, DOI je krivo prepisan i "
+                  f"traži se točan (DOI se ne pogađa).")
+    elif zapis.get("url"):
+        radnja = (f"otvori {zapis['url']} i provjeri je li na toj adresi baš ova jedinica. "
+                  f"Adresa koja odgovara nije dokaz o sadržaju — poslužitelj koji na "
+                  f"nepostojeću stranicu vraća 200 ovdje izgleda uredno.")
+    else:
+        radnja = ("jedinica nema ni DOI ni URL, pa je stroj nema gdje provjeriti: potraži je u "
+                  + ", ".join(KATALOZI) + ". Ako je nema ni ondje, pitaj mentora je li "
+                  "bibliografski redak točno prepisan iz jedinice koju si držao u ruci.")
+
+    if zapis["status"] == NEDOSTUPNO:
+        radnja = ("prvo ponovi provjeru — ⏸ je nalaz o mreži, ne o izvoru. Ako i drugi put "
+                  "bude ⏸: " + radnja)
+    if ver["status"] == CONFLICT:
+        radnja = ("razriješi koja je bibliografska jedinica točna prije nego išta drugo — "
+                  "dok sukob stoji, izvor ne ulazi u rad. " + radnja)
+    if ver["status"] == INVALID:
+        radnja = ("izvor je nevaljan i ne ulazi u rad dok se ne ispravi ili zamijeni. "
+                  + radnja)
+    return oznaka, radnja
+
+
+def zahtjevi_covjeka(izvori):
+    """Izvori koji NISU `verified`, svaki sa svojom sljedećom radnjom."""
+    stavke = []
+    for z in izvori:
+        if z["verification"]["status"] == VERIFIED:
+            continue
+        oznaka, radnja = radnja_za_izvor(z)
+        stavke.append({
+            "oznaka": oznaka,
+            "source_id": z.get("source_id"),
+            "autor": z.get("autor") or "—",
+            "godina": z.get("godina") or "—",
+            "naslov": z.get("naslov") or z.get("unos") or "—",
+            "status": z["status"],
+            "semantic": z["verification"]["status"],
+            "razlog": z.get("obrazlozenje") or z["verification"].get("reason") or "—",
+            "radnja": radnja,
+        })
+    return stavke
+
+
+def zapisi_zahtjeve(put, datoteka, stavke, ukupno, lokatorski=0):
+    """Checklista koju čovjek otvori i odradi redak po redak.
+
+    Markdown, a ne JSON, jer je adresat student: popis se prepisuje u tablicu
+    „RUČNO PROVJERI" (SKILL.md, pravilo 7) i nosi se mentoru.
+    """
+    hitni = [s for s in stavke if s["oznaka"] == HITNO]
+    rucni = [s for s in stavke if s["oznaka"] == RUCNO]
+
+    r = []
+    r.append("# RUČNO PROVJERI — izvori")
+    r.append("")
+    r.append(f"Popis: `{os.path.basename(datoteka)}` · {len(stavke)} od {ukupno} "
+             f"{mn(ukupno, 'izvora', 'izvora', 'izvora')} nije potvrđeno strojno.")
+    r.append("")
+    r.append("> `verify_sources.py` odgovara samo na „može li se ovo naći\". `unverified` nije")
+    r.append("> optužba: hrvatske knjige, zbornici i fakultetska izdanja rijetko su u Crossrefu.")
+    r.append("> Zato ovdje ne piše „makni izvor\" nego gdje pogledati — ondje gdje alat ne gleda.")
+    if lokatorski:
+        r.append(">")
+        r.append(f"> Uz ovo: {lokatorski} strojno potvrđenih izvora prošlo je samo na razini")
+        r.append("> adrese (scope: locator). Ti ovdje nisu, ali „adresa odgovara\" nije")
+        r.append("> „jedinica je ondje\".")
+    r.append("")
+
+    if not stavke:
+        r.append("✅ Svaki izvor s popisa potvrđen je strojno — nema ručnih provjera.")
+        r.append("")
+    for naslov, skupina, uvod in (
+            ("HITNO — blokira predaju", hitni,
+             "Sukob ili nevaljan izvor. Rad se ne predaje dok ovo stoji."),
+            ("PROVJERI RUČNO — ne blokira, ali ulazi u tablicu", rucni,
+             "Alat nije mogao potvrditi jedinicu. To nije isto što i „ne postoji\".")):
+        if not skupina:
+            continue
+        r.append(f"## {naslov} ({len(skupina)})")
+        r.append("")
+        r.append(uvod)
+        r.append("")
+        for s in skupina:
+            r.append(f"- [ ] **{s['oznaka']}** · {s['autor']} ({s['godina']}) — {s['naslov']}")
+            r.append(f"      - stanje: {s['status']} `{s['semantic']}` · {s['razlog']}")
+            r.append(f"      - radnja: {s['radnja']}")
+            if s["source_id"]:
+                r.append(f"      - source_id: `{s['source_id']}`")
+            r.append("")
+
+    r.append("---")
+    r.append("")
+    r.append("Kad redak dobije odgovor, upiši ga u popis literature i ponovi provjeru.")
+    r.append("Redak koji ostane bez odgovora ide mentoru kao pitanje, ne u rad kao tvrdnja.")
+    r.append("")
+
+    os.makedirs(os.path.dirname(os.path.abspath(put)) or ".", exist_ok=True)
+    tmp = put + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write("\n".join(r))
+    os.replace(tmp, put)
+
+
 def main():
     ap = argparse.ArgumentParser(
         description="Provjera postoje li izvori s popisa (Crossref / Hrčak / HTTP).")
@@ -1085,6 +1214,9 @@ def main():
                     help="profil fakulteta (JSON) — provjeri minimalan broj izvora")
     ap.add_argument("--tip", metavar="TIP",
                     help="vrsta rada za --profil (seminarski/zavrsni/diplomski)")
+    # kvar 38: ⚠️/⏸ bez naredne kretnje je nalaz koji se u praksi preskače.
+    ap.add_argument("--zahtjevi-covjeka", dest="zahtjevi", metavar="PUT",
+                    help="zapiši checklistu ručnih provjera za izvore koji nisu potvrđeni")
     a = ap.parse_args()
 
     if not os.path.isfile(a.datoteka):
@@ -1237,6 +1369,14 @@ def main():
         print("         🟠 conflict blokira izvor dok se ne razriješi koja je bibliografska jedinica točna.")
     if brojac[NEPOSTOJI]:
         print("         ❌ invalid izvor ne ulazi u rad dok se ne ispravi ili zamijeni.")
+
+    if a.zahtjevi:
+        print()
+        stavke = zahtjevi_covjeka(izvori)
+        zapisi_zahtjeve(a.zahtjevi, a.datoteka, stavke, len(izvori), lokatorski)
+        print(f"[zahtjevi za čovjeka → {a.zahtjevi}] {len(stavke)} "
+              f"{mn(len(stavke), 'izvor traži', 'izvora traže', 'izvora traži')} "
+              f"ručnu provjeru")
 
     if a.json_out:
         spremi_json(a.json_out, {
