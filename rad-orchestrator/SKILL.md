@@ -1,6 +1,6 @@
 ---
 name: rad-orchestrator
-description: "v1.1 — skripta ugrađena kao Dodatak A (kartica ju nosi bez paketa), tolerantna na katedra-lite < v1.9, mod rad_docx za gotov rad. Orkestrator faza rada (plan → pisanje → audit → predaja) koji kroz Workflow tool pokreće STVARNE katedra-lite skripte i satelite (rad-audit, rad-docx, fpzg-diplomski, replikacija-pspp), s paralelnim multi-lens auditom, bidirekcionalnim povratkom na raniju fazu i zaustavljanjem s pitanjima za autora umjesto beskonačne petlje. Aktiviraj kad korisnik kaže 'pokreni orkestrator', 'provuci rad kroz sve faze', 'audit + predaja u jednom', 'rad-orchestrator', ili kad želi da se više Katedrinih skillova pokrene po fazi umjesto jednog. Ne aktiviraj za jedan izolirani zadatak (npr. samo tipografija) — za to je katedra-lite izravno."
+description: "Orkestrator faza rada (plan → pisanje → audit → predaja) za katedra-lite; v1.2: lens budget (leće se ponavljaju samo kad se gate promijenio), paket iz katedra-pkg repoa, skripta kao Dodatak A. Orkestrator faza rada (plan → pisanje → audit → predaja) koji kroz Workflow tool pokreće STVARNE katedra-lite skripte i satelite (rad-audit, rad-docx, fpzg-diplomski, replikacija-pspp), s paralelnim multi-lens auditom, bidirekcionalnim povratkom na raniju fazu i zaustavljanjem s pitanjima za autora umjesto beskonačne petlje. Aktiviraj kad korisnik kaže 'pokreni orkestrator', 'provuci rad kroz sve faze', 'audit + predaja u jednom', 'rad-orchestrator', ili kad želi da se više Katedrinih skillova pokrene po fazi umjesto jednog. Ne aktiviraj za jedan izolirani zadatak (npr. samo tipografija) — za to je katedra-lite izravno."
 ---
 
 # RAD-ORCHESTRATOR — više skillova po fazi, kroz stvarne skripte
@@ -12,17 +12,24 @@ sljedeći alat. Slobodan markdown bez `.katedra/` stanja je kvar, ne rezultat.
 
 ## 0. Ulazni protokol — prije poziva Workflowa
 
-1. **Pronađi katedra-lite** (nikad ne pogađaj putanju):
+1. **Dohvati paket** (isti korak kao katedra-lite §0.0 — repo `katedra-pkg`; synced kopija je rezerva):
    ```bash
-   ls -d /root/.claude/skills/synced/*/katedra-lite ~/.claude/skills/katedra-lite /home/claude/.claude/skills/katedra-lite 2>/dev/null | head -1
+   export KATEDRA_PKG="$HOME/.katedra-pkg"; export KATEDRA_PKG_URL="UPIŠI_REMOTE_URL"
+   if [ -d "$KATEDRA_PKG/.git" ]; then git -C "$KATEDRA_PKG" pull -q --ff-only 2>/dev/null || echo "⚠️ pull nije prošao — lokalna kopija";
+   elif [ "$KATEDRA_PKG_URL" != "UPIŠI_REMOTE_URL" ]; then git clone -q --depth 1 "$KATEDRA_PKG_URL" "$KATEDRA_PKG" 2>/dev/null || echo "⚠️ clone nije prošao"; fi
+   if [ -f "$KATEDRA_PKG/bin/env.sh" ]; then KATEDRA_ENV_GLASNO=1 . "$KATEDRA_PKG/bin/env.sh";
+   else KATEDRA_SKILL="$(ls -d /root/.claude/skills/synced/*/katedra-lite ~/.claude/skills/katedra-lite 2>/dev/null | head -1)"; echo "⚠️ paket nije dostupan — synced kopija: $KATEDRA_SKILL"; fi
    ```
-   Ako nema → stani i reci korisniku; bez katedra-lite orkestrator nema što zvati.
-2. **Provjeri satelite** (mapa u kojoj je katedra-lite obično sadrži i njih):
+   `KATEDRA_SKILL` i `<SLUG>_HOME` koje ovaj korak izveze idu u `args` (`katedra_skill`, `sateliti_dir`
+   = `$KATEDRA_PKG`). Svaki idući bash poziv počinje s `. "$KATEDRA_PKG/bin/env.sh"` (Cowork ne pamti
+   okolinu između poziva). Ako ni paketa ni synced kopije nema → stani i reci korisniku.
+2. **Provjeri satelite**:
    ```bash
-   python3 <KATEDRA_SKILL>/scripts/vjestine.py --provjeri
+   . "$KATEDRA_PKG/bin/env.sh"; python3 "$KATEDRA_SKILL/scripts/vjestine.py" --provjeri
    ```
    Ako nešto fali, reci koji satelit i što se gubi (rad-audit → faze A–G; rad-docx → predajni docx;
-   replikacija-pspp → brojke). Workflow ih traži kao susjede katedra-lite ili preko `args.sateliti_dir`.
+   replikacija-pspp → brojke). Workflow ih traži preko `<SLUG>_HOME`, pa kao susjede katedra-lite ili
+   preko `args.sateliti_dir`.
 3. **Prikupi args razgovorom s korisnikom** (AskUserQuestion ili chat) — ovo je JEDINO mjesto gdje se
    korisnika pita; agenti unutar workflowa nemaju živog sugovornika i ne smiju simulirati razgovor:
    - `tip` (seminar | zavrsni | diplomski | esej), `tema`, `fakultet` (slug: fpzg/efzg/libertas iz
@@ -37,12 +44,13 @@ sljedeći alat. Slobodan markdown bez `.katedra/` stanja je kvar, ne rezultat.
      `references/fakulteti/hks-fzs.json`); inače formalni nalazi ostaju „preskočeno" (pravilo 8).
    - `project_root`: APSOLUTNA putanja mape rada (npr. `/home/claude/rad-<slug>`); agenti ne dijele cwd.
 4. **Pripremi skriptu tamo gdje je Workflow može čitati** (radna mapa). Prvi redak skripte nosi
-   verziju (`// rad-orchestrator v1.1`); paket može biti stariji od ovog SKILL.md-a:
+   verziju (`// rad-orchestrator v1.2`); redoslijed izvora: paket → synced skill → Dodatak A:
    ```bash
-   head -1 <OVAJ_SKILL>/scripts/rad-orchestrator.js   # ako je „v1.1" ili novija → cp; inače zapiši Dodatak A
-   cp <OVAJ_SKILL>/scripts/rad-orchestrator.js ./rad-orchestrator.js
+   . "$KATEDRA_PKG/bin/env.sh" 2>/dev/null
+   SRC="$RAD_ORCHESTRATOR_HOME/scripts/rad-orchestrator.js"; [ -f "$SRC" ] || SRC="$(ls /root/.claude/skills/synced/*/rad-orchestrator/scripts/rad-orchestrator.js 2>/dev/null | head -1)"
+   head -1 "$SRC"; cp "$SRC" ./rad-orchestrator.js
    ```
-   Ako datoteke nema ili je starija od v1.1: zapiši **Dodatak A** (dolje) doslovno u `./rad-orchestrator.js`
+   Ako datoteke nema ili je starija od v1.2: zapiši **Dodatak A** (dolje) doslovno u `./rad-orchestrator.js`
    (Write alat) — to je ista skripta, i to je jedini razlog zašto je ovdje u cijelosti.
 
 ## 1. Poziv
@@ -92,10 +100,10 @@ prešućuje. `score`/`pokrivenost` dolaze iz `napredak.py`; score ispod pokriven
 
 ---
 
-## Dodatak A — `rad-orchestrator.js` v1.1 (zapiši doslovno ako paket nema tu verziju)
+## Dodatak A — `rad-orchestrator.js` v1.2 (zapiši doslovno ako paket nema tu verziju)
 
-```javascript
-// rad-orchestrator v1.1 — 2026-09-01 (tolerantan na katedra-lite < v1.9; rad_docx mod; sateliti preko <SLUG>_HOME)
+```js
+// rad-orchestrator v1.2 — 2026-09-02 (lens budget: leće se ponavljaju samo kad se gate promijenio ili su prošli put imale nalaze; args.lens_budget=false isključuje; katedra-pkg <SLUG>_HOME; tolerantan na katedra-lite < v1.9; rad_docx mod)
 export const meta = {
   name: 'rad-orchestrator',
   description: 'Vođa kroz faze rada koji zove STVARNE katedra-lite skripte (stanje_init → plan_state → rukopis → build_docx → gate → napredak); paralelni audit, bidirekcionalni flow, ceka_autora umjesto ping-ponga',
@@ -186,7 +194,8 @@ const FAZA_REZULTAT_SCHEMA = {
     treba_autora: { type: 'boolean', description: 'Postoje nalazi koje NIJEDNA automatizirana faza ne smije riješiti (nedostaje izvor za tvrdnju, sadržajna odluka, mentorov zahtjev). To NIJE strukturni problem i NE vraća se na raniju fazu.' },
     pitanja_za_autora: { type: 'array', items: { type: 'string' }, description: 'Konkretna pitanja/odluke koje autor mora dati da se nastavi' },
     score: { type: ['integer', 'null'], description: 'health_score iz napredak.py, null ako nema' },
-    pokrivenost: { type: ['number', 'null'] }
+    pokrivenost: { type: ['number', 'null'] },
+    gate_koraci: { type: 'array', items: { type: 'object', properties: { naziv: { type: 'string' }, stanje: { type: 'string', enum: ['ok', 'nalaz', 'preskoceno', 'pukao'] }, otisak: { type: 'string', description: 'kratak sažetak nalaza koraka (≤80 znakova) — isti nalaz mora dati isti otisak' } }, required: ['naziv', 'stanje', 'otisak'] }, description: 'SAMO audit priprema: svaki korak iz gate.json; lens budget uspoređuje ovo s prošlim prolazom' }
   },
   required: ['sazetak', 'artefakti', 'naredbe_pale', 'problem_pronaden', 'povratak_na_fazu', 'kontekst_problema', 'treba_autora', 'pitanja_za_autora', 'score', 'pokrivenost']
 }
@@ -289,6 +298,7 @@ FAZA: AUDIT — priprema (mehanički). Korisnik ima ${tip} rad "${config.tema}".
 5. python3 ${S}/nalazi_trag.py analiza --faza audit  (što preživljava kroz krugove)
 
 U sazetak stavi: sažetak gate.json (ok/nalaz/preskočeno/pukao, što blokira) i koje su datoteke nalaza nastale u ${K}/ (stil.json, pravila.json, arg.json...).
+U gate_koraci stavi SVAKI korak iz gate.json: naziv, stanje (ok|nalaz|preskoceno|pukao) i otisak = deterministički kratak sažetak nalaza tog koraka (npr. "3 nalaza: font, prored, TOC" — isti nalazi → isti otisak; ok → "ok"). Lens budget po tome odlučuje koje se leće ponavljaju.
 Vrati JSON prema shemi (problem_pronaden=false, treba_autora=false).`
 }
 
@@ -317,12 +327,12 @@ const NALAZ_SCHEMA = {
 
 function auditLensovi() {
   const l = [
-    { naziv: 'Sadržaj i logika', uputa: `Pozovi Skill tool sa skill='rad-audit' (dio o logici/argumentaciji). Pročitaj ${K}/plan.json i ${K}/arg.json ako postoji.`, fokus: 'Prati li argumentacija plan, logičke rupe, teza ↔ zaključak. Nedostaje li poglavlje iz plana → kategorija strukturno.' },
-    { naziv: 'Citati i reference', uputa: `Pozovi Skill tool sa skill='rad-audit' (dio o citiranju). Pročitaj ${K}/gate.json korake o izvorima/literaturi.`, fokus: 'Tvrdnje bez izvora, [TREBA IZVOR], nedosljedan stil, siročad. Tvrdnja kojoj FALI izvor a agent ga ne smije izmisliti → kategorija treba_autora.' },
-    { naziv: 'Plagijat i AI-tekst', uputa: `Pročitaj ${K}/stil.json ako postoji (check_ai_style) i ${K}/gate.json korak "tragovi generiranog teksta".`, fokus: 'Predvidljive fraze, ponavljanja, generički prijelazi. Uglavnom mehanicko.' },
-    { naziv: 'Formatiranje i jezik', uputa: `Pročitaj ${K}/gate.json korake pravopis/tipografija/profil i ${K}/pravila.json ako postoji.`, fokus: 'Navodnici, brojevi, jedinice, terminologija. Mehanicko osim ako profil fakulteta traži odluku autora.' }
+    { naziv: 'Sadržaj i logika', koraci: /argument|teza|logik|plan|dijel|zadat|rubrik|proturje/i, uputa: `Pozovi Skill tool sa skill='rad-audit' (dio o logici/argumentaciji). Pročitaj ${K}/plan.json i ${K}/arg.json ako postoji.`, fokus: 'Prati li argumentacija plan, logičke rupe, teza ↔ zaključak. Nedostaje li poglavlje iz plana → kategorija strukturno.' },
+    { naziv: 'Citati i reference', koraci: /citat|literatur|izvor|referenc|evidence|fusnot|siro/i, uputa: `Pozovi Skill tool sa skill='rad-audit' (dio o citiranju). Pročitaj ${K}/gate.json korake o izvorima/literaturi.`, fokus: 'Tvrdnje bez izvora, [TREBA IZVOR], nedosljedan stil, siročad. Tvrdnja kojoj FALI izvor a agent ga ne smije izmisliti → kategorija treba_autora.' },
+    { naziv: 'Plagijat i AI-tekst', koraci: /generiran|\bai\b|stil|ponavlj|zamk|original|preklap/i, uputa: `Pročitaj ${K}/stil.json ako postoji (check_ai_style) i ${K}/gate.json korak "tragovi generiranog teksta".`, fokus: 'Predvidljive fraze, ponavljanja, generički prijelazi. Uglavnom mehanicko.' },
+    { naziv: 'Formatiranje i jezik', koraci: /pravopis|tipograf|profil|pravil|format|jezik|odloma|prikaz|slik|geometr/i, uputa: `Pročitaj ${K}/gate.json korake pravopis/tipografija/profil i ${K}/pravila.json ako postoji.`, fokus: 'Navodnici, brojevi, jedinice, terminologija. Mehanicko osim ako profil fakulteta traži odluku autora.' }
   ]
-  if (empirijski) l.push({ naziv: 'Empirijska provjera', uputa: `Pozovi Skill tool sa skill='replikacija-pspp'.`, fokus: 'Brojke i statističke tvrdnje: provjerljive i konzistentne? Brojka bez podataka → treba_autora.' })
+  if (empirijski) l.push({ naziv: 'Empirijska provjera', koraci: /izracun|brojk|formul|statist|replik|model/i, uputa: `Pozovi Skill tool sa skill='replikacija-pspp'.`, fokus: 'Brojke i statističke tvrdnje: provjerljive i konzistentne? Brojka bez podataka → treba_autora.' })
   return l
 }
 
@@ -392,23 +402,58 @@ ${prompt}`
 // ─────────────────────────────────────────────────────────
 // 3. AUDIT — priprema (gate) → paralelni lensovi → sinteza
 // ─────────────────────────────────────────────────────────
+// Lens budget (v1.2): drugi i svaki idući audit ponavlja samo leće čiji su se gate koraci
+// promijenili od prošlog prolaza ili koje su prošli put imale nalaze (popravak se mora
+// potvrditi). Ostale leće ne troše agenta — njihovi prošli nalazi ulaze u sintezu označeni
+// `iz_proslog_prolaza`. args.lens_budget=false → sve leće uvijek.
+let zadnjiAudit = null
+const LENS_BUDGET = config.lens_budget !== false
+
+function koraciZaLens(lens, koraci) {
+  return (koraci || []).filter((k) => lens.koraci && lens.koraci.test(k.naziv || ''))
+    .map((k) => `${k.naziv}|${k.stanje}|${k.otisak}`).sort().join('\n')
+}
+
+function odlukaBudgeta(lensovi, priprema) {
+  if (!LENS_BUDGET) return { pokreni: lensovi, preskoci: [], razlog: 'lens_budget isključen' }
+  if (!zadnjiAudit) return { pokreni: lensovi, preskoci: [], razlog: 'prvi audit' }
+  const nemaPodataka = !(priprema.gate_koraci || []).length || !(zadnjiAudit.gate_koraci || []).length
+  if (nemaPodataka) return { pokreni: lensovi, preskoci: [], razlog: 'priprema nije vratila gate_koraci' }
+  const pokreni = [], preskoci = []
+  for (const l of lensovi) {
+    const prije = koraciZaLens(l, zadnjiAudit.gate_koraci)
+    const sada = koraciZaLens(l, priprema.gate_koraci)
+    const imaoNalaze = (zadnjiAudit.nalaziPoLensu[l.naziv] || []).length > 0
+    if (prije !== sada || imaoNalaze) pokreni.push(l)
+    else preskoci.push(l)
+  }
+  return { pokreni, preskoci, razlog: 'gate otisak + prošli nalazi' }
+}
+
 async function izvrsiAudit(kontekst) {
   const priprema = await agent(sPovratkom(promptAuditPriprema(), kontekst),
     { label: 'Audit: gate + snapshot', phase: 'Audit', schema: FAZA_REZULTAT_SCHEMA, agentType: 'general-purpose', effort: 'low' })
   log(`🔧 audit priprema: ${priprema.sazetak.slice(0, 200)}`)
 
   const lensovi = auditLensovi()
-  log(`🔎 ${lensovi.length} paralelnih lensova...`)
-  const rez = await parallel(lensovi.map((l) => () => agent(promptLens(l, priprema),
-    { label: `Lens: ${l.naziv}`, phase: 'Audit', schema: NALAZ_SCHEMA, agentType: 'general-purpose' })))
+  const { pokreni, preskoci, razlog } = odlukaBudgeta(lensovi, priprema)
+  log(`🔎 lens budget (${razlog}): pokrećem ${pokreni.length}/${lensovi.length}${preskoci.length ? ' — preskačem: ' + preskoci.map((l) => l.naziv).join(', ') : ''}`)
+  const rez = pokreni.length ? await parallel(pokreni.map((l) => () => agent(promptLens(l, priprema),
+    { label: `Lens: ${l.naziv}`, phase: 'Audit', schema: NALAZ_SCHEMA, agentType: 'general-purpose' }))) : []
   const valid = rez.filter(Boolean)
-  const svi = valid.flatMap((r) => (r.nalazi || []).map((n) => ({ ...n, lens: r.lens })))
+  const nalaziPoLensu = {}
+  for (const l of pokreni) nalaziPoLensu[l.naziv] = []
+  for (const r of valid) nalaziPoLensu[r.lens] = (r.nalazi || []).map((n) => ({ ...n, lens: r.lens }))
+  for (const l of preskoci) nalaziPoLensu[l.naziv] = (zadnjiAudit.nalaziPoLensu[l.naziv] || []).map((n) => ({ ...n, iz_proslog_prolaza: true }))
+  const svi = Object.values(nalaziPoLensu).flat()
   const poKat = svi.reduce((a, n) => { a[n.kategorija] = (a[n.kategorija] || 0) + 1; return a }, {})
-  log(`📊 ${svi.length} nalaza iz ${valid.length}/${lensovi.length} lensova — ${JSON.stringify(poKat)}`)
+  log(`📊 ${svi.length} nalaza (${valid.length}/${pokreni.length} leća vratilo rezultat, ${preskoci.length} iz prošlog prolaza) — ${JSON.stringify(poKat)}`)
+  zadnjiAudit = { gate_koraci: priprema.gate_koraci || [], nalaziPoLensu }
 
   const sinteza = await agent(promptSinteza(svi, priprema),
     { label: 'Audit: sinteza + odluka', phase: 'Audit', schema: FAZA_REZULTAT_SCHEMA, agentType: 'general-purpose', effort: 'high' })
   sinteza.artefakti = [...new Set([...(priprema.artefakti || []), ...(sinteza.artefakti || [])])]
+  sinteza.lens_budget = { pokrenuto: pokreni.map((l) => l.naziv), preskoceno: preskoci.map((l) => l.naziv) }
   return sinteza
 }
 
@@ -451,7 +496,7 @@ while (idx < FAZA_REDOSLIJED.length && iteracija < MAX_UKUPNO_ITERACIJA) {
   }
   if (!r) { log(`⚠️ ${naziv}: agent nije vratio rezultat — prekid`); return zavrsi('agent_bez_rezultata', { faza }) }
 
-  povijest.push({ faza, posjet: posjeceno[faza], sazetak: r.sazetak, artefakti: r.artefakti, naredbe_pale: r.naredbe_pale, score: r.score, pokrivenost: r.pokrivenost, vraceno_iz: kontekstPovratka })
+  povijest.push({ faza, posjet: posjeceno[faza], lens_budget: r.lens_budget, sazetak: r.sazetak, artefakti: r.artefakti, naredbe_pale: r.naredbe_pale, score: r.score, pokrivenost: r.pokrivenost, vraceno_iz: kontekstPovratka })
   if (Array.isArray(r.artefakti)) sviArtefakti.push(...r.artefakti)
   log(`📄 ${naziv}: score ${r.score ?? '—'} / pokrivenost ${r.pokrivenost ?? '—'} | artefakti: ${(r.artefakti || []).length}${(r.naredbe_pale || []).length ? ' | PALE: ' + r.naredbe_pale.join('; ') : ''}`)
   kontekstPovratka = null
