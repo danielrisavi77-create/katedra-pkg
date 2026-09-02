@@ -16,6 +16,9 @@ if [ -d "$DEST/.git" ]; then
   if [ -n "$URL" ] && [ "$(git -C "$DEST" remote get-url origin 2>/dev/null)" != "$URL" ]; then
     git -C "$DEST" remote set-url origin "$URL" 2>/dev/null || git -C "$DEST" remote add origin "$URL"
   fi
+  # __pycache__ koje skripte ostave nisu u repou, ali blokiraju --ff-only pull kad
+  # se u novoj verziji pojavi datoteka istog imena; čiste se prije pulla.
+  find "$DEST" -name __pycache__ -type d -prune -exec rm -rf {} + 2>/dev/null
   if git -C "$DEST" remote get-url origin >/dev/null 2>&1; then
     if out=$(git -C "$DEST" pull -q --ff-only 2>&1); then
       :
