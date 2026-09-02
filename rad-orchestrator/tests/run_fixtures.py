@@ -225,6 +225,9 @@ def main():
         sys.exit(0 if smoke(fx, root, args) else 1)
     else:
         rez = json.loads(Path(a.rezultat).read_text(encoding="utf-8"))
+        # Workflow tool sprema omot {summary, logs, result, …}; goli zavrsi() JSON ima "status"
+        if "status" not in rez and isinstance(rez.get("result"), dict):
+            rez = rez["result"]
         sys.exit(0 if provjeri(fx, root, rez) else 1)
 
 
