@@ -105,7 +105,11 @@ AUTHOR_YEAR_NARRATIVE_DETAIL = re.compile(
 # tu točku u tekstu, pa je nastajalo „(Čavlek, 1998..)" i citat se više NIJE
 # prepoznavao — verify_rewrite je uspoređivao Counter() s Counter() i javljao
 # „0 referenci, identično" iako je citat u međuvremenu zamijenjen.
-_LOK_BROJ = r"\d+(?:\s*[–—-]\s*\d+)?"
+# v1.9 (nalaz iz orchestrator testa): kanonski placeholder pravila 2 („(Autor, 2020:
+# [PROVJERI STR.])") je lokator koji još nije potvrđen — citat i dalje POSTOJI. Bez
+# ove grane check_argument je javljao „RASPRAVA i ZAKLJUČAK bez citata" na radu s 25
+# citata, samo zato što stranice još nisu bile potvrđene.
+_LOK_BROJ = r"(?:\d+(?:\s*[–—-]\s*\d+)?|\[PROVJERI STR\.?\])"
 _LOK_REP = r"(?:\s*\.?\s*(?:i|te)\s*" + _LOK_BROJ + r")?\s*\.?"
 LOKATOR = re.compile(
     r"((?:1[89]|20)\d{2}\.?[a-z]?)"

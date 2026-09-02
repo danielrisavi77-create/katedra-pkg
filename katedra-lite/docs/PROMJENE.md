@@ -1806,3 +1806,7 @@ poruka koju je lanac proizveo bila je lažna.
 - **`check_rules.py`**: `provjeri_opseg` prima `zadano_korisnikom` i poštuje razinu nalaza.
 
 - **Preimenovanje u `katedra-lite`.** Paket je objavljen pod novim imenom da ne prepiše postojeću instalaciju skilla `katedra`. Stanje projekta ostaje u `.katedra/`, pa se započeti radovi nastavljaju. `tests/` i `evals/` nisu u paketu (ograničenje broja datoteka); za razvoj skilla uzmi puni paket.
+
+## v1.9.1 — lokator [PROVJERI STR.] je citat (2. 9. 2026.)
+
+- `citation_dialects.LOKATOR` prepoznaje `(Autor, 2020: [PROVJERI STR.])` i `, str. [PROVJERI STR.]` kao lokator; `check_argument` je na FPZG seminarskom s 24 citata javljao „3 citata, RASPRAVA i ZAKLJUČAK bez citata" samo zato što stranice još nisu bile potvrđene. Mjereno: 3 → 24 citata, 0 poglavlja bez citata; HKS (Vancouver) i FPZG autor-godina regresija nepromijenjeni.
