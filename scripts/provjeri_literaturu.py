@@ -166,6 +166,13 @@ def provjeri_jedinicu(t, oblik):
     m = GODINA.search(t)
     if not m:
         nalazi.append((UPOZ, "nema godine izdanja"))
+    elif oblik["tocka_iza_godine"] is not None and oblik.get("stil") in NUMERICKI_STILOVI:
+        # v1.9 (kvar 35): u numeričkim dijalektima (Vancouver/IEEE) godina stoji
+        # u sredini jedinice („2020;12(3):45–50.") ili neposredno prije završne
+        # točke jedinice („Zagreb: ZVU; 2014."). Ta točka zatvara jedinicu, ne
+        # godinu — „godina s točkom" je svojstvo autor-godina popisa i ovdje se
+        # NE provjerava. 11/75 lažnih ❌ na stvarnom HKS radu.
+        pass
     elif oblik["tocka_iza_godine"] is not None:
         ima_tocku = bool(re.search(r"\b\d{4}\.\)?", m.group(0)))
         if oblik["tocka_iza_godine"] and not ima_tocku:
@@ -173,6 +180,9 @@ def provjeri_jedinicu(t, oblik):
         elif not oblik["tocka_iza_godine"] and ima_tocku:
             nalazi.append((LOSE, f"godina s točkom ({m.group(0)}), a profil ju ne traži"))
     return nalazi
+
+
+NUMERICKI_STILOVI = ("ieee", "vancouver")
 
 
 def provjeri_oblikovanje(odlomci, oblik):
