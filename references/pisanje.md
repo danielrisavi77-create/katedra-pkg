@@ -168,14 +168,18 @@ kirurgiju nad postojećim odlomcima — v. §0 o rukopisu kao izvoru istine.
 
 ## 2. Citiranje
 
-Format dolazi iz profila (`citiranje.u_tekstu`), ne iz navike. Dvije stvarne varijante:
+Format dolazi iz profila (`citiranje.u_tekstu`), ne iz navike. Tablica je samo
+ilustracija — **dijalekt i oblik u tekstu uvijek dolaze iz `resolved_profile.json`
+(`citiranje.stil`, `citiranje.u_tekstu`), nikad iz ove tablice**; kad se tablica i profil
+razlikuju, profil ima pravo, a tablica se ispravlja (v1.9: red FPZG je nosio `str.`, a
+profil `fpzg.json` traži dvotočku bez „str." — `(Becker, 2007: 9)`).
 
 | profil | u tekstu | u popisu |
 |---|---|---|
-| `autor-godina` (FPZG) | `(Lindblom, 1959, str. 81)` | s uvlakom, točka na kraju |
+| `autor-godina` (FPZG) | `(Lindblom, 1959: 81)` — **dvotočka** pred stranicom, bez „str.", godina bez točke | s uvlakom, `Prezime, Ime (Godina) Naslov. Mjesto: Nakladnik.` |
 | `apa-hr` (EFZG) | `(Čavlek, 1998., str. 41)` | bez uvlake, **zarez** iza godine, bez završne točke |
 | `ieee` | `[1]`, `[2, 3]`, `[4]–[6]` | brojčani popis prema redoslijedu citiranja |
-| `vancouver` (HKS-FZS, MEF) | `(1)`, `(2, 5)`, `(3–7)` — prije interpunkcije | `1. Autor A, Autor B. Naslov. Časopis. 2020;12(3):45–50.`, „i sur." nakon 6 autora, po redoslijedu prvog pojavljivanja |
+| `vancouver` (HKS-FZS, MEF) | `(12)`, `(12, 15)`, `(12–15)` — ovalne zagrade, en-crtica u rasponu, razmak iza zareza, prije interpunkcije | `1. Autor A, Autor B. Naslov. Časopis. 2020;12(3):45–50.`, „i sur." nakon 6 autora, po redoslijedu prvog pojavljivanja |
 | `legal-footnote` | nadredni broj fusnote | fusnota može sadržavati literaturu, propis, sudsku odluku ili EU akt |
 
 Pravila koja vrijede svugdje:
