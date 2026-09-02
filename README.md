@@ -5,6 +5,7 @@ nose samo tanki `SKILL.md` (router); sve što ima datoteke — skripte, referenc
 profili fakulteta, sateliti — živi ovdje i dohvaća se jednim `git pull`.
 
 ```
+katedra/            meta-skill za UČENJE (kvar → pravilo/zakrpa); ne kopilot
 katedra-lite/       kopilot za radove (7 modova, .katedra/ stanje, gate, napredak)
 rad-audit/          motor audita A–G (zove ga katedra-lite engine.py)
 rad-docx/           motor izrade .docx-a iz rukopisa
