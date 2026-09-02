@@ -260,7 +260,10 @@ def provjeri(put, profil):
         "neprovjereno": [{"jedinica": t, "razlog": r} for t, r in neprovjereno],
         "oblikovanje": [{"stanje": s, "poruka": p}
                         for s, p in provjeri_oblikovanje(odlomci, oblik)],
-        "abecedni_red": [{"prije": a, "poslije": b}
+        # numerički popis (Vancouver/IEEE) ide po redoslijedu citiranja, ne
+        # abecedi — provjera abecede tamo bi bila lažni nalaz (kvar 35b)
+        "abecedni_red": [] if oblik.get("stil") in NUMERICKI_STILOVI else
+                        [{"prije": a, "poslije": b}
                          for a, b in abecedni_red([t for t in tekstovi
                                                    if len(t) >= 15])],
         "oblik_iz_profila": oblik,

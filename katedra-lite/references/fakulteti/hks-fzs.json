@@ -25,8 +25,6 @@
   "stil": "vancouver",
   "u_tekstu": "(1) ili (1, 2) ili (3–5) — u ovalnim zagradama, u razini teksta, PRIJE zareza ili točke",
   "popis_primjer": "Kellehear A. Compassionate Cities: global significance and meaning for palliative care. Prog Palliat Care. 2020;28(2):115-9.",
-  "tocka_iza_godine": false,
-  "uvlaka_u_popisu": false,
   "napomena": "VANCOUVER, ne IEEE: numerički stil po redoslijedu prvog pojavljivanja; brojevi u OVALNIM zagradama (n), ne uglatim [n] i ne u eksponentu; više referenci u JEDNOJ zagradi; ista referenca uvijek isti broj; prvih 6 autora pa „i sur.\"; naslov rada samo prvo slovo veliko; časopis skraćenim imenom. Od v1.9 paket ima dijalekt 'vancouver' (citation_dialects.py): ovalne zagrade, rasponi, siročad, redoslijed prvog pojavljivanja; scripts/provjeri_vancouver.py ostaje kao samostalna provjera."
  },
  "format": {
