@@ -75,6 +75,8 @@ references/plan_stress_test_schema.json schema v1 za .katedra/plan_stress_test.j
 
 scripts/napredak.py             AGREGATOR napretka (pravilo 29): četiri faze, score uz
                                 pokrivenost, trend u .katedra/napredak_povijest.jsonl, --html
+scripts/drift.py                SKILL.md: synced kartica naspram repo kopije (§ 0.0 pravilo b);
+                                0 iste / 1 razišle se / 2 NIJE izmjereno — dvojka nije uredno
 scripts/provjeri_zamke_proze.py šest tihih zamki proze uz check_ai_style (SKILL.md §3);
                                 nikad blokira, --usporedi prije.json za prije/poslije
 scripts/provjeri_vancouver.py   referentna provjera Vancouver (n) citata: siročad, redoslijed,

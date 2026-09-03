@@ -43,7 +43,8 @@ korak izvezao — ne pogađa se put; (2) ako paketa nema, radi se iz synced kopi
 **kaže** (pravilo 8); skripta koju SKILL.md spominje a u kopiji je nema ne izmišlja se —
 korak se označi `preskočeno`; (3) sateliti se razrješavaju kroz `<SLUG>_HOME` koje
 `env.sh` izvozi, a `scripts/vjestine.py --provjeri` to potvrđuje; (4) verziju paketa
-(`KATEDRA_PKG_VERZIJA`) ispiši u prvoj poruci uz sažetak stanja; (5) cloud sandbox pušta git samo na
+(`KATEDRA_PKG_VERZIJA`) i redak `drift.py --kratko` (v. dolje) ispiši u prvoj poruci uz
+sažetak stanja; (5) cloud sandbox pušta git samo na
 repoe koji su **izvor sesije** — token u URL-u to ne zaobilazi, a koja površina taj izvor daje
 stoji u tablici ispod; token služi desktop VM-u i drugim okolinama koje nemaju taj proxy.
 
@@ -94,8 +95,21 @@ Izmjereno 3. 9. 2026.: account `katedra-lite/SKILL.md` 28 476 B naspram repo HEA
 repo je bio dva željezna pravila iza. Iz toga slijede dva pravila: (a) zakrpa koja mijenja
 SKILL.md piše se nad **account** verzijom, nikad nad onom iz repoa, inače vraća stariji
 router; (b) poslije svake izmjene doktrine kroz karticu ista verzija ide i u repo, u istom
-commitu — inače razlika raste, a `pull` je ne zna pomiriti. Poravnato 3. 9. 2026. (commit
-`0935bd2`, repo na 30 518 B); razlika se mjeri, ne pamti: `wc -c` nad objema verzijama.
+commitu — inače razlika raste, a `pull` je ne zna pomiriti.
+
+Razlika se **mjeri, ne pamti** — pravilo (b) inače ostaje obećanje u prozi, a to je točno ono
+što pravilo 20 zabranjuje ostatku paketa. Kartica je u sesiji na disku kao synced kopija, pa
+je usporediva:
+
+```bash
+python3 "$KATEDRA_PKG/katedra-lite/scripts/drift.py" --kratko
+```
+
+Izlazni kod 0 = iste, 1 = razišle se (alat kaže i **koliko** i, kad to može dokazati iz git
+povijesti, **u kojem smjeru**), 2 = **NIJE izmjereno** — jedna strana nedostaje ili je nađeno
+više različitih kartica. Dvojka se izgovara i ide u RUČNO PROVJERI (pravila 8 i 20); tiha nula
+nad neizmjerenom razlikom bila bi isti kvar zbog kojeg pravilo 20 postoji. Alat ne spaja
+verzije i ne zna koja je točna — spajanje je posao čovjeka po pravilima (a) i (b).
 
 ### 0.1 Guard — pročitaj stanje s diska prije bilo čega
 
