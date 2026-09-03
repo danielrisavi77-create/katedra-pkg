@@ -35,24 +35,14 @@ HEADING_RE = re.compile(
     r"(LITERATURA|POPIS LITERATURE|REFERENCE|BIBLIOGRAFIJA|POPIS IZVORA|IZVORI)\s*$"
 )
 
-# Redak reference: "Prezime, I. (2020). Naslov..." / "Prezime I. (2020) Naslov..."
-# Pravni oblik tvrtke piše se malim slovom i stoji IZA imena („easyJet plc",
-# „Jet2 plc", „Podravka d.d."). Uzorak je tražio velika početna slova u svakoj
-# riječi, pa je stao na imenu i nije stigao do godine — takav redak popisa
-# literature ostao je bez ključa, a citat u tekstu postao lažno „citat bez
-# reference". Nađeno mjerenjem na stvarnom radu, nije bilo u prijavi.
-_OBLIK_TVRTKE = (r"(?:plc|inc|ltd|llc|corp|co|gmbh|ag|sa|nv|bv|spa|oyj|ab|as|kg|"
-                 r"d\.\s?d\.|d\.\s?o\.\s?o\.|j\.\s?d\.\s?o\.\s?o\.)")
-# Ime institucije mora sadržavati barem jedno veliko slovo („easyJet", „TUI",
-# „Jet2"), inače bi uzorak hvatao obične rečenice u popisu.
+# Institucionalni autor je sve prije prve parentetizirane godine. To je namjerno
+# šire od osobnog autora: mediji/platforme nose točke u imenu („danas.hr",
+# „Index.hr"), a kratice često imaju točku prije godine („UNESCO. (2021)").
+# Primjenjuje se tek NAKON strožeg BIBLIO_LINE_RE i samo na retke popisa
+# literature koji imaju godinu u zagradi.
 BIBLIO_INST_RE = re.compile(
-    r"^[•\-\d\.\)\s]*((?=[\w&\-]*[A-ZČĆŠŽĐ])[\w&\-]+"
-    r"(?:\s+(?:[A-ZČĆŠŽĐ][\w&\-]*|" + _OBLIK_TVRTKE + r")){0,3})"
-    # Institucionalni autor često nosi raspis kratice prije godine:
-    # „HNB (Hrvatska narodna banka) (2023)". Bez ovoga takav redak nema ključ.
-    r"(?:\s*\([^)]{3,80}\))?"
-    r"[,\s]*\(?(\d{4})\.?[a-z]?\)?",
-    re.IGNORECASE | re.UNICODE,
+    r"^[•\-\d\.\)\s]*(.{1,160}?)\s*(?:\.\s*)?\((\d{4}[a-z]?)\.?\)\.?(?:\s|,|$)",
+    re.UNICODE,
 )
 # Uzorak je tražio INICIJAL („Prezime, I. (2007)"), a FPZG Upute traže PUNO IME
 # („Prezime, Ime (2007)"). Zbog toga cijeli popis literature u FPZG obliku nije
@@ -83,11 +73,16 @@ def extract_biblio_keys(lit_text):
             # parsera citata u tekstu. Dok je svaka strana gradila ključ po svome,
             # „Van der Zwan" je iz teksta bio „van", a iz popisa „zwan".
             keys.add((C.kljuc_prezimena(m.group(1)), m.group(2).lower()))
-        elif BIBLIO_INST_RE.match(line) and re.search(r"\(\d{4}", line):
+        else:
             mi = BIBLIO_INST_RE.match(line)
-            keys.add((C.kljuc_prezimena(mi.group(1)), mi.group(2).lower()))
-        elif re.search(r"\d{4}", line) and len(line) > 15:
-            unmatched += 1
+            if mi:
+                autor = mi.group(1).strip(" \t,.;:")
+                kljuc = C.kljuc_prezimena(autor)
+                if kljuc:
+                    keys.add((kljuc, mi.group(2).lower()))
+                    continue
+            if re.search(r"\d{4}", line) and len(line) > 15:
+                unmatched += 1
     return keys, unmatched
 
 

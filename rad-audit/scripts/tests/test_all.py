@@ -142,6 +142,26 @@ def main():
     check("R2 fusnota: citat iz fusnote prebrojan", "Citirano u tekstu (uklj. fusnote/endnote): 1" in txt, txt)
     check("R2 fusnota: nema lažnog siročeta", "SIROČAD (u popisu, ne citirano): nema" in txt, txt)
 
+    # --- R2b) izvori bez osobnog autora + signalna riječ/napomena u citatu ---
+    txt, code = capture(check_citations_authoryear.main,
+                        os.path.join(fx, "author_year_institutions.docx"))
+    check("R2b institucije/mediji: svih 5 jedinica prepoznato",
+          "Definirano u popisu literature (prezime+godina): 5" in txt, txt)
+    check("R2b institucije/mediji: nema lažnog siročeta",
+          "SIROČAD (u popisu, ne citirano): nema" in txt, txt)
+    check("R2b institucije/mediji: nema lažnog citata bez reference",
+          "CITAT BEZ REFERENCE: nema" in txt, txt)
+    check("R2b institucije/mediji: konzistentan dokument prolazi", code == 0, txt)
+
+    # Guardovi: pravi manjak i pogrešna godina i dalje moraju ostati nalazi.
+    sir, bez = check_citations_authoryear.uskladi_kljuceve(
+        {("danas.hr", "2025"), ("unesco", "3035")},
+        {("unesco", "2021")})
+    check("R2b guard: stvarno nedostajući medij ostaje citat bez reference",
+          ("danas.hr", "2025") in bez, (sir, bez))
+    check("R2b guard: nemoguća/pogrešna godina ne spaja se s pravom",
+          ("unesco", "3035") in bez and ("unesco", "2021") in sir, (sir, bez))
+
     # --- R3) --no-indent ne kontaminira rPr; XML valjan raspored ---
     out_r3 = os.path.join(tmp, "rpr_fixed.docx")
     txt, code = capture(apply_safe_fixes.main,
