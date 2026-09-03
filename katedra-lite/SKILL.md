@@ -1,6 +1,6 @@
 ---
 name: katedra-lite
-description: "Kopilot za akademske radove (novi rad, plan, pisanje, poboljšanje, audit, obrana, predaja, povratak iz Worda; stanje u .katedra/). v1.9: §0.0 dohvat paketa iz git repoa katedra-pkg, Vancouver dijalekt, opseg po dijelovima, Upute → profil, provjera zamki proze, pravilo 29 (napredak)."
+description: "Kopilot za akademske radove (novi rad, plan, pisanje, poboljšanje, audit, obrana, predaja, povratak iz Worda; stanje u .katedra/). v1.9: §0.0 dohvat paketa iz git repoa katedra-pkg, Vancouver dijalekt, opseg po dijelovima, Upute → profil, provjera zamki proze, pravilo 29 (napredak), pravilo 30 + §0.7a (praćene izmjene prije ekstrakcije), §0.0 push naspram pulla i drift SKILL.md-a."
 ---
 
 # KATEDRA-LITE — kopilot za akademske radove
@@ -30,11 +30,12 @@ ljuske pri svakom pozivu, pa se okolina ne pamti).
 
 ```bash
 export KATEDRA_PKG="$HOME/.katedra-pkg"
-export KATEDRA_PKG_URL="UPIŠI_REMOTE_URL"    # jednom; npr. https://<token>@github.com/<user>/katedra-pkg.git
-if [ -d "$KATEDRA_PKG/.git" ]; then git -C "$KATEDRA_PKG" pull -q --ff-only 2>/dev/null || echo "⚠️ pull nije prošao — lokalna kopija";
-elif [ "$KATEDRA_PKG_URL" != "UPIŠI_REMOTE_URL" ]; then git clone -q --depth 1 "$KATEDRA_PKG_URL" "$KATEDRA_PKG" 2>/dev/null || echo "⚠️ clone nije prošao"; fi
+export KATEDRA_PKG_URL="https://github.com/danielrisavi77-create/katedra-pkg.git"            # bez tokena — cloud sesija s priključenim repoom
+export KATEDRA_PKG_URL_TOKEN="UPIŠI_URL_S_TOKENOM"   # https://<token>@github.com/danielrisavi77-create/katedra-pkg.git (rezerva: desktop VM / sesija bez priključenog repoa)
+if [ -d "$KATEDRA_PKG/.git" ]; then find "$KATEDRA_PKG" -name __pycache__ -type d -prune -exec rm -rf {} + 2>/dev/null; git -C "$KATEDRA_PKG" pull -q --ff-only 2>/dev/null || echo "⚠️ pull nije prošao — lokalna kopija $(cat "$KATEDRA_PKG/VERSION" 2>/dev/null)";
+else for U in "$KATEDRA_PKG_URL" "$KATEDRA_PKG_URL_TOKEN"; do case "$U" in UPIŠI_*) continue;; esac; git clone -q --depth 1 "$U" "$KATEDRA_PKG" 2>/dev/null && break; done; fi
 if [ -f "$KATEDRA_PKG/bin/env.sh" ]; then . "$KATEDRA_PKG/bin/env.sh"; echo "katedra-pkg $KATEDRA_PKG_VERZIJA";
-else KATEDRA_SKILL="$(ls -d /root/.claude/skills/synced/*/katedra-lite ~/.claude/skills/katedra-lite 2>/dev/null | head -1)"; echo "⚠️ paket nije dostupan — synced kopija: $KATEDRA_SKILL (skripte mogu biti starije od ovog SKILL.md-a)"; fi
+else KATEDRA_SKILL="$(ls -d /root/.claude/skills/synced/*/katedra-lite ~/.claude/skills/katedra-lite 2>/dev/null | head -1)"; echo "⚠️ paket nije dostupan (u cloud sesiji repo katedra-pkg mora biti PRIKLJUČEN sesiji — GitHub konekcija u claude.ai + Add repository; token sam ne pomaže) — synced kopija: $KATEDRA_SKILL (skripte mogu biti starije od ovog SKILL.md-a)"; fi
 ```
 
 Pravila za taj korak: (1) `<KATEDRA_SKILL>` u svim naredbama ispod je ono što je ovaj
@@ -42,7 +43,44 @@ korak izvezao — ne pogađa se put; (2) ako paketa nema, radi se iz synced kopi
 **kaže** (pravilo 8); skripta koju SKILL.md spominje a u kopiji je nema ne izmišlja se —
 korak se označi `preskočeno`; (3) sateliti se razrješavaju kroz `<SLUG>_HOME` koje
 `env.sh` izvozi, a `scripts/vjestine.py --provjeri` to potvrđuje; (4) verziju paketa
-(`KATEDRA_PKG_VERZIJA`) ispiši u prvoj poruci uz sažetak stanja.
+(`KATEDRA_PKG_VERZIJA`) ispiši u prvoj poruci uz sažetak stanja; (5) cloud sandbox pušta git samo na
+repoe priključene sesiji (GitHub konekcija u claude.ai → repo `katedra-pkg` odabran za sesiju) — token u
+URL-u to ne zaobilazi; token služi desktop VM-u i drugim okolinama koje nemaju taj proxy.
+
+**Čitanje i pisanje su odvojena dopuštenja.** `clone` i `pull` znaju proći nad repoom nad
+kojim je `push` odbijen:
+
+```
+remote: access denied by the git proxy: <owner>/katedra-pkg is not in this session's
+authorized repository set, so the proxy will not inject a credential for it.
+fatal: ... The requested URL returned error: 403
+```
+
+To nije krivi URL, nedostajući token ni TLS. To je egress politika, a `/root/.ccr/README.md`
+za 403/407 kaže izrijekom: **ne ponavljaj i ne zaobilazi — prijavi**. Token u URL-u, `gh` kao
+druga ruta i drugi remote su zaobilaženje iste odluke, ne rješenje. Rješenje je jedan klik
+korisnika (claude.ai → GitHub konekcija → Add repository, uz pravo pisanja), a **iz Cowork
+mobilne aplikacije taj se popis ne može mijenjati** — ondje se ide rutom ispod.
+
+**Kad push ne prođe, commit se isporučuje, ne gubi.** Kontejner je efemeran, pa lokalna grana
+nestaje sa sesijom; priložena datoteka ne:
+
+```bash
+git -C "$KATEDRA_PKG" format-patch -1 --stdout > zakrpa.patch
+git -C "$KATEDRA_PKG" bundle create zakrpa.bundle main..HEAD     # nosi granu, ne samo diff
+```
+
+Prije slanja provjeri na ČISTOM klonu `main`-a: `git apply --check zakrpa.patch`. Commit je
+bolji od zipa: ručno raspakiran zip u `$KATEDRA_PKG` ostavlja lokalne izmjene, pa sljedeći
+`pull --ff-only` iz gornjeg bloka tiho ne prođe i sesija radi na staroj kopiji.
+
+**SKILL.md postoji na dva mjesta i zna se razići.** Account skill (kartica u claude.ai)
+učitava se u svakoj poruci i **on je izvor doktrine**; repo nosi skripte, reference i profile.
+Izmjereno 3. 9. 2026.: account `katedra-lite/SKILL.md` 28 476 B naspram repo HEAD 24 519 B —
+repo je bio dva željezna pravila iza. Iz toga slijede dva pravila: (a) zakrpa koja mijenja
+SKILL.md piše se nad **account** verzijom, nikad nad onom iz repoa, inače vraća stariji
+router; (b) poslije svake izmjene doktrine kroz karticu ista verzija ide i u repo, u istom
+commitu — inače razlika raste, a `pull` je ne zna pomiriti.
 
 ### 0.1 Guard — pročitaj stanje s diska prije bilo čega
 
@@ -50,7 +88,7 @@ korak se označi `preskočeno`; (3) sateliti se razrješavaju kroz `<SLUG>_HOME`
 cat .katedra/stanje.json 2>/dev/null || echo "NEMA"
 ```
 
-- **Postoji `.katedra/stanje.json`** → **preskoči wizard.** Sažmi u jednoj rečenici gdje smo stali (mod, tip, tema, napredak iz `plan.json`) i pitaj samo što je sljedeće. Nikad ne pitaj ono što je u datoteci.
+- **Postoji `.katedra/stanje.json`** → **preskoči wizard.** Sažmi u jednoj rečenici gdje smo stali (mod, tip, tema, napredak iz `plan.json`) i pitaj samo što je sljedeće. Nikad ne pitaj ono što je u datoteci. Sažetak ne sastavljaj iz glave: `python3 <KATEDRA_SKILL>/scripts/napredak.py` daje faze, score uz pokrivenost i „najviše diže sljedeće" (pravilo 29).
 - **Nema datoteke, ali korisnik je već dao mod/temu/datoteke u poruci** → potvrdi shvaćeno, pitaj samo što fali, i **odmah zapiši** stanje.
 - **Direktan ulaz** (`katedra audit`, `katedra plan`, `katedra piši`, `katedra popravi`, `katedra obrana`, `katedra predaja`) → preskoči izbornik, idi na intake tog moda.
 - **„autopilot" / „full auto"** → radi s defaultima i deklariraj ih u tablici pretpostavki. Za završni/diplomski full auto **ne preskače perspective/plan gate**: znači samo da je korisnik unaprijed autorizirao `plan_state.py odobri --actor full-auto` nakon što gate prođe.
@@ -201,12 +239,13 @@ unutar `<w:ins>` je stupanj dublje i **preskače se**, a `<w:del>` zna ostati u 
 Rad s neprihvaćenim izmjenama zato kroz `python-docx` nije rad — to je rad minus nevidljivi
 sloj, i svaka dijagnoza koja krene odatle polazi od krivog teksta.
 
-Mjereno: diplomski sa **125 `w:ins` i 13 `w:del`** (4149 znakova) izgledao je kao rad **bez
-sažetka, bez ključnih riječi, bez abstracta i bez izjave o autorstvu** — sve četiri stavke
-postojale su i bile su upravo taj neprihvaćeni sloj. Opseg je bio 12 602 umjesto 13 203
-riječi.
+Mjereno (diplomski, FPZG, 3. 9. 2026.): **125 `w:ins` i 13 `w:del`** (4149 znakova) učinilo
+je da rad izgleda kao rad **bez sažetka, bez ključnih riječi, bez abstracta i bez izjave o
+autorstvu** — sve četiri stavke postojale su i bile su upravo taj neprihvaćeni sloj. Opseg
+je ispao 12 602 umjesto 13 203 riječi. Nalaz „dio rada nedostaje" nad dokumentom s praćenim
+izmjenama je hipoteza, ne nalaz.
 
-Zato je redoslijed obavezan: `engine.py --provjeri` → **faza A/F** (jedina koja broji
+Redoslijed je obavezan: `engine.py --provjeri` → **faza A/F** (jedina koja broji
 `w:ins`/`w:del`) → prihvaćanje → tek onda ekstrakcija teksta i sve ostalo. Ako se rad ne
 smije mijenjati, radi se na kopiji; izvornik ostaje netaknut, a snapshot je ionako prvi
 korak.
@@ -337,22 +376,34 @@ korak.
     Dva dohvata istog PDF-a dala su 445 i 446–447 za isti odlomak — točna je bila 446.
     Ako stranice PDF-a teku 1–N, to je otisak, a ne svezak: brojevi se **ne izvode računom**,
     koliko god pomak izgledao očito. Dok stranica nije potvrđena, u tekstu stoji
-    `[PROVJERI STR.]` — ali samo dok stranica POSTOJI i čeka potvrdu. Izvor koji tiskanu
-    paginaciju nema (mrežni izvještaj, HTML članak, .txt/.md bez prijeloma) nema što čekati:
-    `evidence_ingest.py` mu daje `page_label: null` i `passage: N`, i to je **gotov, citabilan
-    lokator** — citira se po odlomku, `(N, odl. P)`. Privremena oznaka na trajnom stanju je
-    kvar sama po sebi: `[PROVJERI STR.]` ondje šalje studenta da traži broj kojeg nema, a
-    tablica „RUČNO PROVJERI" puni se recima koji se ne mogu zatvoriti. Razlika je dakle
-    „stranica postoji, nepotvrđena" (privremeno) naspram „izvor stranicu nema" (trajno) —
-    v. `references/pisanje.md` §2.1. Isto vrijedi za **termin** i **doseg**: ako izvoru
-    pripisuješ naziv,
-    naziv mora u njemu postojati (inače navedi izvorni oblik u zagradi), a „jedini/svi/prvi"
-    mora stati unutar uzorka izvora — v. `references/pisanje.md` §2.2.
+    `[PROVJERI STR.]`. **To nije isto što i izvor koji stranicu uopće nema** (cjeloviti HTML
+    tekst bez tiskane paginacije): `evidence_ingest.py` takav zapis obilježava s
+    `page_label: null`, i to je konačna, ne privremena činjenica — citira se po odlomku
+    (`passage` iz evidence zapisa), nikad se ne izmišlja stranica niti se stavlja
+    `[PROVJERI STR.]` na nešto što nikad neće imati stranicu (katedra-lite kvar 2,
+    `references/pisanje.md` §2.1). Isto vrijedi za **termin** i **doseg**: ako izvoru
+    pripisuješ naziv, naziv mora u njemu postojati (inače navedi izvorni oblik u zagradi), a
+    „jedini/svi/prvi" mora stati unutar uzorka izvora — v. `references/pisanje.md` §2.2.
+
+29. **Napredak se gleda na jednom mjestu, a score nikad ne stoji bez pokrivenosti.**
+    `scripts/napredak.py` agregira ono što drugi alati već mjere — `tempo` (opseg naspram
+    plana), `rubrika` (pojas), zadnji `gate` prolaz, `verzije.json` — u četiri faze sa
+    statusom i jedan kompozitni 0–100. Ne mjeri ništa novo: agregator, ne sudac, isto kao
+    `rubrika.py`. Komponenta bez artefakta je ❔, ne ulazi u prosjek i **smanjuje
+    pokrivenost**; score ispod pokrivenosti 0.5 je orijentacijski i tako se i kaže. Prazan
+    projekt daje `—`, ne 0 — nula bi bila tvrdnja. `--zabiljezi` dopisuje zapis u
+    `.katedra/napredak_povijest.jsonl` pa se vidi **trend, ne trenutak**; `--html` daje
+    samostalnu stranicu bez servera. Student pita „jesam li blizu" — odgovor je broj uz
+    pokrivenost i jedna stavka „najviše diže sljedeće", ne pet izlaza. Alat ne predviđa
+    ocjenu mentora i ne zamjenjuje `gate.py` u modu 6. Gotov rad bez plana (mod 4/6 nad
+    tuđim radom, `datoteke.rad_docx`) daje plan/pisanje „gotovo izvana" i opseg „iz
+    postojećeg rada", ne 🔴. Ako `napredak.py` u paketu ne postoji (verzija < v1.9), to se
+    kaže i sažetak stanja ide iz `plan.json` + zadnjeg `gate.json` — bez izmišljenog broja.
 
 30. **Rad s neprihvaćenim izmjenama nije rad koji čitaš.** Prije prve ekstrakcije teksta
     provjeri `w:ins`/`w:del` (faza A/F) i prihvati ih na kopiji — v. § 0.7a. Vrijedi u svim
-    modovima nad gotovim `.docx`-om, ne samo u modu 3. Nalaz „dio rada nedostaje" nad
-    dokumentom s praćenim izmjenama je hipoteza, ne nalaz.
+    modovima nad gotovim `.docx`-om, ne samo u modu 3. Dva su smjera kvara i oba su
+    stvarna: dio rada koji postoji prijavi se kao da ga nema, a opseg se izmjeri prekratak.
 
 *Zašto je koje pravilo nastalo — stvarni radovi, brojke i kvarovi iza pravila 11–20:*
 **`references/zasto.md`**. Router se učitava u svakoj poruci; obrazloženja se čitaju jednom.
@@ -373,6 +424,12 @@ python3 <KATEDRA_SKILL>/scripts/gate.py --faza plan|pisanje|audit|predaja \
 
 Izlazni kod 1 = blokirajuća provjera je pala. Koraci `preskočeno` i `alat pukao` **se
 izgovaraju korisniku**, ne prešućuju (pravila 8 i 20).
+
+Poslije svakog gatea osvježi sliku napretka, da trend postoji kad ga student zatraži:
+
+```bash
+python3 <KATEDRA_SKILL>/scripts/napredak.py --zabiljezi
+```
 
 ## 3. Što je gdje
 
