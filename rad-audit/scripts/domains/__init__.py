@@ -104,7 +104,7 @@ MIN_RAZLICITIH = 5   # koliko RAZLIČITIH ključnih riječi domena mora pogoditi
 
 
 def _bodovi(tl, pack):
-    """(bodovi, razlicitih, claim_pogodaka) za jedan paket.
+    r"""(bodovi, razlicitih, claim_pogodaka) za jedan paket.
 
     Ključne riječi su korijeni, pa se traže na POČETKU riječi (`(?<!\w)`), a ne
     kao slobodan podniz. Bez te granice `stup` hvata „nastup" i „dostupan",

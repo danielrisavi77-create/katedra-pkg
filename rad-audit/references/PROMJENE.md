@@ -29,6 +29,12 @@ oko 4 zemalja") generički rječnik i dalje ne hvata; to traži zaseban zahvat u
 osobnog autora — v. `references/zamke.md`, kvar 2. Zapisano nakon druge pojave; do popravka
 se nalaz faze B nad medijskim ili institucionalnim korpusom čita kao hipoteza.
 
+**Dopuna (4. 9. 2026.):** docstring `_bodovi` postao je raw string. `(?<!\w)` u običnom
+docstringu daje `SyntaxWarning: invalid escape sequence` na Pythonu 3.12+, pa je svaki
+poziv `numbers_inventory.py` ispisivao upozorenje prije rezultata, a na budućem Pythonu
+to je greška. Mjereno: prije 1 upozorenje nad `domena_celik.docx`, poslije 0; detekcija
+nepromijenjena (`celik` → `celik`, `domena_drustvene` → `generic`).
+
 # Zakrpe skripti (kolovoz 2026.)
 
 Nađeno i ispravljeno na stvarnom završnom radu (EFZG, hrvatski APA, 61 izvor).
