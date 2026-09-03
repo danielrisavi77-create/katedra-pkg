@@ -199,11 +199,14 @@ NUMBERED_ITEM_RE = re.compile(r"(?m)^\s*(?:(\d{1,3})\s*[.)]|\[\s*(\d{1,3})\s*\])
 # kažnjava rad zato što je precizniji.
 LOKATOR = r"(?:\s*:\s*[\dxivlcdmXIVLCDM]+(?:\s*[-–]\s*[\dxivlcdmXIVLCDM]+)?)?"
 
-# Parentetički citat koji završava s ", GODINA" (dopušta ; za više grupa u istoj zagradi)
+# Parentetički citat s ", GODINA" (dopušta ; za više grupa u istoj zagradi).
+# Poslije godine smije stajati kratka napomena („, za analizu"), a prije autora
+# signalna riječ („usp."). Identitet ključa i dalje čine autor + godina.
 # HR APA: točka iza godine je dopuštena — "(Čavlek i sur., 2011.)"
+_AY_NAPOMENA = r"(?:\s*,\s*[^;()]{1,80})?"
 CITE_AY_RE = re.compile(
-    r"\(([^()]{2,160}?,\s*\d{4}\.?[a-z]?" + LOKATOR +
-    r"(?:\s*;\s*[^()]{2,160}?,\s*\d{4}\.?[a-z]?" + LOKATOR + r")*)\)"
+    r"\(([^()]{2,160}?,\s*\d{4}\.?[a-z]?" + LOKATOR + _AY_NAPOMENA +
+    r"(?:\s*;\s*[^()]{2,160}?,\s*\d{4}\.?[a-z]?" + LOKATOR + _AY_NAPOMENA + r")*)\)"
 )
 
 # Narativni citat: "Faulkner (2001.)", "Hall, Prayag i Amore (2018.)".
@@ -260,7 +263,10 @@ def parse_ay_segment(seg):
     # su dvije funkcije istog alata davale različite ključeve za isti citat.
     # Lokator stranice iza godine ("Becker, 2007: 45") ovdje se prepoznaje i
     # odbacuje: on je oznaka mjesta u izvoru, ne dio identiteta.
-    m = re.match(r"\s*(.+?),\s*(\d{4})\.?([a-z]?)" + LOKATOR + r"\s*$", seg.strip())
+    seg = re.sub(r"^(?:usp\.|vidi|vidjeti|prema|cf\.)\s+", "", seg.strip(),
+                 flags=re.IGNORECASE)
+    m = re.match(r"\s*(.+?),\s*(\d{4})\.?([a-z]?)" + LOKATOR +
+                 r"(?:\s*,\s*[^;()]{1,80})?\s*$", seg)
     if not m:
         return None
     author_part, year = m.group(1), m.group(2) + m.group(3)

@@ -76,9 +76,13 @@ Isti uzorak radi i obrnuto: `Tonković 2014` prijavljen je kao **siroče**, a ci
 obliku `(…, 2020; usp. Tonković, Krolo i Marcelić, 2014, za analizu)` — ključ nije prepoznao
 `usp. …, GODINA, za …`.
 
-**Nije popravljeno u ovoj zakrpi.** Popravak traži drugi razred ključeva za izvore bez
-osobnog autora (medij / institucija / platforma) i svođenje naziva iz kosih padeža u
-nominativ prije usporedbe, a to je zahvat u `check_citations_authoryear.py` koji treba
-vlastiti skup fixtura. Ovdje je zapisan da druga pojava ne ostane u čekaonici i da se ne
-otkriva treći put. Dok stoji: nalaz faze B nad radom s medijskim ili institucionalnim
-korpusom čita se kao **hipoteza**, ne kao popis — i to se korisniku kaže.
+**Popravljeno u 1.9.2.** `BIBLIO_LINE_RE` ostaje prvi, stroži parser za osobne autore, a
+drugi parser uzima naziv institucionalnog autora prije prve parentetizirane godine. Time
+točke u nazivima medija/platformi i točka iza kratice više ne prekidaju ključ. Parser
+citata uklanja signalnu riječ (`usp.`, `vidi`, `prema`, `cf.`) i kratku napomenu nakon
+godine prije gradnje ključa.
+
+Dokaz je end-to-end fixture s `danas.hr`, `Index.hr`, Ministarstvom, UNESCO-om i
+Tonkovićem u obliku `usp. …, 2014, za analizu`: prije 2/5 definiranih, 1 lažno siroče i 3
+lažna citata bez reference; poslije 5/5, bez nalaza, exit 0. Guardovi zasebno dokazuju da
+stvarno nedostajući medij i nepodudarna godina i dalje ostaju prijavljeni.

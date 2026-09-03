@@ -1,3 +1,24 @@
+# Faza B: izvori bez osobnog autora (rujan 2026.) — kvar 2
+
+`check_citations_authoryear.py` sada iz retka literature prepoznaje institucionalnog
+autora kao naziv prije prve godine u zagradi. Time isti ključ dobivaju mediji i platforme
+s točkom u nazivu (`danas.hr`, `Index.hr`), institucije i kratice s točkom prije godine
+(`UNESCO. (2021)`). Osobni autor i dalje prvo prolazi kroz stroži postojeći parser.
+
+Parentetički parser sada iz identiteta citata izostavlja signalnu riječ (`usp.`, `vidi`,
+`prema`, `cf.`) i kratku napomenu iza godine. Zato oblik `usp. Tonković, Krolo i Marcelić,
+2014, za analizu` daje isti ključ `tonković/2014` kao redak literature.
+
+Regresijski fixture `author_year_institutions.docx` pokriva pet konzistentnih jedinica:
+dvije domene, ministarstvo, UNESCO i osobnog autora u citatu sa signalnom riječi/napomenom.
+Prije zakrpe: 2 definirane jedinice, 3 neprepoznata retka, 1 lažno siroče i 3 lažna citata
+bez reference; poslije: 5 definiranih, 0 neprepoznatih, 0 siročadi, 0 citata bez reference,
+exit 0. Zasebni guardovi potvrđuju da stvarno nedostajući medij i pogrešna godina i dalje
+ostaju nalazi.
+
+Promjena dviju skripti osvježava otisak u `engine_contract.json`; bez toga Katedrin
+`engine.py` ispravno odbija rezultat kao verzijski nekompatibilan.
+
 # Detekcija domene (rujan 2026.) — kvar 1
 
 Nađeno na diplomskom radu iz medijskih studija (FPZG, 13 203 riječi).
@@ -25,9 +46,8 @@ brojeve. Sukob koji je u tom radu ostao neuhvaćen („oko četrdeset pet zemalj
 oko 4 zemalja") generički rječnik i dalje ne hvata; to traži zaseban zahvat u
 `zbroj_kategorija`.
 
-**Nije popravljeno:** lažni „CITAT BEZ REFERENCE" i lažno siroče u fazi B nad izvorima bez
-osobnog autora — v. `references/zamke.md`, kvar 2. Zapisano nakon druge pojave; do popravka
-se nalaz faze B nad medijskim ili institucionalnim korpusom čita kao hipoteza.
+**Naknadno popravljeno u 1.9.2:** lažni „CITAT BEZ REFERENCE" i lažno siroče u fazi B nad
+izvorima bez osobnog autora — v. `references/zamke.md`, kvar 2.
 
 **Dopuna (4. 9. 2026.):** docstring `_bodovi` postao je raw string. `(?<!\w)` u običnom
 docstringu daje `SyntaxWarning: invalid escape sequence` na Pythonu 3.12+, pa je svaki
