@@ -1,3 +1,10 @@
+# v1.9 — 403 na pushu: izvor sesije umjesto krivog klika (kvar 43)
+
+* **`SKILL.md` § 0.0 — tablica površina.** Doktrina je za `403` s git proxyja ispravno govorila da je to egress politika koja se prijavljuje, a ne zaobilazi, pa je onda kao rješenje nudila „jedan klik korisnika (claude.ai → GitHub konekcija → Add repository, uz pravo pisanja)". Ta veza je po dokumentaciji **read-only sinkronizacija datoteka za chat i Projects** — sesija dobije imena i sadržaj datoteka s odabrane grane, a `push` pada na isti 403. Sada stoji tablica triju površina (chat/Projects — read-only; **Claude Code on the web** — repo kao izvor sesije, gura granu i otvara PR; Cowork zadatak — mape s korisnikova računala, push samo ako je repo izvor zadatka) i izričita rečenica da „GitHub konekcija u claude.ai" znači dvije različite stvari. Točka (5) u pravilima § 0.0 više ne imenuje klik nego pojam **izvor sesije** i upućuje na tablicu, pa se popravak ne može opisati bez površine na koju se odnosi.
+* **Mjera.** 2 commita (`a633706`, `0935bd2`; 14 datoteka, +417/−21) bila su gotova i provjerena (svih 6 provjera iz HANDOFF-a prošlo), a isporuka je otišla ručnom rutom bundle + patch. Korisnik je zatim upitao mora li sesiju pokretati iz chata — točno u smjeru koji je doktrina sugerirala, a koji bi dao **manje** nego Cowork: datoteke bez prava pisanja.
+* **Drift SKILL.md-a.** Repo je poravnat s account verzijom 3. 9. 2026. (`0935bd2`, 30 518 B); § 0.0 sada uz pravilo (b) traži i mjerenje razlike (`wc -c` nad objema verzijama) umjesto pamćenja brojke.
+* **Granice.** Tablica opisuje ponašanje površina izmjereno 3. 9. 2026. iz službene dokumentacije; ako se ponašanje promijeni, mijenja se tablica, a ne zaključak da je 403 politika, a ne konfiguracija. Nijedan alat ovo ne provjerava — doktrina u routeru nema gate, pa je jedina ograda to što je popravak formuliran kao pojam („izvor sesije"), a ne kao putanja kroz sučelje.
+
 # v1.9 — plutajuće slike, uzrok umjesto posljedice, prihvaćanje izmjena (kvar 40, 41, 42)
 
 Nađeno na diplomskom radu FPZG-a (medijske studije, 45 str., 13 203 riječi) u modu 4.

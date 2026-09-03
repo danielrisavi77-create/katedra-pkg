@@ -409,3 +409,33 @@ Provjereno: `--tihi` nad `1 → 0` pada, zadano ponašanje `1 → 0` i dalje pro
 Ovo je treći put da se pravilo iz § 0.8 potvrdilo (v. kvarove 36 i 37): alat za učenje koji
 sebe izuzima prestaje učiti prvi. Nađeno je jer je protokol zahtijevao dokaz — da se dokaz
 preskočio, kvar 40 bio bi isporučen s bilješkom „dokaz nije prošao, ali radi".
+
+## 43. Doktrina je za 403 na pushu upućivala na read-only GitHub konektor, pa je popravak bio klik koji ništa ne mijenja
+
+§ 0.0 je ispravno prepoznavao egress politiku („ne ponavljaj i ne zaobilazi — prijavi”), a onda
+je korisniku nudio krivi popravak: „jedan klik korisnika (claude.ai → GitHub konekcija → Add
+repository, uz pravo pisanja)”. Ta veza postoji, ali je **sinkronizacija datoteka za chat i
+Projects i po dokumentaciji je read-only** — sesija dobije imena i sadržaj datoteka s odabrane
+grane, a `push` pada na isti 403. Površina koja `push` doista daje je Claude Code on the web,
+gdje se repo bira **za sesiju** i sesija sama otvara granu i PR.
+
+```
+remote: access denied by the git proxy: danielrisavi77-create/katedra-pkg is not in
+this session's authorized repository set, so the proxy will not inject a credential for it.
+fatal: ... The requested URL returned error: 403
+```
+
+Mjera kvara: 2 commita (`a633706`, `0935bd2`, 14 datoteka, +417/−21) bila su gotova i
+provjerena, a isporuka je otišla ručnom rutom (bundle + patch) jer je sesija tražila
+autorizaciju koje u toj površini nema. Korisnik je zatim upitao mora li sesiju pokretati iz
+chata — točno u smjeru koji doktrina sugerira, a koji bi dao **manje** nego Cowork: datoteke bez
+prava pisanja. Krivi popravak skuplji je od nikakvog jer izgleda kao da je posao gotov.
+
+Popravak je u `katedra-lite/SKILL.md` § 0.0: umjesto jedne rečenice sada stoji tablica triju
+površina (chat/Projects — read-only sinkronizacija; Claude Code on the web — repo kao izvor
+sesije, gura granu i PR; Cowork — mape s računala, push samo ako je repo izvor zadatka) i
+izričita rečenica da „GitHub konekcija u claude.ai” znači dvije različite stvari. Ograda protiv
+ponavljanja: točka (5) u pravilima § 0.0 više ne imenuje konkretan klik nego pojam **izvor
+sesije** i upućuje na tablicu, pa se popravak ne može opisati bez površine na koju se odnosi.
+Doktrina koja imenuje simptom, a promaši mehanizam, ista je klasa kao kvar 41 — samo na razini
+routera, gdje je nitko ne provjerava alatom.

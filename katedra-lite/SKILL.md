@@ -44,8 +44,8 @@ korak izvezao — ne pogađa se put; (2) ako paketa nema, radi se iz synced kopi
 korak se označi `preskočeno`; (3) sateliti se razrješavaju kroz `<SLUG>_HOME` koje
 `env.sh` izvozi, a `scripts/vjestine.py --provjeri` to potvrđuje; (4) verziju paketa
 (`KATEDRA_PKG_VERZIJA`) ispiši u prvoj poruci uz sažetak stanja; (5) cloud sandbox pušta git samo na
-repoe priključene sesiji (GitHub konekcija u claude.ai → repo `katedra-pkg` odabran za sesiju) — token u
-URL-u to ne zaobilazi; token služi desktop VM-u i drugim okolinama koje nemaju taj proxy.
+repoe koji su **izvor sesije** — token u URL-u to ne zaobilazi, a koja površina taj izvor daje
+stoji u tablici ispod; token služi desktop VM-u i drugim okolinama koje nemaju taj proxy.
 
 **Čitanje i pisanje su odvojena dopuštenja.** `clone` i `pull` znaju proći nad repoom nad
 kojim je `push` odbijen:
@@ -58,9 +58,23 @@ fatal: ... The requested URL returned error: 403
 
 To nije krivi URL, nedostajući token ni TLS. To je egress politika, a `/root/.ccr/README.md`
 za 403/407 kaže izrijekom: **ne ponavljaj i ne zaobilazi — prijavi**. Token u URL-u, `gh` kao
-druga ruta i drugi remote su zaobilaženje iste odluke, ne rješenje. Rješenje je jedan klik
-korisnika (claude.ai → GitHub konekcija → Add repository, uz pravo pisanja), a **iz Cowork
-mobilne aplikacije taj se popis ne može mijenjati** — ondje se ide rutom ispod.
+druga ruta i drugi remote su zaobilaženje iste odluke, ne rješenje. Rješenje je da repo bude
+**izvor sesije**, a to ne daje svaka površina jednako:
+
+| Površina | Što GitHub veza ondje daje | Push? |
+|---|---|---|
+| Claude chat / Projects — „Add from GitHub” | sinkronizira imena i sadržaj datoteka s odabrane grane | ❌ read-only; ne commita i ne gura |
+| Claude Code on the web (claude.ai/code) | repo se bira **za sesiju**, radi se u remote okruženju | ✅ gura granu i otvara PR |
+| Cowork zadatak | mape priključene s korisnikova računala | samo ako je repo odabran kao izvor zadatka; inače ruta ispod |
+
+Zamka je što „GitHub konekcija u claude.ai” znači **dvije različite stvari**. Ona iz chata je
+sinkronizacija datoteka: sesija dobije sadržaj repoa, a `push` i dalje pada na isti 403. Sesija
+koja to pobrka pošalje korisnika u postavke koje ništa ne mijenjaju — krivi popravak skuplji je
+od nikakvog, jer izgleda kao da je posao gotov. Kad se git posao zna unaprijed, zadatak se
+otvara iz **Claude Code on the web** s odabranim repoom; **iz Cowork mobilne aplikacije popis
+izvora se ne može mijenjati** — ondje se ide rutom ispod, i to je zadano stanje, ne kvar.
+Provjereno u dokumentaciji 3. 9. 2026.; ako se ponašanje površina promijeni, mijenja se tablica,
+a ne zaključak da je 403 politika, ne konfiguracija.
 
 **Kad push ne prođe, commit se isporučuje, ne gubi.** Kontejner je efemeran, pa lokalna grana
 nestaje sa sesijom; priložena datoteka ne:
@@ -80,7 +94,8 @@ Izmjereno 3. 9. 2026.: account `katedra-lite/SKILL.md` 28 476 B naspram repo HEA
 repo je bio dva željezna pravila iza. Iz toga slijede dva pravila: (a) zakrpa koja mijenja
 SKILL.md piše se nad **account** verzijom, nikad nad onom iz repoa, inače vraća stariji
 router; (b) poslije svake izmjene doktrine kroz karticu ista verzija ide i u repo, u istom
-commitu — inače razlika raste, a `pull` je ne zna pomiriti.
+commitu — inače razlika raste, a `pull` je ne zna pomiriti. Poravnato 3. 9. 2026. (commit
+`0935bd2`, repo na 30 518 B); razlika se mjeri, ne pamti: `wc -c` nad objema verzijama.
 
 ### 0.1 Guard — pročitaj stanje s diska prije bilo čega
 
