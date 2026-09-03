@@ -15,6 +15,7 @@ Dva su uobičajena oblika dokaza:
     python3 dokaz.py --prije "python3 alat.py pokvareni.docx" \\
                      --poslije "python3 alat.py ispravni.docx"
 
+`--tihi` je za kvarove kod kojih je alat prije LAŽNO PROLAZIO (0 → ≠0).
 Bez `--dopusti-isto` alat javlja grešku ako su oba izlazna koda jednaka: to
 znači da dokaz ne razlikuje stanja, pa ništa ne dokazuje.
 """
@@ -41,6 +42,9 @@ def main():
     ap.add_argument("--poslije", required=True, help="ista provjera nakon popravka")
     ap.add_argument("--dopusti-isto", action="store_true",
                     help="ne traži razliku u izlaznom kodu (npr. kad se razlika vidi u tekstu)")
+    ap.add_argument("--tihi", action="store_true",
+                    help="kvar je bio TIHI PROLAZ: očekuje se 0 → ≠0 (alat je prije "
+                         "propuštao ono što sad prijavljuje)")
     a = ap.parse_args()
 
     print("=" * 72)
@@ -60,10 +64,21 @@ def main():
     if tekst_prije.strip() == tekst_poslije.strip():
         print("❌ oba stanja daju isti izlaz — nema što dokazati")
         return 1
+    if a.tihi:
+        if kod_prije == 0 and kod_poslije != 0:
+            print(f"✅ dokazan tihi kvar: {kod_prije} → {kod_poslije}")
+            print("   Alat je prije šutio nad dokumentom koji sad prijavljuje.")
+            print("   Prilijepi oba izlaza uz unos u katalogu kvarova.")
+            return 0
+        print(f"❌ --tihi očekuje 0 → ≠0, a dobio {kod_prije} → {kod_poslije}")
+        print("   Ako popravak ne pretvara lažno zeleno u crveno, to nije tihi kvar.")
+        return 1
     if kod_prije == 0 and kod_poslije != 0:
         print(f"⚠ obrnuto od očekivanog: prije prolazi ({kod_prije}), "
               f"poslije pada ({kod_poslije})")
-        print("   Provjeri jesu li naredbe zamijenjene.")
+        print("   Ako je kvar bio TIHI PROLAZ — alat je šutio nad dokumentom koji je "
+              "trebao prijaviti — to je očekivan smjer: ponovi s --tihi.")
+        print("   Inače provjeri jesu li naredbe zamijenjene.")
         return 1
     print(f"✅ dokazano: {kod_prije} → {kod_poslije}")
     print("   Prilijepi oba izlaza uz unos u katalogu kvarova.")

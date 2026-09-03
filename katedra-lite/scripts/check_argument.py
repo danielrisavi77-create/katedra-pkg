@@ -238,6 +238,7 @@ def poglavlja(put, citatni_stil="autor-godina"):
     footnotes = C.extract_docx_footnotes(put) if dialect == "legal-footnote" else {}
     pog = [{"naslov": "(prije prvog poglavlja)", "odlomci": [], "podnaslovi": [], "_citati": []}]
     izvori = []
+    nizi_naslovi = []   # (razina, tekst) za sve naslove ispod razine 1 — v. kvar 41
     for p in doc.paragraphs:
         t = (p.text or "").strip()
         if not t:
@@ -253,6 +254,7 @@ def poglavlja(put, citatni_stil="autor-godina"):
             continue
         if razina:
             pog[-1]["podnaslovi"].append(t)
+            nizi_naslovi.append((razina, t))
             continue
         if H.IZVOR.match(t):
             izvori.append(t)
@@ -281,6 +283,7 @@ def poglavlja(put, citatni_stil="autor-godina"):
         p["rijeci"] = len(H.rijeci(p["tekst"]))
         p["citati"] = len(p["_citati"])
         p["tipovi_izvora"] = dict(Counter(r.source_type for r in p["_citati"] if r.source_type != "unknown"))
+    poglavlja.nizi_naslovi = nizi_naslovi
     return pog, izvori
 
 
@@ -306,8 +309,26 @@ class Ocjena:
         return [d for d in self.dim if d["stanje"] != OK]
 
 
+def _uvod_na_krivoj_razini():
+    """Ako naslov „Uvod" postoji, ali ispod razine 1, vrati (razina, tekst)."""
+    for razina, t in getattr(poglavlja, "nizi_naslovi", []):
+        if re.search(r"\buvod", norm(t)):
+            return razina, t
+    return None
+
+
 def dim_teza(oc, uvod):
     if uvod is None:
+        krivi = _uvod_na_krivoj_razini()
+        if krivi:
+            razina, t = krivi
+            oc.dodaj("teza", LOSE, f"„{t}” je na razini {razina}, ne 1",
+                     [f"Naslov „{t}” postoji, ali kao Heading {razina}; poglavljem se "
+                      f"broji samo Heading 1.",
+                      "Ovo NIJE nalaz o tezi — dok je razina naslova kriva, teza se ne "
+                      "mjeri. Postavi naslov na Heading 1 i pokreni ponovno."],
+                     "razina naslova, ne argument")
+            return []
         oc.dodaj("teza", LOSE, "nema uvoda",
                  ["Uvod nije prepoznat (nema Heading 1 čiji naslov sadrži „uvod\")."],
                  "bez uvoda se teza ne može ni tražiti")
@@ -340,6 +361,14 @@ def dim_teza(oc, uvod):
 
 
 def dim_zakljucak(oc, uvod, zakljucak):
+    if uvod is None and _uvod_na_krivoj_razini():
+        razina, t = _uvod_na_krivoj_razini()
+        oc.dodaj("zaključak zatvara krug", LOSE,
+                 f"„{t}” je na razini {razina}, ne 1",
+                 [f"Isti uzrok kao gore: naslov „{t}” je Heading {razina}.",
+                  "Preklapanje uvod↔zaključak ne mjeri se dok se uvod ne prepozna."],
+                 "razina naslova, ne argument")
+        return
     if uvod is None or zakljucak is None:
         koji = "uvod" if uvod is None else "zaključak"
         oc.dodaj("zaključak zatvara krug", LOSE, f"nema: {koji}",

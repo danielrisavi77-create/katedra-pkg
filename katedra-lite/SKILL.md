@@ -79,7 +79,7 @@ Razgovor nije memorija. Sve što treba preživjeti novu sesiju ide u datoteku, n
 | 1 Novi rad | `references/plan.md` → pa `references/pisanje.md` | plan je obavezan checkpoint |
 | 2 Pisanje | `references/pisanje.md` (+ `references/glas_fpzg.md` kad je profil fpzg) | bez plana za završni/diplomski ne piši; izradu .docx-a razriješi kroz `scripts/vjestine.py` |
 | 3 Poboljšanje | `references/pisanje.md` → `references/stil_pipeline.md` | dijagnoza prije prepisivanja; neprihvaćene Track Changes → `revizije.py prihvati` prvo, v. § 0.7a |
-| 4 Audit | `references/audit.md` | **adapter na `rad-audit`** (dokument) i **`replikacija-pspp`** (brojke) — Katedra ne kopira ni jedno ni drugo |
+| 4 Audit | `references/audit.md` | **adapter na `rad-audit`** (dokument) i **`replikacija-pspp`** (brojke) — Katedra ne kopira ni jedno ni drugo; neprihvaćene Track Changes → `revizije.py prihvati` PRIJE ekstrakcije, v. § 0.7a |
 | 5 Obrana | `references/obrana.md` | traži finalni rad |
 | 6 Predaja | `references/predaja.md` | izvodi se iz profila fakulteta; statistički prilog i predajni .docx dolaze od satelita (v. `references/vjestine.md`) |
 | 7 Povratak | `references/povratak.md` | rad koji je Katedra izradila vratio se uređen; za tuđi gotov rad ide mod 4 |
@@ -186,6 +186,30 @@ python3 <KATEDRA_SKILL>/scripts/extract_comments.py rad.docx --out .katedra/zamj
 Svaka zamjerka dobiva `status: otvoreno`. **Self-check prije svake isporuke prolazi
 kroz otvorene zamjerke.** Komentar mentora koji se spomene u intakeu pa zaboravi je
 najskuplja greška u procesu.
+
+### 0.7a Neprihvaćene izmjene se prihvaćaju PRIJE prvog čitanja teksta
+
+Vrijedi u **svim** modovima koji čitaju gotov `.docx`, ne samo u modu 3.
+
+```bash
+python3 <KATEDRA_SKILL>/scripts/diff_versions.py --snapshot rad.docx --biljeska "prije prihvaćanja"
+python3 <KATEDRA_SKILL>/scripts/revizije.py prihvati rad.docx rad_prihvaceno.docx
+```
+
+`python-docx` čita `Paragraph.text` samo iz runova koji su izravna djeca `<w:p>`. Tekst
+unutar `<w:ins>` je stupanj dublje i **preskače se**, a `<w:del>` zna ostati u ekstrakciji.
+Rad s neprihvaćenim izmjenama zato kroz `python-docx` nije rad — to je rad minus nevidljivi
+sloj, i svaka dijagnoza koja krene odatle polazi od krivog teksta.
+
+Mjereno: diplomski sa **125 `w:ins` i 13 `w:del`** (4149 znakova) izgledao je kao rad **bez
+sažetka, bez ključnih riječi, bez abstracta i bez izjave o autorstvu** — sve četiri stavke
+postojale su i bile su upravo taj neprihvaćeni sloj. Opseg je bio 12 602 umjesto 13 203
+riječi.
+
+Zato je redoslijed obavezan: `engine.py --provjeri` → **faza A/F** (jedina koja broji
+`w:ins`/`w:del`) → prihvaćanje → tek onda ekstrakcija teksta i sve ostalo. Ako se rad ne
+smije mijenjati, radi se na kopiji; izvornik ostaje netaknut, a snapshot je ionako prvi
+korak.
 
 ### 0.8 Defaulti, snapshot, profil autora
 
@@ -324,6 +348,11 @@ najskuplja greška u procesu.
     pripisuješ naziv,
     naziv mora u njemu postojati (inače navedi izvorni oblik u zagradi), a „jedini/svi/prvi"
     mora stati unutar uzorka izvora — v. `references/pisanje.md` §2.2.
+
+30. **Rad s neprihvaćenim izmjenama nije rad koji čitaš.** Prije prve ekstrakcije teksta
+    provjeri `w:ins`/`w:del` (faza A/F) i prihvati ih na kopiji — v. § 0.7a. Vrijedi u svim
+    modovima nad gotovim `.docx`-om, ne samo u modu 3. Nalaz „dio rada nedostaje" nad
+    dokumentom s praćenim izmjenama je hipoteza, ne nalaz.
 
 *Zašto je koje pravilo nastalo — stvarni radovi, brojke i kvarovi iza pravila 11–20:*
 **`references/zasto.md`**. Router se učitava u svakoj poruci; obrazloženja se čitaju jednom.

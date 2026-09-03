@@ -320,3 +320,92 @@ odlomku `(N, odl. P)`, gotov je lokator i ne ide u tablicu); §2.1 dobiva odjelj
 `page_label: null` s mjerom i obrazloženjem zašto je `null` točan podatak, a ne rupa. Ograda:
 `assets/fixture_izvor_bez_paginacije.txt` s pet odlomaka drži brojku 5 provjerljivom — ako se
 fixtureu doda odlomak, provjera pukne i tjera na usklađivanje umjesto da tiho prođe.
+
+## 40. `inline_shapes` ne vidi sliku koju je autor povukao mišem, pa alat javi „nema što mjeriti"
+
+`provjeri_prikaze.py` skupljao je prikaze iz `docx.Document(put).inline_shapes`. Taj popis
+sadrži samo `<wp:inline>` — sliku usidrenu uz tekst. Čim autor u Wordu postavi „Wrap text"
+(bilo koju opciju osim „In line with text"), slika postaje `<wp:anchor>` i `python-docx` je
+ne vidi jer za plutajuće oblike nema API.
+
+Na diplomskom radu s **4 slike, sve četiri `<wp:anchor>`, nula `<wp:inline>`**, alat je
+ispisao „➖ dokument nema nijednu umetnutu sliku — nema što mjeriti" i vratio **izlazni kod
+0**. Isti rad, isti trenutak, `check_rules.py`: „dokument sadrži slike, ali nijedan prikaz
+nema natpis". Dva alata, dvije istine, jedan ulaz — a korisnik vidi zeleno.
+
+Kvar je tih dvaput: nema poruke o kvaru, i nema razlike između „provjereno, uredno" i
+„nisam ni pogledao". Kad je zakrpa proradila, ispalo je da su sve četiri slike umetnute na
+**0,19–0,28× izvorne širine**, pa pismo od 10 pt u njima izlazi kao 1,9–2,8 pt. Nalaz koji
+je stajao neviđen od prvog pokretanja.
+
+```python
+# prije: samo <wp:inline>
+for i, sh in enumerate(d.inline_shapes, start=1): ...
+
+# poslije: + <wp:anchor> izravno iz XML-a (extent nosi mjere, a:blip r:embed vezu)
+for anchor in d.element.body.iter(f"{{{_NS_WP}}}anchor"):
+    extent = anchor.find(f"{{{_NS_WP}}}extent")
+    rid = anchor.find(f".//{{{_NS_A}}}blip").get(f"{{{_NS_R}}}embed")
+```
+
+Popravak je u `katedra-lite/scripts/provjeri_prikaze.py`: `_plutajuce()` čita anchor slike,
+`_slike()` ih spaja s inline popisom. Uz to je dodana **ograda koja bi kvar bila uhvatila** —
+`_crteza_u_xml()` broji `<w:drawing>`, pa kad je izmjerenih prikaza nula, a crteža nije,
+alat izlazi s kodom 1 i porukom „NIJE provjereno, nije uredno" umjesto s tihom nulom.
+Dokaz: isti rad, prije `exit 0` bez ijednog retka mjerenja, poslije `exit 1` i 4 izmjerene
+slike s 4 kršenja.
+
+## 41. Uvod na razini Heading 2 prijavljuje se kao „rad nema tezu"
+
+`check_argument.py` gradi poglavlja samo iz `Heading 1` (`if razina == 1`). Naslov niže
+razine pada u `podnaslovi` i njegova proza pripiše se prethodnom poglavlju. Kad je „Uvod"
+zabunom ostao `Heading 2`, `uvod` je `None`, pa su dvije dimenzije javile:
+
+```
+❌ TEZA — nema uvoda
+     Uvod nije prepoznat (nema Heading 1 čiji naslov sadrži „uvod").
+❌ ZAKLJUČAK ZATVARA KRUG — nema: uvod
+```
+
+Poruka imenuje **posljedicu**, ne uzrok, i čita se kao presuda o kvaliteti rada. Na
+diplomskom radu na kojem je nađena, promjena stila **tog jednog naslova** i ništa drugo
+dala je `✅ TEZA — 3 kandidata` i `✅ ZAKLJUČAK ZATVARA KRUG — 100 % preklapanja (10/10)`.
+Rad je cijelo vrijeme imao i tezu i zatvoren krug.
+
+Ovo je lažni nalaz iz §0.3 željeznih pravila: alat koji viče na uredan rad uči korisnika da
+ignorira crvenu boju. Ovdje je gore od toga — nalaz je usmjeravao na prepisivanje uvoda i
+zaključka umjesto na jedan klik u Wordu.
+
+Popravak je u `katedra-lite/scripts/check_argument.py`: `poglavlja()` pamti sve naslove
+ispod razine 1 kao `(razina, tekst)`, a `_uvod_na_krivoj_razini()` ih pretraži prije nego
+se javi „nema uvoda". Kad naslov postoji, poruka glasi „„Uvod” je na razini 2, ne 1" i
+izrijekom kaže **„Ovo NIJE nalaz o tezi — dok je razina naslova kriva, teza se ne mjeri."**
+Regresija provjerena: rad s Uvodom na `Heading 1` i dalje daje zeleno na obje dimenzije.
+
+## 42. Alat za dokazivanje popravaka ne poznaje smjer tihog kvara koji sam skill proglašava prioritetom
+
+`katedra/SKILL.md` § 1.4 kaže da tihi kvarovi imaju prednost: „Kvar koji sruši skriptu netko
+će naći. Kvar koji tiho proizvede krivi dokument neće nitko." Popravak takvog kvara po naravi
+ide **iz lažnog zelenog u istinito crveno**: prije `exit 0` bez nalaza, poslije `exit 1` s
+nalazom. `dokaz.py` je taj smjer imao tvrdo označen kao grešku:
+
+```
+⚠ obrnuto od očekivanog: prije prolazi (0), poslije pada (1)
+   Provjeri jesu li naredbe zamijenjene.
+[izlazni kod 1]
+```
+
+Naredbe nisu bile zamijenjene — to je bio točan dokaz kvara 40 (`provjeri_prikaze.py` šuti
+nad radom sa 4 plutajuće slike). Alat koji dokazuje popravke odbijao je jedinu vrstu kvara
+koju vlastita doktrina stavlja na prvo mjesto, a jedini izlaz bio je `--dopusti-isto`, koji
+tu ne vrijedi jer se kodovi razlikuju.
+
+Popravak je u `katedra/scripts/dokaz.py`: zastavica `--tihi` obrće očekivanje na `0 → ≠0` i
+javlja „✅ dokazan tihi kvar: 0 → 1". Kad smjer nije takav, `--tihi` pada s porukom da to
+onda nije tihi kvar, pa se zastavica ne može upotrijebiti da bi se bilo što progurao.
+Poruka u zadanom načinu sada upućuje na `--tihi` umjesto da tvrdi da su naredbe zamijenjene.
+Provjereno: `--tihi` nad `1 → 0` pada, zadano ponašanje `1 → 0` i dalje prolazi.
+
+Ovo je treći put da se pravilo iz § 0.8 potvrdilo (v. kvarove 36 i 37): alat za učenje koji
+sebe izuzima prestaje učiti prvi. Nađeno je jer je protokol zahtijevao dokaz — da se dokaz
+preskočio, kvar 40 bio bi isporučen s bilješkom „dokaz nije prošao, ali radi".

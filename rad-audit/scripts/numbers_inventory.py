@@ -19,23 +19,27 @@ import re
 import sys
 from collections import defaultdict
 from common import load_docx_text, sentences
-from domains import DOMAINS, UNIT_ALTERNATION, detect_domain, generic_keywords
+from domains import (DOMAINS, UNIT_ALTERNATION, detect_domain,
+                     detect_domain_detail, generic_keywords)
 
 
 def main(path, domain_override=None):
     body, cells, _ = load_docx_text(path)
     text = body + "\n" + "\n".join(cells)
 
+    razlog = ""
     if domain_override:
         domain, scores = domain_override, {}
     else:
-        domain, scores = detect_domain(text)
+        domain, scores, _detalj, razlog = detect_domain_detail(text)
 
     print("=" * 56)
     print("BROJČANI INVENTAR —", path)
     print("=" * 56)
     if scores:
         print(f"domena (auto-detekcija): {domain}  —  {DOMAINS[domain]['label']}  (bodovi: {scores})")
+        if razlog:
+            print(f"  ↳ {razlog}")
     else:
         print(f"domena: {domain}  —  {DOMAINS.get(domain, {}).get('label', '?')}")
 
