@@ -50,8 +50,48 @@ PRAGOVI = {
 }
 
 
+_NS_WP = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+_NS_A = "http://schemas.openxmlformats.org/drawingml/2006/main"
+_NS_R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+
+
+def _plutajuce(d, od_indeksa):
+    """[(indeks, š_emu, v_emu, blob, partname)] za slike u <wp:anchor>.
+
+    `python-docx` nema API za plutajuće slike: `inline_shapes` vraća samo
+    <wp:inline>. Rad u kojem je autor sliku povukao mišem („Wrap text") nema
+    nijedan inline oblik, pa je do zakrpe za ovaj alat izgledao kao rad bez
+    slika. Zato se anchor čita izravno iz XML-a: <wp:extent> nosi mjere,
+    <a:blip r:embed> nosi vezu na dio paketa.
+    """
+    out = []
+    i = od_indeksa
+    for anchor in d.element.body.iter(f"{{{_NS_WP}}}anchor"):
+        try:
+            extent = anchor.find(f"{{{_NS_WP}}}extent")
+            blip = anchor.find(f".//{{{_NS_A}}}blip")
+            if extent is None or blip is None:
+                continue
+            rid = blip.get(f"{{{_NS_R}}}embed")
+            if not rid:
+                continue
+            dio = d.part.related_parts[rid]
+            i += 1
+            out.append((i, int(extent.get("cx") or 0), int(extent.get("cy") or 0),
+                        dio.blob, dio.partname))
+        except Exception:  # noqa: BLE001 — neprepoznat oblik nije slika
+            continue
+    return out
+
+
+def _crteza_u_xml(d):
+    """Koliko <w:drawing> elemenata dokument uopće ima — ograda protiv tihog nule."""
+    ns = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+    return sum(1 for _ in d.element.body.iter(f"{{{ns}}}drawing"))
+
+
 def _slike(put):
-    """[(indeks, širina_emu, visina_emu, blob)] za svaku inline sliku."""
+    """[(indeks, širina_emu, visina_emu, blob, partname)] za inline I plutajuće slike."""
     import docx
     d = docx.Document(put)
     out = []
@@ -62,6 +102,7 @@ def _slike(put):
             out.append((i, sh.width, sh.height, dio.blob, dio.partname))
         except Exception:  # noqa: BLE001 — neprepoznat oblik nije slika
             continue
+    out.extend(_plutajuce(d, len(out)))
     return d, out
 
 
@@ -163,7 +204,7 @@ def analiziraj(put):
         redci.append(r)
 
     return {"sirina_teksta_cm": round(sirina_teksta, 2) if sirina_teksta else None,
-            "prikaza": len(redci), "slike": redci}
+            "prikaza": len(redci), "crteza_u_xml": _crteza_u_xml(d), "slike": redci}
 
 
 def ispisi(r):
@@ -213,6 +254,14 @@ def main(argv=None) -> int:
         return 2
 
     if not r["prikaza"]:
+        crteza = r.get("crteza_u_xml", 0)
+        if crteza:
+            print(f"❌ dokument ima {crteza} crteža (<w:drawing>), a nijedan se ne da "
+                  f"izmjeriti — NIJE provjereno, nije uredno.")
+            print("   Vjerojatno su umetnuti kao ugniježđeni objekti, OLE ili "
+                  "naslijeđeni <w:pict>, ne kao slike.")
+            print("   Provjeri ručno: širinu, rezoluciju i natpis svakog prikaza.")
+            return 1
         print("➖ dokument nema nijednu umetnutu sliku — nema što mjeriti. "
               "Ako rad ima grafikone, provjeri jesu li umetnuti kao slike, "
               "a ne kao ugniježđeni objekti.")

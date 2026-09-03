@@ -100,21 +100,75 @@ STOPWORDS_HR = {
 }
 
 
+MIN_RAZLICITIH = 5   # koliko RAZLIČITIH ključnih riječi domena mora pogoditi
+
+
+def _bodovi(tl, pack):
+    r"""(bodovi, razlicitih, claim_pogodaka) za jedan paket.
+
+    Ključne riječi su korijeni, pa se traže na POČETKU riječi (`(?<!\w)`), a ne
+    kao slobodan podniz. Bez te granice `stup` hvata „nastup" i „dostupan",
+    `okvir` hvata „okvira" (što je točno) ali i sve izvedenice pojma „teorijski
+    okvir", pa rad iz medijskih studija skupi više bodova nego stvarna
+    konstrukcija — v. rad-audit/references/zamke.md, kvar 1.
+    """
+    pogoci = {}
+    for k in pack["keywords"]:
+        n = len(re.findall(r"(?<!\w)" + re.escape(k), tl))
+        if n:
+            pogoci[k] = n
+    claim = 0
+    for pat in pack["claim_patterns"]:
+        claim += len(re.findall(pat, tl, re.IGNORECASE))
+    return sum(pogoci.values()), len(pogoci), claim, pogoci
+
+
 def detect_domain(text, min_score=3):
-    """Vrati (naziv_domene, {domena: score}) na temelju broja pogodaka ključnih
-    riječi iz svakog paketa. Ako nijedan paket ne prijeđe min_score, vrati 'generic'."""
+    """Vrati (naziv_domene, {domena: score}). 'generic' kad dokaza nema dovoljno.
+
+    Domena se prihvaća samo ako uz `min_score` bodova ima i JEDAN od dva dokaza
+    da je rad doista iz te struke:
+      · barem MIN_RAZLICITIH različitih ključnih riječi, ili
+      · barem jedan pogodak domenskog uzorka oznake (IPE 300, S235, IP44, HTTP 404…).
+    Golo zbrajanje pogodaka nije dokaz: na dovoljno dugom tekstu dvije česte
+    riječi prijeđu svaki fiksni prag.
+    """
     tl = text.lower()
-    scores = {}
+    scores, detalj = {}, {}
     for name, pack in DOMAINS.items():
         if name == "generic":
             continue
-        scores[name] = sum(tl.count(k) for k in pack["keywords"])
+        b, raz, claim, pogoci = _bodovi(tl, pack)
+        scores[name] = b
+        detalj[name] = {"bodovi": b, "razlicitih": raz, "claim": claim, "pogoci": pogoci}
     if not scores:
         return "generic", scores
     best = max(scores, key=scores.get)
-    if scores[best] >= min_score:
+    d = detalj[best]
+    if d["bodovi"] >= min_score and (d["razlicitih"] >= MIN_RAZLICITIH or d["claim"] >= 1):
         return best, scores
     return "generic", scores
+
+
+def detect_domain_detail(text, min_score=3):
+    """Kao detect_domain, ali vraća i razlog odluke — za ispis alata."""
+    tl = text.lower()
+    detalj = {}
+    for name, pack in DOMAINS.items():
+        if name == "generic":
+            continue
+        b, raz, claim, pogoci = _bodovi(tl, pack)
+        detalj[name] = {"bodovi": b, "razlicitih": raz, "claim": claim, "pogoci": pogoci}
+    ime, scores = detect_domain(text, min_score)
+    najbolji = max(detalj, key=lambda n: detalj[n]["bodovi"]) if detalj else None
+    razlog = ""
+    if ime == "generic" and najbolji and detalj[najbolji]["bodovi"] >= min_score:
+        d = detalj[najbolji]
+        razlog = (f"'{najbolji}' ima {d['bodovi']} bodova, ali samo "
+                  f"{d['razlicitih']} različitih ključnih riječi "
+                  f"(traži se {MIN_RAZLICITIH}) i {d['claim']} domenskih oznaka "
+                  f"— nedovoljno za tvrdnju o struci, pa ide generički rječnik")
+    return ime, scores, detalj, razlog
 
 
 def generic_keywords(text, top=15, min_count=3, window=3):

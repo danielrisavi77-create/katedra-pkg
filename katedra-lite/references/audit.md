@@ -159,6 +159,16 @@ Puni postupak i način čitanja nalaza: `references/vjestine.md`.
 
 ## 4. Redoslijed
 
+0. **snapshot + `revizije.py prihvati`** — dokument s `w:ins`/`w:del` ne čita se prije
+   prihvaćanja (SKILL.md § 0.7a, željezno pravilo 30). Faza A/F u koraku 3 broji izmjene,
+   ali dotad je ekstrakcija već prošla; zato je provjera i ovdje, na početku:
+
+   ```bash
+   python3 <KATEDRA_SKILL>/scripts/diff_versions.py --snapshot ./rad.docx --biljeska "prije audita"
+   python3 <KATEDRA_SKILL>/scripts/revizije.py prihvati ./rad.docx ./rad_prihvaceno.docx
+   ```
+
+   Sve naredbe niže rade nad `rad_prihvaceno.docx`. Izvornik ostaje netaknut.
 1. `engine.py --provjeri`
 2. `check_rules.py` — usklađenost s fakultetom
 3. `engine.py --audit … --json …` — motorni nalaz preko contracta

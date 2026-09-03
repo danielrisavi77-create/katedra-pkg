@@ -1,3 +1,40 @@
+# Detekcija domene (rujan 2026.) — kvar 1
+
+Nađeno na diplomskom radu iz medijskih studija (FPZG, 13 203 riječi).
+
+| datoteka | greška | posljedica prije zakrpe |
+|---|---|---|
+| `domains/__init__.py` | `tl.count(k)` traži korijen kao slobodan podniz, bez granice riječi | `stup` hvata „nastup"/„dostupan" (30×), `okvir` „teorijski okvir" (38×), `temelj` „temelji se" (13×) → **83 boda za „celik"** na radu o glazbi |
+| `domains/__init__.py` | domena se prihvaća golim zbrojem ≥ `min_score` | na dovoljno dugom tekstu dvije česte riječi prijeđu svaki fiksni prag; `generic` (točan odgovor) postao nedostižan |
+
+Popravljeno: korijeni se traže na početku riječi (`(?<!\w)`), a domena se prihvaća samo uz
+jedan od dva dokaza struke — **≥ 5 različitih** ključnih riječi (`MIN_RAZLICITIH`) ili **≥ 1
+domensku oznaku** iz `claim_patterns` (IPE 300, S235, RAL 9006, IP44, HTTP 404…). Novi
+`detect_domain_detail()` vraća i razlog odluke; `numbers_inventory.py` ga ispisuje kao
+`↳ 'celik' ima 38 bodova, ali samo 4 različitih ključnih riječi (traži se 5) i 0 domenskih
+oznaka`, pa je kriva detekcija vidljiva umjesto tiha.
+
+Mjereno na tri ulaza: sporni rad `celik` → `generic`; `katedra/assets/domena_celik.docx`
+(stvarni inženjerski rječnik) `celik` → `celik`, bez regresije;
+`katedra/assets/domena_drustvene.docx` `celik` → `generic`.
+
+**Granica:** `detect_domain` i dalje ne poznaje nijednu ne-inženjersku domenu. Rad iz
+društvenih i humanističkih znanosti ide na generički frekvencijski rječnik, što je točno,
+ali znači da faza C nad takvim radom ne nudi domensku provjeru — samo popis riječi uz
+brojeve. Sukob koji je u tom radu ostao neuhvaćen („oko četrdeset pet zemalja" naspram „iz
+oko 4 zemalja") generički rječnik i dalje ne hvata; to traži zaseban zahvat u
+`zbroj_kategorija`.
+
+**Nije popravljeno:** lažni „CITAT BEZ REFERENCE" i lažno siroče u fazi B nad izvorima bez
+osobnog autora — v. `references/zamke.md`, kvar 2. Zapisano nakon druge pojave; do popravka
+se nalaz faze B nad medijskim ili institucionalnim korpusom čita kao hipoteza.
+
+**Dopuna (4. 9. 2026.):** docstring `_bodovi` postao je raw string. `(?<!\w)` u običnom
+docstringu daje `SyntaxWarning: invalid escape sequence` na Pythonu 3.12+, pa je svaki
+poziv `numbers_inventory.py` ispisivao upozorenje prije rezultata, a na budućem Pythonu
+to je greška. Mjereno: prije 1 upozorenje nad `domena_celik.docx`, poslije 0; detekcija
+nepromijenjena (`celik` → `celik`, `domena_drustvene` → `generic`).
+
 # Zakrpe skripti (kolovoz 2026.)
 
 Nađeno i ispravljeno na stvarnom završnom radu (EFZG, hrvatski APA, 61 izvor).
