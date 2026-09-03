@@ -9,7 +9,9 @@ to je do sada bilo obećanje u prozi, a pravilo 20 zabranjuje baš to: provjera 
 nije pokrenula izgleda identično kao provjera koja je prošla.
 
 Ovaj alat je mjeri. Kartica je u sesiji na disku kao synced kopija, pa se razlika
-računa, ne pamti:
+računa, ne pamti. Traži se u `~/.claude/skills/synced/*/` (Claude Code) i u desktop
+stablu `<APPDATA|Library|.config>/Claude/local-agent-mode-sessions/skills-plugin/*/*/`;
+put se može i zadati s `--kartica` ili `KATEDRA_KARTICA`:
 
     python3 drift.py                      # kartica vs. repo kopija pored ove skripte
     python3 drift.py --kratko             # jedan redak za prvu poruku sesije
@@ -57,8 +59,48 @@ def sha(tekst):
     return hashlib.sha256(tekst.encode("utf-8")).hexdigest()
 
 
+def _desktop_baze():
+    """Korijeni u kojima Claude desktop aplikacija drži svoje podatke, po platformama."""
+    baze = []
+    appdata = os.environ.get("APPDATA")
+    if appdata:
+        baze.append(os.path.join(appdata, "Claude"))
+    baze.append(os.path.expanduser("~/AppData/Roaming/Claude"))              # Windows bez APPDATA
+    baze.append(os.path.expanduser("~/Library/Application Support/Claude"))  # macOS
+    baze.append(os.path.expanduser("~/.config/Claude"))                      # Linux
+    out = []
+    for b in baze:
+        rb = os.path.realpath(b)
+        if rb not in out and os.path.isdir(rb):
+            out.append(rb)
+    return out
+
+
+def kandidati_desktop():
+    """Kartice iz desktop stabla, NAJNOVIJA PRVA.
+
+    Desktop aplikacija drži po jednu kopiju za svaku sesiju, u
+    `local-agent-mode-sessions/skills-plugin/<sesija>/<workspace>/skills/<slug>/`.
+    Stare sesije zato ostavljaju starije kopije iste kartice. Njih se NE broji kao
+    „dvije različite kartice": među njima postoji poredak koji dvije `synced/`
+    instalacije nemaju — aplikacija kopiju piše na početku sesije, pa je najnovija
+    ona koja je u sesiji učitana. Uzima se najnovija, a ostale se izgovore kao
+    preskočene (pravilo 20: preskočeno se kaže, ne prešuti).
+    """
+    nadeni = []
+    for baza in _desktop_baze():
+        uzorak = os.path.join(baza, "local-agent-mode-sessions", "skills-plugin",
+                              "*", "*", "skills", SLUG, "SKILL.md")
+        for p in glob.glob(uzorak):
+            rp = os.path.realpath(p)
+            if rp not in nadeni and os.path.isfile(rp):
+                nadeni.append(rp)
+    nadeni.sort(key=os.path.getmtime, reverse=True)
+    return nadeni
+
+
 def kandidati_kartice():
-    """Putovi na kojima synced account skill zna stajati, redom vjerojatnosti."""
+    """(putovi, biljeska). Klasični synced putovi + najnovija kopija iz desktop stabla."""
     uzorci = [
         os.path.expanduser("~/.claude/skills/synced/*/%s/SKILL.md" % SLUG),
         "/root/.claude/skills/synced/*/%s/SKILL.md" % SLUG,
@@ -71,32 +113,45 @@ def kandidati_kartice():
             rp = os.path.realpath(p)
             if rp not in out:
                 out.append(rp)
-    return out
+    biljeska = None
+    desktop = kandidati_desktop()
+    if desktop:
+        if desktop[0] not in out:
+            out.append(desktop[0])
+        razliciti = len(set(sha(normaliziraj(procitaj(x))) for x in desktop))
+        if len(desktop) > 1 and razliciti > 1:
+            biljeska = ("desktop stablo ima više kopija kartice i one nisu iste "
+                        "(kopija: %d, verzija: %d) — uzeta najnovija (%s), "
+                        "starije sesije preskočene"
+                        % (len(desktop), razliciti, desktop[0]))
+    return out, biljeska
 
 
 def razrijesi_karticu(zadano):
-    """(put, sadrzaj, None) ili (None, None, razlog). Dvije različite kartice = razlog."""
+    """(put, sadrzaj, razlog, biljeska). Dvije različite kartice = razlog, ne izbor."""
     if zadano:
         if not os.path.isfile(zadano):
-            return None, None, "zadana kartica ne postoji: %s" % zadano
-        return zadano, procitaj(zadano), None
+            return None, None, "zadana kartica ne postoji: %s" % zadano, None
+        return zadano, procitaj(zadano), None, None
     okolina = os.environ.get("KATEDRA_KARTICA")
     if okolina and os.path.isfile(okolina):
-        return okolina, procitaj(okolina), None
-    nadeni = kandidati_kartice()
+        return okolina, procitaj(okolina), None, None
+    nadeni, biljeska = kandidati_kartice()
     if not nadeni:
         return None, None, ("synced kopija kartice nije nađena (traženo u "
-                            "~/.claude/skills/synced/*/%s/ i /root/.claude/skills/synced/*/%s/)"
-                            % (SLUG, SLUG))
+                            "~/.claude/skills/synced/*/%s/, /root/.claude/skills/synced/*/%s/ "
+                            "i u desktop stablu <APPDATA|Library|.config>/Claude/"
+                            "local-agent-mode-sessions/skills-plugin/*/*/skills/%s/)"
+                            % (SLUG, SLUG, SLUG)), None
     po_sadrzaju = {}
     for p in nadeni:
         po_sadrzaju.setdefault(sha(normaliziraj(procitaj(p))), []).append(p)
     if len(po_sadrzaju) > 1:
         return None, None, ("nađeno %d RAZLIČITIH kartica — ne zna se koja je učitana "
                             "(razriješi s --kartica PUT ili KATEDRA_KARTICA): %s"
-                            % (len(po_sadrzaju), ", ".join(nadeni)))
+                            % (len(po_sadrzaju), ", ".join(nadeni))), biljeska
     p = nadeni[0]
-    return p, procitaj(p), None
+    return p, procitaj(p), None, biljeska
 
 
 def repo_korijen(put_datoteke):
@@ -179,7 +234,7 @@ def main():
     repo_put = a.repo or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "SKILL.md")
     repo_put = os.path.realpath(repo_put)
 
-    kartica_put, kartica_txt, razlog = razrijesi_karticu(a.kartica)
+    kartica_put, kartica_txt, razlog, biljeska = razrijesi_karticu(a.kartica)
     if razlog is None and not os.path.isfile(repo_put):
         razlog = "repo kopija ne postoji: %s" % repo_put
 
@@ -191,7 +246,8 @@ def main():
               "pravilo (b) iz § 0.0 stoji nepokriveno i ide u RUČNO PROVJERI (pravilo 8).")
         if a.json_out:
             io.open(a.json_out, "w", encoding="utf-8").write(
-                json.dumps({"izmjereno": False, "razlog": razlog}, ensure_ascii=False, indent=2))
+                json.dumps({"izmjereno": False, "razlog": razlog,
+                            "biljeska": biljeska}, ensure_ascii=False, indent=2))
         return 2
 
     repo_txt = procitaj(repo_put)
@@ -211,7 +267,7 @@ def main():
                  % (n["redaka_samo_u_kartici"], n["redaka_samo_u_repou"]))
 
     n.update({"izmjereno": True, "kartica": kartica_put, "repo": repo_put, "smjer": smjer,
-              "kartica_je_commit": povijest})
+              "kartica_je_commit": povijest, "biljeska": biljeska})
 
     if a.json_out:
         io.open(a.json_out, "w", encoding="utf-8").write(
@@ -221,6 +277,8 @@ def main():
         print("✅ SKILL.md: kartica i repo su iste (%s)" % n["sha_kartica"] if n["iste"]
               else "❌ SKILL.md drift: kartica %d B / repo %d B — %s"
                    % (n["bajtova_kartica"], n["bajtova_repo"], smjer))
+        if biljeska:
+            print("   ↳ %s" % biljeska)
         return 0 if n["iste"] else 1
 
     print("=" * 72)
@@ -228,6 +286,8 @@ def main():
     print("=" * 72)
     print("kartica: %s\n         %d B · %s" % (kartica_put, n["bajtova_kartica"], n["sha_kartica"]))
     print("repo:    %s\n         %d B · %s" % (repo_put, n["bajtova_repo"], n["sha_repo"]))
+    if biljeska:
+        print("   ↳ %s" % biljeska)
     print()
     if n["iste"]:
         print("✅ iste su (normalizirano: BOM, CRLF, repovi razmaka, prazni redci na kraju)")
