@@ -110,8 +110,20 @@ def citac_zadatak_komponente(_a, kat):
     kom = z.get("komponente") or []
     if not kom:
         return NEPOZNATO, "zadatak.json nema nijednu komponentu"
-    return DJELOMICNO, (f"{len(kom)} komponenti zapisano; prisutnost u dokumentu "
-                        f"provjerava rad-docx/provjeri_predaju.py --zadatak")
+    # Komponenta je pokrivena ako je strojno provjerljiva (`igle`) ili ako uz nju
+    # stoji zapisan nalaz provjere (`provjereno`: alat, nalaz, datum). Bez te druge
+    # grane kriterij je bio trajno zaglavljen na `djelomicno`, pa pojas 5 nije bio
+    # dosezljiv nijednom radu koji uopće ima zadatak.json — a to je bilo svojstvo
+    # alata, ne rada. Zahtjev poput „stranica i kod parafraze" ne postoji kao niska
+    # u dokumentu; postoji samo kao nalaz alata koji ga je provjerio.
+    bez = [k.get("naziv", "?") for k in kom
+           if not (k.get("igle") or k.get("provjereno"))]
+    s_provjerom = sum(1 for k in kom if k.get("provjereno"))
+    if bez:
+        return DJELOMICNO, (f"{len(kom)} komponenti zapisano, {len(bez)} bez igala i bez "
+                            f"zapisanog nalaza provjere: " + "; ".join(bez[:3]))
+    return ISPUNJENO, (f"{len(kom)} komponenti zapisano, sve pokrivene "
+                       f"({s_provjerom} sa zapisanim nalazom provjere)")
 
 
 def citac_evidence(a, kat):
