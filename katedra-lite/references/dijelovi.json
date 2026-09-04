@@ -632,6 +632,26 @@
    ],
    "$comment": "Jedini korak u kojem rad izlazi iz Worda i ulazi u tuđi obrazac. Neusklađen engleski naslov između naslovnice, sažetka i repozitorija je trajan i javan."
   },
+  "citanje_tijela": {
+   "naziv": "Autorovo čitanje tijela rada",
+   "skupina": "proces",
+   "redoslijed": 205,
+   "obavezan": "uvijek",
+   "uvjet": "svaki rad prije predaje",
+   "profil_nazivi": [],
+   "proizvodi": {
+    "mod": "6",
+    "cime": "jedan prolaz kroz tijelo, od Uvoda do Zaključka"
+   },
+   "provjera": {
+    "razina": "rucno",
+    "naredba": null,
+    "kako": "Željezno pravilo 31. Alati mjere ono što znaju izmjeriti; proturječje između poglavlja, tvrdnja koja je pri cijepanju rečenice izgubila citat i tablica koja ne prikazuje proces opisan u tekstu ne padaju ni na jednoj provjeri. Mjereno 4. 9. 2026.: dva kruga alata prošla su bez blokirajućeg nalaza, čitanje je našlo sedam grešaka. Zabilježi tko je čitao i kada; ovo je jedini blokirajući dio koji alat ne može sam zadovoljiti, i to namjerno."
+   },
+   "modovi": [
+    "6"
+   ]
+  },
   "obrana_paket": {
    "naziv": "Paket za obranu",
    "skupina": "proces",

@@ -145,6 +145,10 @@ def stable_evidence_id(source_id: str, locator: dict[str, Any], text: str) -> st
         "char_end": locator.get("char_end"),
         "text_sha256": text_sha256(text),
     }
+    # Kvar 47: točka standarda i članak propisa nemaju stranicu. Ključ ih uzima
+    # samo kad postoje, pa se identiteti postojećih `page` zapisa ne mijenjaju.
+    if locator.get("clause_label"):
+        identity["clause_label"] = locator.get("clause_label")
     raw = json.dumps(identity, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return "ev_" + hashlib.sha256(raw.encode("utf-8")).hexdigest()[:20]
 

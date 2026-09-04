@@ -182,6 +182,14 @@ def koraci(faza: str, c: dict) -> list[Korak]:
                   _k("consistency_check.py", "--claims", claims,
                      "--out", os.path.join(kat, "consistency.json")),
                   treba=[claims], blokira=False),
+            # Kvar 48: korak iznad gleda samo tvrdnje iz lanca, pa brojka koju
+            # rad izvodi iz vlastitog prikaza („šest od sedam koraka") nikad
+            # nije uspoređena sa sobom.
+            Korak("brojke_teksta", "brojke koje rad sam izvodi iz svojih prikaza",
+                  _k("provjeri_brojke_u_tekstu.py", rad,
+                     "--json", os.path.join(kat, "brojke_teksta.json")),
+                  treba=[rad], blokira=False,
+                  zasto="pita, ne presuđuje: dva ciklusa smiju imati različite brojke"),
             Korak("originalnost", "preklapanje s ingestiranim izvorima",
                   _k("originality_check.py", rad, "--evidence", evidence,
                      "--json", os.path.join(kat, "originality.json")),
