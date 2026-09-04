@@ -1090,6 +1090,46 @@ def provjeri_margine(iz, doc, profil):
                  rule_id="format.margine_cm")
 
 
+#: Format papira: naziv → (širina cm, visina cm). Zadano je A4 jer na njemu
+#: počiva i procjena broja stranica niže u ovom modulu.
+FORMATI_PAPIRA = {"a4": (21.0, 29.7), "letter": (21.59, 27.94), "a5": (14.8, 21.0)}
+
+
+def provjeri_format_stranice(iz, doc, profil):
+    """Format papira, jer se opseg procjenjuje uz pretpostavku A4 (kvar 44).
+
+    Margine su se mjerile, papir nije. Rad na US Letteru prolazio je sve provjere
+    jer su margine bile točne, a razlika je 1,76 cm visine — dovoljno da se
+    prijelom, pa i broj stranica, promijene.
+    """
+    trazeni = str(((profil.get("format") or {}).get("stranica")) or "a4").lower()
+    ocekivano = FORMATI_PAPIRA.get(trazeni)
+    if not ocekivano:
+        return
+    sirina_t, visina_t = ocekivano
+    for i, sek in enumerate(doc.sections, 1):
+        w, h = sek.page_width, sek.page_height
+        stvarno_w = None if w is None else round(w.cm, 2)
+        stvarno_h = None if h is None else round(h.cm, 2)
+        opis = (f"{stvarno_w} × {stvarno_h} cm" if stvarno_w and stvarno_h else "—")
+        krivo = (stvarno_w is None or stvarno_h is None
+                 or abs(stvarno_w - sirina_t) > TOLERANCIJA_CM
+                 or abs(stvarno_h - visina_t) > TOLERANCIJA_CM)
+        detalji = []
+        if krivo:
+            nadjen = next((n.upper() for n, (a, b) in FORMATI_PAPIRA.items()
+                           if stvarno_w and stvarno_h
+                           and abs(stvarno_w - a) <= TOLERANCIJA_CM
+                           and abs(stvarno_h - b) <= TOLERANCIJA_CM), None)
+            detalji.append(f"traženo {trazeni.upper()} ({sirina_t:g} × {visina_t:g} cm), "
+                           f"nađeno {opis}" + (f" — to je {nadjen}" if nadjen else ""))
+            detalji.append("procjena broja stranica u ovom alatu pretpostavlja A4")
+        oznaka = ("format stranice" if len(doc.sections) == 1
+                  else f"format stranice (sekcija {i})")
+        iz.dodaj(oznaka, f"{trazeni.upper()} {sirina_t:g} × {visina_t:g} cm", opis,
+                 LOSE if krivo else OK, detalji, rule_id="format.stranica")
+
+
 def _razina_opsega(opseg, tip, profil):
     """Koliko je težak nalaz o opsegu za ovaj tip rada.
 
@@ -1887,6 +1927,7 @@ def main():
     provjeri_font(iz, doc, a.rad, profil)
     provjeri_prored_i_poravnanje(iz, doc, profil)
     provjeri_margine(iz, doc, profil)
+    provjeri_format_stranice(iz, doc, profil)
     provjeri_opseg(iz, profil, tip, broj_rijeci, opis_opsega)
     provjeri_poglavlja(iz, profil, tip, sadrzajna_poglavlja([t for _, t, _ in h1]))
     provjeri_prijelome(iz, profil, h1)

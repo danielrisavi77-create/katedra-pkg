@@ -154,6 +154,54 @@ def razrijesi_karticu(zadano):
     return p, procitaj(p), None, biljeska
 
 
+def usporedi_skripte(kartica_skill_md, repo_skill_md):
+    """Popis i hash svake skripte u `scripts/` s obje strane (kvar 49).
+
+    Vraća `{"izmjereno", "iste", "samo_kartica", "samo_repo", "razlicite"}`.
+    Kad jedne strane nema, `izmjereno` je False i to se izgovara — neizmjereno
+    nije isto što i jednako (željezno pravilo 20).
+    """
+    out = {"izmjereno": False, "iste": True, "samo_kartica": [], "samo_repo": [],
+           "razlicite": []}
+    mape = []
+    for put in (kartica_skill_md, repo_skill_md):
+        d = os.path.join(os.path.dirname(put or ""), "scripts")
+        mape.append(d if put and os.path.isdir(d) else None)
+    if not all(mape):
+        return out
+    popisi = []
+    for d in mape:
+        popisi.append({f: sha(procitaj(os.path.join(d, f)) or "")
+                       for f in sorted(os.listdir(d)) if f.endswith(".py")})
+    kart, repo = popisi
+    out["izmjereno"] = True
+    out["samo_kartica"] = sorted(set(kart) - set(repo))
+    out["samo_repo"] = sorted(set(repo) - set(kart))
+    out["razlicite"] = sorted(f for f in set(kart) & set(repo) if kart[f] != repo[f])
+    out["iste"] = not (out["samo_kartica"] or out["samo_repo"] or out["razlicite"])
+    out["broj_kartica"], out["broj_repo"] = len(kart), len(repo)
+    return out
+
+
+def _redak_skripti(s):
+    if not s.get("izmjereno"):
+        return "⚠️  skripte: NIJE izmjereno — jedna strana nema mapu `scripts/`"
+    if s["iste"]:
+        return "✅ skripte: kartica i repo su iste (%d datoteka)" % s["broj_kartica"]
+    dijelovi = []
+    if s["razlicite"]:
+        dijelovi.append("%d različitih (%s)" % (len(s["razlicite"]),
+                                                ", ".join(s["razlicite"][:4])))
+    if s["samo_repo"]:
+        dijelovi.append("%d samo u repou (%s)" % (len(s["samo_repo"]),
+                                                  ", ".join(s["samo_repo"][:4])))
+    if s["samo_kartica"]:
+        dijelovi.append("%d samo u kartici (%s)" % (len(s["samo_kartica"]),
+                                                    ", ".join(s["samo_kartica"][:4])))
+    return ("❌ skripte drift: " + "; ".join(dijelovi)
+            + " — agent radi iz kartice, pa dokumentirana naredba zna ne postojati")
+
+
 def repo_korijen(put_datoteke):
     try:
         out = subprocess.run(["git", "-C", os.path.dirname(put_datoteke), "rev-parse",
@@ -273,13 +321,21 @@ def main():
         io.open(a.json_out, "w", encoding="utf-8").write(
             json.dumps(n, ensure_ascii=False, indent=2))
 
+    # Kvar 49: kartica se sinkronizira kao cjelina, pa može nositi identičan
+    # SKILL.md uz starije `scripts/`. Mjereno na skillu `katedra`: SKILL.md isti,
+    # a `kvar.py --nastavak-od` postoji samo u repou. Alat koji mjeri samo
+    # doktrinu takvo stanje prijavljuje kao uredno.
+    s = usporedi_skripte(kartica_put, repo_put)
+    n["skripte"] = s
+
     if a.kratko:
         print("✅ SKILL.md: kartica i repo su iste (%s)" % n["sha_kartica"] if n["iste"]
               else "❌ SKILL.md drift: kartica %d B / repo %d B — %s"
                    % (n["bajtova_kartica"], n["bajtova_repo"], smjer))
+        print(_redak_skripti(s))
         if biljeska:
             print("   ↳ %s" % biljeska)
-        return 0 if n["iste"] else 1
+        return 0 if (n["iste"] and s.get("iste", True)) else 1
 
     print("=" * 72)
     print("DRIFT SKILL.md — kartica naspram repoa")

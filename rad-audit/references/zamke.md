@@ -86,3 +86,34 @@ Dokaz je end-to-end fixture s `danas.hr`, `Index.hr`, Ministarstvom, UNESCO-om i
 Tonkovićem u obliku `usp. …, 2014, za analizu`: prije 2/5 definiranih, 1 lažno siroče i 3
 lažna citata bez reference; poslije 5/5, bez nalaza, exit 0. Guardovi zasebno dokazuju da
 stvarno nedostajući medij i nepodudarna godina i dalje ostaju prijavljeni.
+
+
+## 3. Faza A/F ispisuje „updateFields: NE" u punom dumpu, ali ga ne diže u nalaz
+
+Faza A/F provjerava Wordova polja i u punom ispisu uredno javlja da `settings.xml` ne traži
+osvježavanje polja. Bucketizacija u `kritično/srednje/kozmetičko` taj redak ne uzima. Iz
+faze se u sažetak digne samo `tblLayout fixed`, a `updateFields` ostane u tijelu izvještaja
+koje nitko ne čita do kraja.
+
+Na radu Paroci (seminarski, EFZG RFIR) izvještaj je izgledao ovako:
+
+```
+--- formatiranje koje zna praviti probleme ---
+pageBreakBefore: 0   ✓
+tblLayout fixed/autofit: 1/0   ⚠ fixed = kruti stupci
+...
+updateFields u settings.xml: NE — dodaj radi auto-osvježavanja
+REZULTAT: ✓ polja/zaštita uredni
+```
+
+`REZULTAT: ✓ polja/zaštita uredni` je pritom neistinit za dokument koji ima tri TOC i četiri
+SEQ polja, a ne traži njihovo osvježavanje. Rad je prošao dva kruga audita s **praznim
+sadržajem, praznim popisom slika i praznim popisom tablica**; mentorica bi ih vidjela prazne
+osim da sama pritisne Ctrl+A pa F9.
+
+Tih je jer izgleda kao uspjeh: linija s nalazom stoji tri retka iznad zelene kvačice.
+
+Popravak: `updateFields` koji nedostaje uz prisutna `fldChar` polja tipa TOC ili SEQ postaje
+nalaz razine **srednje**, a `REZULTAT` te faze prestaje biti ✓ dok god polja postoje bez
+zahtjeva za osvježavanjem. Ograda: sažetak faze ne smije tvrditi „uredni" na temelju
+podskupa provjera koje je sam ispisao.
