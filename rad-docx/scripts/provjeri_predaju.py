@@ -85,6 +85,10 @@ def stoji_u(tekst, zapis):
 class Provjera:
     def __init__(self):
         self.greske, self.upozorenja, self.ogranicenja = [], [], []
+        # Strukturirani nalaz o zadatku. Ispis je za čovjeka; ovo je za rubrika.py,
+        # koja je do sada morala pretpostavljati da je provjera prošla jer nalaz
+        # nigdje nije postojao u obliku koji se dade pročitati.
+        self.zadatak = None
 
     def g(self, x): self.greske.append(x)
     def u(self, x): self.upozorenja.append(x)
@@ -147,10 +151,14 @@ def provjeri_model(P, sve, model, model_prije):
 def provjeri_zadatak(P, sve, zadatak):
     if not zadatak:
         P.o("nema zadatak.json — nije provjereno je li rad odgovorio na uputu predmeta")
+        P.zadatak = {"provjeren": False, "razlog": "nema zadatak.json"}
         return
+    nalazi = []
     for k in zadatak.get("komponente", []):
         igle = k.get("igle")
         if igle and any(i in sve for i in igle):
+            nalazi.append({"naziv": k["naziv"], "status": "u_radu",
+                           "dokaz": "igla nađena u tekstu rada"})
             continue
         prov = k.get("provjereno")
         if prov:
@@ -160,12 +168,19 @@ def provjeri_zadatak(P, sve, zadatak):
             # doslovan tekst zahtjeva unutar teksta rada.
             P.o(f"zadatak, provjereno alatom ({prov.get('alat', '?')}): "
                 f"{k['naziv']} — {prov.get('nalaz', '')}")
+            nalazi.append({"naziv": k["naziv"], "status": "provjereno_alatom",
+                           "dokaz": f"{prov.get('alat', '?')}: {prov.get('nalaz', '')}"})
             continue
         if not igle:
             P.o(f"zadatak, nije strojno provjerljivo (nema igala ni nalaza provjere): "
                 f"{k['naziv']}")
+            nalazi.append({"naziv": k["naziv"], "status": "nije_strojno_provjerljivo",
+                           "dokaz": "nema ni igala ni zapisanog nalaza provjere"})
             continue
         P.g(f"zadatak traži, a u radu nema: {k['naziv']}")
+        nalazi.append({"naziv": k["naziv"], "status": "nema_u_radu",
+                       "dokaz": "nijedna igla nije nađena: " + ", ".join(igle)})
+    P.zadatak = {"provjeren": True, "komponente": nalazi}
 
 
 # ── C. formalna pravila iz profila ───────────────────────────────────────────
@@ -461,6 +476,9 @@ def main():
     ap.add_argument("--zadatak")
     ap.add_argument("--prelomi", default="prelomi.json")
     ap.add_argument("--grafikoni")
+    ap.add_argument("--json", dest="json_out",
+                    help="zapiši nalaz kao JSON (npr. .katedra/predaja.json) — "
+                         "rubrika.py ga čita kao dokaz za kriterij „zadatak\"")
     a = ap.parse_args()
 
     ucitaj = lambda p: json.load(open(p, encoding="utf-8")) if p and os.path.exists(p) else None
@@ -505,6 +523,17 @@ def main():
         print(f"\nℹ️  OGRANIČENJA — nije provjereno ({len(P.ogranicenja)}):")
         for x in P.ogranicenja:
             print("   ·", x)
+    if a.json_out:
+        with open(a.json_out, "w", encoding="utf-8") as f:
+            json.dump({"rad": os.path.basename(a.docx),
+                       "prosao": not P.greske,
+                       "greske": P.greske,
+                       "upozorenja": P.upozorenja,
+                       "ogranicenja": P.ogranicenja,
+                       "zadatak": P.zadatak},
+                      f, ensure_ascii=False, indent=2)
+        print(f"nalaz zapisan: {a.json_out}")
+
     print()
     sys.exit(1 if P.greske else 0)
 

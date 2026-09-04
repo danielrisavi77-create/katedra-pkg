@@ -439,3 +439,45 @@ ponavljanja: točka (5) u pravilima § 0.0 više ne imenuje konkretan klik nego 
 sesije** i upućuje na tablicu, pa se popravak ne može opisati bez površine na koju se odnosi.
 Doktrina koja imenuje simptom, a promaši mehanizam, ista je klasa kao kvar 41 — samo na razini
 routera, gdje je nitko ne provjerava alatom.
+
+## 44. Čitač kriterija „zadatak" nije imao granu ispunjeno, pa je pojas 5 bio nedosežljiv svakom radu koji ima zadatak.json
+
+`citac_zadatak_komponente` u `rubrika.py` završavao je jednim bezuvjetnim `return`: čim
+`.katedra/zadatak.json` postoji i ima barem jednu komponentu, kriterij je `djelomicno`.
+Kriterij je `kljucni: true`, a `pojas()` na ključnom `djelomicno` vraća **4**. Gornja
+granica rada tako nije ovisila o radu nego o tome je li itko zapisao zadatak — a zapis
+zadatka je ono što željezno pravilo 14 izrijekom traži u modu 1. Rad je time kažnjen za
+poslušnost prema vlastitoj doktrini.
+
+```python
+    return DJELOMICNO, (f"{len(kom)} komponenti zapisano; prisutnost u dokumentu "
+                        f"provjerava rad-docx/provjeri_predaju.py --zadatak")
+```
+
+Drugi krak istog kvara stajao je u `rad-docx/scripts/provjeri_predaju.py`: komponenta bez
+`igle` tražila je doslovan tekst zahtjeva unutar teksta rada (`igle = k.get("igle") or
+[k["naziv"]]`). Zahtjev poput „broj stranice i kod parafraze" nije niska koja u dokumentu
+može postojati — postoji samo kao **nalaz alata** koji ga je provjerio. Takav je zahtjev
+zato uvijek padao kao greška „zadatak traži, a u radu nema", i to greška koja blokira
+predaju. Alat je kažnjavao rad za svojstvo vlastitog načina provjere.
+
+Mjera kvara: na seminarskom radu (EFZG RFIR, rujan 2026.) pojas je stajao na **4**, a
+držao ga je jedini kriterij „Odgovor na zadatak predmeta" — uz 5 od 5 komponenti koje su
+doista bile provjerene i zadovoljene. Poslije zakrpe: pojas **5**, „nijedna greška" u
+`provjeri_predaju`. Popravak je mjeren na 10 slučajeva, s verzijom „prije" izvađenom iz
+gita a ne rekonstruiranom.
+
+Popravak uvodi polje `provjereno` (`{alat, nalaz, datum}`) uz komponentu: komponenta je
+pokrivena ako je strojno provjerljiva (`igle`) **ili** ako uz nju stoji zapisan nalaz
+provjere. Komponenta bez jednog i drugog i dalje drži kriterij na `djelomicno` i **imenuje
+se**, pa se nepokrivenost vidi umjesto da se pretpostavi.
+
+Ograda protiv ponavljanja, i drugi kvar koji je prva zakrpa usput otvorila: „pokriven" nije
+isto što i „provjeren". Komponenta s iglama kojih u radu nema ulazila je u „sve pokrivene",
+pa je `rubrika.py` nad istim `zadatak.json`-om govorila `✅ ispunjeno` dok je
+`provjeri_predaju.py` govorio `❌ zadatak traži, a u radu nema` — dva alata, jedan artefakt,
+suprotan nalaz, i to na ključnom kriteriju. Zato `provjeri_predaju.py` sada zapisuje nalaz
+(`--json .katedra/predaja.json`, status po komponenti), a `rubrika.py` ga čita umjesto da
+pretpostavlja da je provjera prošla. Bez tog nalaza kriterij ne ide iznad `djelomicno` za
+komponente pokrivene samo iglama — nedostatak dokaza nije dokaz, isto načelo po kojem
+`pojas()` odbija procijeniti pojas kad je ključni kriterij `nepoznato`.
