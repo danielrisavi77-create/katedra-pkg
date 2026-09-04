@@ -149,9 +149,23 @@ def provjeri_zadatak(P, sve, zadatak):
         P.o("nema zadatak.json — nije provjereno je li rad odgovorio na uputu predmeta")
         return
     for k in zadatak.get("komponente", []):
-        igle = k.get("igle") or [k["naziv"]]
-        if not any(i in sve for i in igle):
-            P.g(f"zadatak traži, a u radu nema: {k['naziv']}")
+        igle = k.get("igle")
+        if igle and any(i in sve for i in igle):
+            continue
+        prov = k.get("provjereno")
+        if prov:
+            # Zahtjev koji se ne da izraziti niskom u dokumentu (npr. „stranica i kod
+            # parafraze") provjerava se alatom, a nalaz stoji uz komponentu. Bez ove
+            # grane takav je zahtjev uvijek padao kao „u radu nema", jer se tražio
+            # doslovan tekst zahtjeva unutar teksta rada.
+            P.o(f"zadatak, provjereno alatom ({prov.get('alat', '?')}): "
+                f"{k['naziv']} — {prov.get('nalaz', '')}")
+            continue
+        if not igle:
+            P.o(f"zadatak, nije strojno provjerljivo (nema igala ni nalaza provjere): "
+                f"{k['naziv']}")
+            continue
+        P.g(f"zadatak traži, a u radu nema: {k['naziv']}")
 
 
 # ── C. formalna pravila iz profila ───────────────────────────────────────────
