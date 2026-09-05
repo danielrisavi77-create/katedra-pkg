@@ -2091,3 +2091,34 @@ provjerava iz jedinog ulaza nije registar nego dogovor.
 Dodane tri skupine (`katalog kvarova: katedra-lite | rad-audit | rad-docx`), suite ide s 9 na
 12. Ograda po pravilu 34: `## 71.` prepisan u `## 75.` obara skupinu i s njom cijeli suite
 (`❌ 1 od 12 skupina palo`, izlaz 1); vraćanjem se vraća i zeleno.
+
+## 115. Otisak motora hashirao je bajtove radnog stabla, pa je isti commit imao dva otiska ovisno o platformi
+
+`katedra_adapter.otisak_motora()` računa sha256 nad `rad-audit/scripts/*.py` čitajući ih u
+binarnom načinu. Git s `core.autocrlf=true` — zadano na Windowsu — piše CRLF u radno stablo,
+a LF u objekte. Isti commit zato daje dva otiska:
+
+```
+sirovi bajtovi, CRLF radno stablo   0.0.0-undeclared+3b6c7a3e
+sirovi bajtovi, LF radno stablo     0.0.0-undeclared+b133a824
+```
+
+Posljedica nije kozmetička. `engine_contract.json` sadrži jednu vrijednost, pa je manifest
+ispravan na platformi na kojoj je zapisan i **pogrešan na svakoj drugoj**. Test R22 („manifest
+se slaže s otiskom koda") time prestaje mjeriti slaganje koda i ugovora i počinje mjeriti
+okolinu u kojoj se pokreće. Katedra u motor načinu odbija `DocumentAuditResult` s otiskom koji
+joj se ne slaže, pa bi lanac na jednoj platformi radio, a na drugoj odbijao rezultat — bez
+ijedne izmjene u kodu.
+
+Nađeno mjerenjem, ne čitanjem: `bin/testovi.sh` prošao je 12/12 u svježem klonu, a odmah
+zatim pao `2 od 12` u `~/.katedra-pkg` nad **istim commitom**. Razlika je bila u tome što je
+klon imao dio datoteka zapisanih s LF (one koje je sesija pisala), a `~/.katedra-pkg` sve s
+CRLF iz checkouta.
+
+Popravak: prijelomi retka normaliziraju se prije hashiranja (`\r\n` i `\r` → `\n`). Otisak
+sada mjeri **sadržaj** motora, ne način na koji ga je git zapisao na disk. Izmjereno poslije:
+CRLF stablo i LF stablo daju isti `b133a824`.
+
+Ograda: `R41` u `rad-audit/scripts/tests/test_all.py` gradi dvije kopije motora, jednu u CRLF
+i jednu u LF, i traži isti otisak. Mutacijom provjereno da pada — vraćanje starog načina
+hashiranja obara R41 i R22 (185 → 183 prošlo), povratak popravka vraća 185/185.

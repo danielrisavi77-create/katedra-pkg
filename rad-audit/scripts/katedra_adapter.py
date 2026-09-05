@@ -70,7 +70,14 @@ def otisak_motora() -> str:
         if os.path.basename(put) == "katedra_adapter.py":
             continue
         with open(put, "rb") as f:
-            h.update(f.read())
+            # Prijelomi retka se normaliziraju prije hashiranja. Git s
+            # `core.autocrlf=true` (zadano na Windowsu) piše CRLF u radno stablo,
+            # pa je ISTI commit davao dva otiska: 3b6c7a3e na Windowsu i b133a824
+            # uz LF. Manifest ispravan na jednoj platformi bio je pogrešan na
+            # drugoj, a R22 je time postao lutrija po okolini umjesto provjere
+            # slaganja koda i ugovora.
+            sadrzaj = f.read().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+            h.update(sadrzaj)
     return "0.0.0-undeclared+" + h.hexdigest()[:8]
 
 
