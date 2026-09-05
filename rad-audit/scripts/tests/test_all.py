@@ -192,6 +192,18 @@ def test_stvarni_rad():
     kljucevi, _ = AY.extract_biblio_keys("Notes from Poland (2026) President vetoes bill.")
     check("R24: alias NE stvara drugi unos u popisu",
           len(kljucevi) == 1, kljucevi)
+    # regresija zakrpe za 76: sirovi ključ se dodaje samo za institucionalna
+    # imena, nikad kad je prva riječ uvodna („Prema Marković" ≠ ključ `prema`)
+    k = C.parse_ay_narrative("Prema Marković (2021) izlaznost raste.")
+    check("R24: 'Prema Marković' ne daje ključ 'prema'",
+          ("prema", "2021") not in k and ("marković", "2021") in k, k)
+    # Narativni uzorak iz „Notes from Poland" uhvati samo „Poland"; vezu na
+    # jedinicu iz popisa uspostavlja alias, ne parser. Test ide end-to-end.
+    k = C.parse_ay_narrative("Izvor: Notes from Poland (2026).")
+    aliasi = AY.biblio_aliasi("Notes from Poland (2026) President vetoes bill.")
+    razrijeseni = {aliasi.get(x, x) for x in k}
+    check("R24: alias vezuje 'poland' iz teksta na 'notes' iz popisa",
+          ("notes", "2026") in razrijeseni, (k, razrijeseni))
 
     # 77 — apostrof u engleskom naslovu nije polunavodnik
     n = _tipografija_nalazi(TY, "Alcidi (2026) Orb\u00e1n\u2019s defeat opens the door to EU funds.")
@@ -208,6 +220,73 @@ def test_stvarni_rad():
     n = _tipografija_nalazi(TY, "Uzorak je bio 80 x 80 mm.")
     check("R26: pravo 'x' kao mno\u017eenje JEST nalaz",
           any("mno\u017eenje" in x for x in n), n)
+
+
+
+def test_izvori():
+    """R27–R29 — veza tvrdnja↔izvor, postojanje jedinice, granica popisa."""
+    import os
+    import tempfile
+    import common as C
+    import check_tvrdnja_izvor as TI
+    import check_reference_exists as RE
+    from docx import Document
+
+    # 79 — popis literature završava na sljedećem naslovu, ne na kraju dokumenta
+    body = ("Tijelo rada.\nLiteratura\nHorvat, S. (2018). Knjiga. Zagreb: A.\n"
+            "Popis tablica\nTablica 1. Nesto\t10\nSažetak\nRad analizira nesto.")
+    lit = C.dio_literature(body)
+    check("R27: popis literature staje na 'Popis tablica'",
+          "Horvat" in lit and "Tablica 1" not in lit and "analizira" not in lit,
+          repr(lit))
+    check("R27: bez naslova popisa vraća prazno",
+          C.dio_literature("Samo tijelo bez popisa.") == "")
+
+    with tempfile.TemporaryDirectory() as radni:
+        izvori = os.path.join(radni, "izvori")
+        os.makedirs(izvori)
+        with open(os.path.join(izvori, "Closa_2021_x.txt"), "w", encoding="utf-8") as f:
+            f.write("Council held 12 hearings. Support stood at 62,1 %.")
+        with open(os.path.join(izvori, "Thinus_2025_y.txt"), "w", encoding="utf-8") as f:
+            f.write("Compliance improved by 16,3 percentage points.")
+        mapa = os.path.join(izvori, "mapa.json")
+        with open(mapa, "w", encoding="utf-8") as f:
+            f.write('{"closa-2021":{"datoteka":"Closa_2021_x.txt"},'
+                    '"thinus-2025":{"datoteka":"Thinus_2025_y.txt"}}')
+
+        d = Document()
+        d.add_heading("1. UVOD", level=1)
+        d.add_paragraph("Vijeće je održalo 12 saslušanja (Closa, 2021).")
+        d.add_paragraph("Usklađenost se popravila za 16,3 postotnih bodova (Closa, 2021).")
+        d.add_paragraph("Potpora je iznosila 88,4 % (Thinus, 2025).")
+        d.add_heading("Literatura", level=1)
+        d.add_paragraph("Closa, Carlos (2021) Institutional logics. JCMS.")
+        d.add_paragraph("Thinus, Pauline (2025) Transactional Approach. JCMS.")
+        rad = os.path.join(radni, "rad.docx")
+        d.save(rad)
+
+        n = TI.provjeri(rad, izvori, mapa)
+        check("R28: točno pripisana brojka je potvrđena", n["potvrdeno"] >= 1, n["potvrdeno"])
+        krivi = [x["broj"] for x in n["krivi_izvor"]]
+        check("R28: brojka iz drugog izvora je PRIPISANO KRIVOM IZVORU",
+              "16,3" in krivi, n["krivi_izvor"])
+        nema = [x["broj"] for x in n["nije_nadeno"]]
+        check("R28: brojke koje nema nigdje su NIJE NAĐENO", "88,4" in nema, n["nije_nadeno"])
+
+        r = RE.provjeri(rad, izvori, mapa)
+        check("R29: jedinica s priloženom građom nije nepotvrđena",
+              len(r["nepotvrdeno"]) == 0, r)
+
+    # 80 — službena oznaka akta u više oblika
+    for akt in ["Uredba (EU, Euratom) 2020/2092 Europskog parlamenta i Vijeća od 2020.",
+                "Zakon o radu, NN 93/14, 2014.",
+                "Presuda Suda EU, ECLI:EU:C:2024:493, 2024."]:
+        check(f"R29: službena oznaka prepoznata: {akt[:28]}",
+              bool(RE.SLUZBENI.search(akt)), akt)
+
+    # ISBN kontrolna znamenka
+    check("R29: valjan ISBN-13 prolazi", RE._isbn_valjan("978-3-16-148410-0"))
+    check("R29: neispravan ISBN-13 pada", not RE._isbn_valjan("978-3-16-148410-1"))
 
 
 def _tipografija_nalazi(TY, tekst):
@@ -536,6 +615,7 @@ def main():
     test_r14_r15()
     test_v195()
     test_stvarni_rad()
+    test_izvori()
     test_manifest()
 
     # --- report ---

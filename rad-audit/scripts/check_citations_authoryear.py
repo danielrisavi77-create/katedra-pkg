@@ -213,7 +213,9 @@ def main(path):
     # kojeg fusnote i čitamo.)
     m = list(HEADING_RE.finditer(body))
     split = m[-1].end() if m else len(body)
-    lit = body[split:]
+    # Kvar 79: do sada je popis literature bio „sve do kraja dokumenta", pa su
+    # redci popisa tablica i rečenice sažetka ulazili u bibliografiju.
+    lit = C.dio_literature(body)
     used_text = "\n".join([body[:split], "\n".join(cells),
                             sup["footnotes"], sup["endnotes"]])
 

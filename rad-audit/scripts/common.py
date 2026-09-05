@@ -150,6 +150,40 @@ def sentences(text):
     return [s.strip() for s in parts if len(s.strip()) > 3]
 
 
+# Kvar 79 (nađen na stvarnom radu, 5.9.2026.): popis literature se svugdje rezao
+# kao „od naslova do KRAJA dokumenta". U radu koji iza literature ima Popis
+# tablica, Popis grafikona, sažetak i summary — dakle u standardnoj FPZG
+# strukturi — sve je to ulazilo u popis literature. Posljedice: redci popisa
+# prikaza i rečenice sažetka brojali su se kao bibliografske jedinice, a
+# `unmatched` brojač je rastao bez razloga.
+#
+# Popis literature završava na PRVOM sljedećem naslovu istoga ranga.
+KRAJ_LITERATURE_RE = re.compile(
+    r"(?im)^\s*(?:\d+\.?\s*)?"
+    r"(?:POPIS\s+(?:TABLICA|GRAFIKONA|SLIKA|PRIKAZA|PRILOGA|KRATICA|SIMBOLA)"
+    r"|PRILO(?:G|ZI)(?:\s+\d+)?"
+    r"|SA[ŽZ]ETAK|SUMMARY|ABSTRACT|KLJU[ČC]NE\s+RIJE[ČC]I|KEYWORDS"
+    r"|[ŽZ]IVOTOPIS|IZJAVA(?:\s+O\s+\w+)*|SADR[ŽZ]AJ)\s*:?\s*$"
+)
+
+
+def dio_literature(body: str) -> str:
+    """Tekst popisa literature, omeđen s obje strane.
+
+    Vraća prazan niz kad naslova popisa nema. Kraj je prvi sljedeći naslov
+    istoga ranga (popis prikaza, prilozi, sažetak, izjava), ili kraj dokumenta.
+    """
+    m = list(LIT_HEADING_RE.finditer(body or ""))
+    if not m:
+        return ""
+    pocetak = m[-1].end()
+    kraj = len(body)
+    k = KRAJ_LITERATURE_RE.search(body, pocetak)
+    if k:
+        kraj = k.start()
+    return body[pocetak:kraj]
+
+
 def parse_citation_group(inner):
     """'[19, 21]' / '[19–22]' -> set brojeva."""
     nums = set()
@@ -325,8 +359,12 @@ def parse_ay_narrative(text):
             # riječ preskočena pa je ključ bio `poland`. Ista jedinica, dva
             # ključa, pa i lažno siroče i lažni citat bez reference. Za višečlano
             # ime dodaje se i ključ PRVE riječi, bez preskakanja.
+            # Zakrpa za kvar 76 najprije je dodavala SVAKI sirovi ključ, pa je
+            # „Prema Marković (2021)" opet davalo ključ `prema` — kvar 70 u novom
+            # obliku. Sirovi ključ se dodaje samo ako prva riječ NIJE uvodna,
+            # dakle samo za institucionalna imena („Notes from Poland").
             sirovi = kljuc_prezimena(imena)
-            if sirovi and sirovi != kljuc:
+            if sirovi and sirovi != kljuc and sirovi not in UVODNE_RIJECI:
                 out.add((sirovi, (god + sufiks).lower()))
     return out
 

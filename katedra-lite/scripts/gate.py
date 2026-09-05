@@ -99,6 +99,7 @@ def _revizije(rad, kat):
 def koraci(faza: str, c: dict) -> list[Korak]:
     """Popis koraka za fazu. Redoslijed je ugovor, ne preporuka."""
     rad, pdf, profil, tip, kat = c["rad"], c["pdf"], c["profil"], c["tip"], c["kat"]
+    korijen_izvora = os.path.dirname(os.path.abspath(kat.rstrip("/")))
     claims = os.path.join(kat, "claims.jsonl")
     evidence = os.path.join(kat, "evidence.jsonl")
     izvori = os.path.join(kat, "izvori.json")
@@ -221,6 +222,20 @@ def koraci(faza: str, c: dict) -> list[Korak]:
                      "--json", os.path.join(kat, "brojke_teksta.json")),
                   treba=[rad], blokira=False,
                   zasto="pita, ne presuđuje: dva ciklusa smiju imati različite brojke"),
+            # Faza D2: brojka mora biti u izvoru koji JE citiran, ne bilo gdje.
+            # Traži izvori/mapa.json; bez nje korak izlazi s 2 (nije mjereno).
+            Korak("tvrdnja_izvor", "brojka naspram izvora koji je citiran",
+                  ["<RAD_AUDIT>/scripts/check_tvrdnja_izvor.py", rad,
+                   "--izvori", os.path.join(korijen_izvora, "izvori"),
+                   "--json", os.path.join(kat, "tvrdnja_izvor.json")],
+                  treba=[rad], satelit="rad-audit", blokira=False,
+                  zasto="brojka iz izvora A pripisana izvoru B do sada je prolazila čista"),
+            Korak("reference_postoje", "postoji li jedinica iz popisa literature",
+                  ["<RAD_AUDIT>/scripts/check_reference_exists.py", rad,
+                   "--izvori", os.path.join(korijen_izvora, "izvori"),
+                   "--json", os.path.join(kat, "reference.json")],
+                  treba=[rad], satelit="rad-audit", blokira=False,
+                  zasto="izmišljena jedinica koja JE citirana prolazila je kao čista"),
             Korak("originalnost", "preklapanje s ingestiranim izvorima",
                   _k("originality_check.py", rad, "--evidence", evidence,
                      "--json", os.path.join(kat, "originality.json")),
@@ -301,6 +316,12 @@ def koraci(faza: str, c: dict) -> list[Korak]:
                  "--json", os.path.join(kat, "literatura.json")),
               treba=[rad, profil],
               zasto="oblik bibliografske jedinice mentor vidi prvi"),
+        Korak("reference_postoje", "svaka jedinica ima građu, identifikator ili oznaku",
+              ["<RAD_AUDIT>/scripts/check_reference_exists.py", rad,
+               "--izvori", os.path.join(korijen_izvora, "izvori"), "--strogo",
+               "--json", os.path.join(kat, "reference.json")],
+              treba=[rad], satelit="rad-audit", blokira=False,
+              zasto="u modu 6 --strogo: nepotvrđena jedinica na obrani nosi autor"),
         Korak("prikazi", "slike i grafikoni: dpi, širina, omjer, pismo",
               _k("provjeri_prikaze.py", rad,
                  "--json", os.path.join(kat, "prikazi.json")),

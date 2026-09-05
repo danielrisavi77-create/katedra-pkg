@@ -67,12 +67,19 @@ def main() -> int:
     check("G7: faza audit ima više od jedne blokirajuće provjere",
           len(blok) >= 6, sorted(blok))
 
+    for korak in ("tvrdnja_izvor", "reference_postoje"):
+        check(f"G7b: faza audit ima korak '{korak}'",
+              korak in {k.kid for k in audit}, sorted(k.kid for k in audit))
+
     predaja = gate.koraci("predaja", c)
     kidovi = {k.kid for k in predaja}
     check("G8: faza predaja zove provjeri_predaju.py (rad-docx)",
           "predaja_docx" in kidovi, sorted(kidovi))
     check("G8: faza predaja provjerava praćene izmjene",
           "revizije" in kidovi, sorted(kidovi))
+    k = next(x for x in predaja if x.kid == "reference_postoje")
+    check("G8: u fazi predaja postojanje reference ide sa --strogo",
+          "--strogo" in k.argv, k.argv)
 
     # check_rules dobiva --strogo u obje faze
     for faza in ("audit", "predaja"):

@@ -441,6 +441,40 @@ def provjeri_prikaze(P, d, prelomi_put):
                    for x in rep):
             P.g(f"prikaz bez retka „Izvor:" f"” ispod sebe: {el.text.strip()[:50]}")
 
+    # Kvar 86: nitko nije uspoređivao broj natpisa u TIJELU s brojem redaka u
+    # POPISU prikaza, ni provjeravao je li numeracija po vrsti neprekinuta.
+    # Rad je išao u predaju s osam tablica i šest redaka u popisu, ili s
+    # „Tablica 1, 2, 2, 4", jer SEQ polje razliku maskira dok se ne osvježi.
+    po_vrsti, u_popisu = {}, {}
+    u_popisnom_dijelu = False
+    for el in elementi:
+        if isinstance(el, Table):
+            continue
+        t = el.text.strip()
+        if re.match(r"(?i)^popis\s+(tablica|grafikona|slika|prikaza)", t):
+            u_popisnom_dijelu = True
+            continue
+        if re.match(r"(?i)^(literatura|prilo(g|zi)|sa[žz]etak|summary)\b", t):
+            u_popisnom_dijelu = False
+        m = NATPIS.match(t)
+        if not m:
+            continue
+        vrsta, broj = m.group(1), int(m.group(2))
+        (u_popisu if u_popisnom_dijelu else po_vrsti).setdefault(vrsta, []).append(broj)
+
+    for vrsta, brojevi in sorted(po_vrsti.items()):
+        ocekivano = list(range(1, len(brojevi) + 1))
+        if sorted(brojevi) != ocekivano:
+            P.g(f"numeracija „{vrsta}” nije neprekinuta: {brojevi} "
+                f"(očekivano {ocekivano}) — rupa ili ponovljen broj")
+        n_popis = len(u_popisu.get(vrsta, []))
+        if n_popis and n_popis != len(brojevi):
+            P.g(f"popis prikaza ne odgovara tijelu: „{vrsta}” u tijelu "
+                f"{len(brojevi)}, u popisu {n_popis}")
+        elif not n_popis and brojevi:
+            P.o(f"„{vrsta}”: {len(brojevi)} u tijelu, popis prikaza nije nađen "
+                f"ili je prazan — provjeri Update Field")
+
     if os.path.exists(prelomi_put or ""):
         try:
             prelomi = json.load(open(prelomi_put, encoding="utf-8"))

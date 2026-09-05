@@ -990,3 +990,83 @@ ali „80 x 80 mm" jest.
 proći kroz barem jedan stvarni rad. Sintetički fixture pokazuje da alat hvata;
 samo stvarni rad pokazuje koliko lažno hvata.
 
+---
+
+## Kvar 79 — popis literature gutao je sve iza sebe
+
+Svugdje u lancu popis literature se rezao kao „od naslova do KRAJA dokumenta".
+Rad koji iza literature ima Popis tablica, Popis grafikona, sažetak i summary,
+dakle standardna FPZG struktura, davao je **30 bibliografskih jedinica umjesto
+27**: redci popisa prikaza i rečenice sažetka brojali su se kao jedinice.
+
+Sada `common.dio_literature()` omeđuje popis s obje strane; kraj je prvi sljedeći
+naslov istoga ranga (`KRAJ_LITERATURE_RE`). Koriste ga svi potrošači.
+**Ograda:** R27.
+
+---
+
+## Kvarovi 80–86 — tri stavke koje su ostale nakon v1.9.5
+
+**80 — službena oznaka akta u jednom obliku.** `Uredba (EU, Euratom) 2020/2092`
+nije prolazila jer je uzorak tražio doslovno `Uredba (EU)`. Propis bez DOI-ja nije
+nepotvrđena jedinica.
+
+**81 — nenađen blok nije obarao mjerenje.** `izmjeri.py` je prikaz kojemu natpis
+ili „Izvor:" nije nađen u PDF-u ispisivao u JSON i to je bilo sve. Takav prikaz
+ispada i iz `prelomi.json` (pa se lomi preko dvije stranice) i iz `natpisi.json`
+(pa nema retka u popisu prikaza), a `gradi.py` javi „✅ stabilno". Fiksna točka
+izračunata nad nepotpunim skupom nije fiksna točka. Izuzetak: `--dopusti-nenadene`.
+
+**82 — smanjeni opseg izgledao je kao uspjeh.** Bez LibreOfficea `gradi.py` je
+gradio dokument bez ijednog izmjerenog broja stranice i vraćao 0. Sada vraća 4,
+kod koji `gate.py` već preslikava u „preskočeno", dakle u deklariranu granicu.
+Uz to je ulazna točka zvala `main()` bez `sys.exit`, pa je i 4 postajalo 0.
+
+**83 — `prikazi.py` je smio pasti.** Povratna vrijednost se nije gledala, pa je
+`blokovi.json` ostajao od prošle izgradnje i mjerio se pogrešan skup blokova.
+Dodana je i provjera da `blokovi.json` nije stariji od dokumenta.
+
+**84 — fiksna točka protiv zaostalog stanja.** `toc.json`, `prelomi.json` i
+`natpisi.json` nisu se brisali na početku, pa je prvi krug mogao dati tri „=" i
+poruku „stabilno" uspoređujući novo mjerenje sa stanjem prethodne izgradnje.
+Sada se premještaju u `_stanje_prosli/`; `--zadrzi-stanje` je svjestan izuzetak.
+
+**85 — pomak numeracije od krivog mjesta.** `gradi.py` nikad nije prosljeđivao
+`--pocetak-tijela`, pa je pomak računat od PRVOG naslova rukopisa. U FPZG
+strukturi prvi je dio predtekst, pa su svi brojevi u sadržaju i popisima bili
+pomaknuti za konstantu. Ograda protiv rasapa to ne vidi jer raspon ostaje
+netaknut, pa se petlja uredno stabilizirala na pogrešnim brojevima. Sada se
+`tijelo_pocinje_od` čita iz profila.
+
+**86 — popis prikaza bez parityja.** Nitko nije uspoređivao broj natpisa u tijelu
+s brojem redaka u popisu, ni provjeravao je li numeracija po vrsti neprekinuta.
+Rad je išao u predaju s osam tablica i šest redaka u popisu, ili s „Tablica 1, 2,
+2, 4", jer `SEQ` polje razliku maskira dok se ne osvježi.
+
+---
+
+## Nova faza D2 i B2 — dvije klase koje nijedan alat nije gledao
+
+**D2, `check_tvrdnja_izvor.py`.** `cross_check.py` traži brojku kao podniz po SVIM
+izvorima ZAJEDNO, pa brojka koja postoji u izvoru A, a pripisana je izvoru B,
+prolazi čista. To je oblik pogreške koji recenzent nađe za dvije minute, a alat
+nije nalazio nikad. Veza se ne da pogoditi iz teksta: zapisuje se jednom u
+`izvori/mapa.json` (`mapa_izvora.py --izgradi` daje prijedlog uparen po prezimenu
+i godini u imenu datoteke). Tri ishoda: potvrđeno, PRIPISANO KRIVOM IZVORU (uz
+popis izvora u kojima brojka stvarno jest), nije nađeno. Granice se broje i
+ispisuju: rečenice bez citata, citati bez unosa u mapi, jedinice bez priložene
+datoteke.
+
+**B2, `check_reference_exists.py`.** Sloj provjere citata gledao je samo
+ZATVORENOST skupa, pa je izmišljena jedinica koja JE citirana prolazila kao
+potpuno čista. Sada se svaka jedinica svrstava po tome čime je potkrijepljena:
+građa, identifikator (DOI, valjan ISBN, URL), službena oznaka (NN, ECLI, CELEX,
+COM, uredba, presuda) ili NEPOTVRĐENA. Alat ne tvrdi da je nepotvrđena jedinica
+izmišljena, nego da ništa u projektu ne pokazuje da postoji. Savjetodavno u modu
+4, `--strogo` u modu 6.
+
+**Ograde:** R27–R29 (11 tvrdnji), G7b i G8 u `test_gate.py`.
+
+**Izmjereno na stvarnom radu:** 27 jedinica, 21 s identifikatorom, 6 službenih,
+0 nepotvrđenih. Prije zakrpe 80 i 79: 30 „jedinica" i 4 lažno nepotvrđene.
+
