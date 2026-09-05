@@ -434,6 +434,19 @@ korak.
     modovima nad gotovim `.docx`-om, ne samo u modu 3. Dva su smjera kvara i oba su
     stvarna: dio rada koji postoji prijavi se kao da ga nema, a opseg se izmjeri prekratak.
 
+31. **Uzorak s ocjenom je mjerilo oblika i rizik ponavljanja, i to se mjeri odvojeno.**
+    Pravila 17 i 24 govore što uzorak dokazuje o OBLIKU. Ne govore ništa o sadržaju, a kad
+    uzorak dolazi s **istog kolegija**, on je i najbliži susjed u prostoru tema: ista
+    literatura, isti standardi, isti mentor koji ga je upravo čitao. Zato uz mjerenje oblika
+    ide i mjerenje preklapanja: `scripts/slicnost.py rad.docx --uzorak uzorak.docx` daje udio
+    zajedničkih n-grama i popis dijeljenih fraza. Prag nije propisan, ali **8-grami iznad
+    2 % traže prolaz kroz uvod, metode i ograničenja** — to su dijelovi koji se pišu po
+    obrascu i prvi se poklope. Mjereno na seminarskom radu iz rujna 2026.: 2,1 % pa 0,9 %
+    poslije prepisivanja pet rečenica. Drugi dio istog pravila je sadržajni: ono što uzorak
+    već dokazuje ne dokazuje se ponovno nego se na to **uputi**, a prostor ide onome čega u
+    uzorku nema. Rad koji ponovi tezu susjednog rada ne pada na formi nego na doprinosu, a
+    nijedan formalni gate to ne vidi.
+
 *Zašto je koje pravilo nastalo — stvarni radovi, brojke i kvarovi iza pravila 11–20:*
 **`references/zasto.md`**. Router se učitava u svakoj poruci; obrazloženja se čitaju jednom.
 

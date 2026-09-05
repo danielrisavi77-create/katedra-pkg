@@ -99,6 +99,25 @@ _ABBR_RE = re.compile(
 )
 
 
+
+# v1.9.3: v. komentar u `sentences`.
+_re_pravna_referenca = re.compile(
+    r"(?i)\b(?:čl|st|t|toč|točk\w*|član\w*|stav\w*|alinej\w*|paragraf\w*"
+    r"|odjelj\w*|redak|retku)\.?\s*\d+[a-z]?\.(?=\s+[A-ZČĆŽŠĐ])")
+
+
+def _zastiti_u_zagradi(t):
+    """Točka unutar otvorene zagrade nije kraj rečenice."""
+    out, dubina = [], 0
+    for ch in t:
+        if ch == "(":
+            dubina += 1
+        elif ch == ")":
+            dubina = max(0, dubina - 1)
+        out.append(_ABBR_PLACEHOLDER if (ch == "." and dubina > 0) else ch)
+    return "".join(out)
+
+
 def sentences(text):
     """Grubo dijeljenje na re\u010denice (hr).
 
@@ -108,6 +127,24 @@ def sentences(text):
     ("nosivost." NIJE "st.")."""
     text = re.sub(r"\s+", " ", text)
     protected = _ABBR_RE.sub(lambda m: m.group(0).replace(".", _ABBR_PLACEHOLDER), text)
+    # Dvije točke koje NISU kraj rečenice, a uzorak iznad ih ne hvata:
+    # (1) redni broj iza najavne riječi pravne reference („prema članku 6. ZPD-a")
+    #     — pravilo o kraticama gleda samu kraticu, ne broj iza nje;
+    # (2) svaka točka unutar otvorene zagrade („(MRS 12, t. 24.)") — citatni
+    #     lokator nikad ne završava rečenicu.
+    # Bez toga je na radu iz poreznog računovodstva mjereno 280 rečenica umjesto
+    # 193, medijan 18 umjesto 24 i „vrlo kratke (≤8): 71 (25 %)" umjesto 10 %,
+    # pa je faza E prijavljivala staccato ritam kojega nema. Najkraća „rečenica"
+    # u tom ispisu bila je `24.).`
+    # (3) redni broj / datum ispred malog slova ili druge znamenke („od 1.
+    #     siječnja 2026.", „NN 155/23, 151/25"). katedra-lite/hr_text.py to
+    #     pravilo ima od početka; ovaj ga splitter nije imao, pa je datum
+    #     lomio rečenicu na „…od 1." + „siječnja 2026.".
+    protected = re.sub(r"(\d)\.(?=\s*[a-zčćžšđ(\d–—-])",
+                       r"\1" + _ABBR_PLACEHOLDER, protected)
+    protected = _re_pravna_referenca.sub(
+        lambda m: m.group(0)[:-1] + _ABBR_PLACEHOLDER, protected)
+    protected = _zastiti_u_zagradi(protected)
     parts = re.split(r"(?<=[\.\!\?])\s+", protected)
     parts = [p.replace(_ABBR_PLACEHOLDER, ".") for p in parts]
     return [s.strip() for s in parts if len(s.strip()) > 3]
@@ -197,7 +234,13 @@ NUMBERED_ITEM_RE = re.compile(r"(?m)^\s*(?:(\d{1,3})\s*[.)]|\[\s*(\d{1,3})\s*\])
 # stranicom — a to je citat koji je BOLJE napisan od golog — pa referenca postane
 # „siroče" i izvještaj prijavi nepostojeće greške. Najgora vrsta kvara: alat
 # kažnjava rad zato što je precizniji.
-LOKATOR = r"(?:\s*:\s*[\dxivlcdmXIVLCDM]+(?:\s*[-–]\s*[\dxivlcdmXIVLCDM]+)?)?"
+# Lokator stranice ima dva dijalekta: FPZG piše dvotočkom („Becker, 2007: 9"),
+# a apa-hr zarezom i kraticom („Jurić, 2022, str. 170"). Uzorak je poznavao samo
+# prvi, pa je u NARATIVNOM položaju („Šimović (2008, str. 6)") cijeli citat
+# ispadao — zagradni ga je hvatao repnom klauzulom, narativni nije. Na jednom
+# radu s pet narativnih i četiri zagradna citata siročad je bilo točno tih pet.
+LOKATOR = (r"(?:\s*[:,]\s*(?:str\.|s\.|p\.|pp\.)?\s*"
+           r"[\dxivlcdmXIVLCDM]+(?:\s*[-–]\s*[\dxivlcdmXIVLCDM]+)?)?")
 
 # Parentetički citat s ", GODINA" (dopušta ; za više grupa u istoj zagradi).
 # Poslije godine smije stajati kratka napomena („, za analizu"), a prije autora

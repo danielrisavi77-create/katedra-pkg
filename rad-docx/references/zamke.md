@@ -515,3 +515,63 @@ izvan redoslijeda: nema
 ```
 
 Prva inačica gledala je tri kontejnera i javljala zeleno nad dokumentom s pet prekršaja.
+
+## 24. `str(None)` je niska „None", pa dokument bez zadanog proreda dobiva grešku da je prored fiksan
+
+`provjeri_predaju.py` mjeri prevladavajuće `line_spacing_rule` po odlomcima. Kad prored
+nigdje nije zadan, `_prevladava` vraća `None`, a `str(None)` daje nisku `"None"` — istinitu
+i bez `AUTO`, `POINT` ili `MULTIPLE` u sebi, pa grana koja traži fiksni prored okida.
+
+```python
+pravila = str(None)                      # 'None'
+bool(pravila and "AUTO" not in pravila.upper()
+     and "POINT" not in pravila.upper()
+     and "MULTIPLE" not in pravila.upper())    # True  -> GREŠKA
+```
+
+Poruka je pritom obrnuta od istine (prored nije zadan, a alat kaže da je fiksan), nalaz je
+razine **greška** i zaustavlja predaju, a isti ispis u istom trenutku sadrži i točan nalaz
+kao upozorenje:
+
+```
+PRIJE:   ❌ GREŠKE (1) — rad se ne predaje:
+            · prored je fiksan (None) — inline slike se obrežu na visinu retka
+         ⚠️  · prored nije zadan ni na odlomcima ni u stilu — nasljeđuje se iz predloška
+POSLIJE: ✅ nijedna greška
+         ⚠️  · prored nije zadan ni na odlomcima ni u stilu — nasljeđuje se iz predloška
+```
+
+Pogađa svaki dokument sastavljen nad tuđim predloškom, jer takav prored nasljeđuje umjesto
+da ga zapisuje. Popravak isključuje nisku `"None"` iz grane; upozorenje koje stvarno opisuje
+stanje ostaje. Ograda: dokument koji prored doista nasljeđuje i dalje treba pogledati, ali
+to je upozorenje, ne zapreka predaji.
+
+## 25. Blokirajuća provjera koja ne postoji javlja se kao „treba ponovna instalacija"
+
+`provjeri_reference.py` zove se na osam mjesta u `katedra-lite` (`predaja.md` dvaput,
+`povratak.md` triput, `dijelovi.json` uz dva obavezna dijela, `katedra/references/kvar.md`
+jednom), a `gate.py --faza predaja` vodi je kao **blokirajuću**. Skripte u paketu nije bilo.
+
+```
+➖ brojevi stranica protiv stvarnog otiska              blokira
+     `rad-docx` nema scripts/provjeri_reference.py — treba ponovna instalacija
+```
+
+Dvostruka šteta: jedina provjera koja mjeri brojeve stranica protiv otiska nikad se ne
+pokrene, a poruka šalje korisnika da ponovno instalira paket koji je potpun. Ponovna
+instalacija daje isti nalaz, pa se drugi put preskoči i prestane se čitati. Popravak je
+sama skripta: iz `.docx`-a čita keširane vrijednosti `PAGEREF` polja, iz PDF-a stvarni
+prijelom, i uspoređuje ih redak po redak.
+
+```
+$ provjeri_reference.py rad.pdf --docx rad.docx
+  ✅ svih 27 brojeva slaže se sa stvarnim prijelomom.        (izlazni kod 0)
+$ provjeri_reference.py rad.pdf --docx rad_s_jednim_krivim.docx
+  ❌ tvrdi 7 · otisak 1   1. UVOD
+  ❌ 1 od 27 brojeva ne slaže se s otiskom — rad se ne predaje.   (izlazni kod 1)
+```
+
+Ograda koja se izgovara: mjeri se **keširana** vrijednost, a Word je osvježava tek kad
+netko otvori dokument i pokrene Update Field. Alat zato ne tvrdi da će brojevi ostati
+točni, nego da su točni u datoteci koja se predaje. Izlazni kod 2 znači da se nije dalo
+izmjeriti (nema `pdftotext`, nema polja) i to nije isto što i prolaz.

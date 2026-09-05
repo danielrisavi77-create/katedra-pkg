@@ -1,3 +1,22 @@
+# v1.9.3 — dijalekt lokatora i dijeljenje rečenica u pravnoj prozi
+
+> **Zadnji korak svake zakrpe koja dira `rad-audit/scripts/`:** osvježi
+> `engine_contract.json` → `engine_version` na `katedra_adapter.otisak_motora()` i pokreni
+> `tests/test_all.py`. Otisak se računa iz izvora, a u contract se upisuje rukom; bez toga
+> Katedra odbija `DocumentAuditResult`, a `--provjeri` i dalje javlja ✅ (v. kvar 5).
+
+* **Kvar 3 — `LOKATOR` poznaje samo dvotočku.** Apa-hr piše `, str. 170`; zagradni parser
+  taj oblik proguta repnom klauzulom, narativni nema, pa `Šimović (2008, str. 6)` nije
+  citat. Na radu s pet narativnih i četiri zagradna citata siročad je bilo točno tih pet.
+  Mjereno: `Citirano u tekstu 5 → 10`, `SIROČAD 5 → nema`. 84 regresijska testa prolaze.
+* **Kvar 4 — `common.sentences` lomi rečenicu na rednom broju i unutar zagrade.**
+  `prema članku 6. ZPD-a` daje dvije rečenice, `(MRS 12, t. 24.)` daje fragment `24.).` od
+  jedne riječi, a nedostajalo je i pravilo o rednom broju pred malim slovom koje
+  `katedra-lite/hr_text.py` ima od početka (`od 1.` + `siječnja 2026.`). Mjereno na istom
+  radu: `305 → 270` rečenica, medijan `19 → 21,0`, vrlo kratke `24 % → 16 %`; ručno brojenje
+  iste proze daje 193 rečenice i medijan 24. Preostalih 16 % nisu rečenice nego brojevi
+  naslova koje ekstrakcija ulijeva u isti tok — to je kvar ekstrakcije i mjeri se zasebno.
+
 # Faza B: izvori bez osobnog autora (rujan 2026.) — kvar 2
 
 `check_citations_authoryear.py` sada iz retka literature prepoznaje institucionalnog

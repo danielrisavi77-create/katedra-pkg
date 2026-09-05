@@ -1,3 +1,45 @@
+# v1.9.3 — sesija „porezne olakšice" (5. 9. 2026.): mjerila koja su mjerila krivu stvar
+
+Sve niže potječe iz jedne sesije u kojoj je seminarski rad prošao sve modove uz uzorak s
+ocjenom 5 kao predložak. Zajedničko im je da nijedan nije srušio skriptu: svi su tiho dali
+krivu brojku, a autor je po njoj mijenjao uredan rad.
+
+* **Kvar 45 — `primjerci.py` mjerio je veličinu pisma iz natpisa prikaza.** Odlomak tijela
+  koji veličinu nasljeđuje iz `docDefaults` vraća `None` i ispada iz moda; na uzorku je
+  takvih bilo **59**, a jedinih pet s izričitom veličinom bili su natpisi od 11 pt. Mjereno
+  `11.0` umjesto `12.0`. Kvar se širi jer po pravilu 17 primjerak nadjačava profil: 11 pt je
+  ušlo u `resolved_profile.json` i `check_rules` je zatim blokirao vlastiti generirani rad.
+  Popravak izbacuje `Caption`, `table of figures`, `TOC*`, zaglavlja i fusnote iz uzorka
+  tijela i čita `docDefaults` kad odlomak nema izričitu veličinu.
+* **Kvar 46 — `hr_text.recenice` lomio je rečenicu na rednom broju pravne reference.**
+  `prema članku 6. ZPD-a` postajalo je dvije rečenice. Na fixtureu pravne proze: 6 rečenica,
+  medijan 9,5 i 50 % kratkih prije, 4 rečenice, medijan 15,5 i 0 % kratkih poslije.
+  `check_ai_style` je zbog toga javljao staccato na tekstu iznad praga. Ograda se izgovara:
+  `To stoji u članku 6. Sljedeće poglavlje…` sada se spaja u jednu rečenicu.
+* **Kvar 47 — `re.IGNORECASE` gasio je strukturni znak u `check_argument.py`.**
+  `\bautor\w*\s+[A-ZČĆŽŠĐ]` s `IGNORECASE` hvata i mala slova, pa je `izrada autora prema
+  ZPD` davalo podudarnost `autora p` i cijeli izvor prijavljivalo kao tuđe autorstvo.
+  Mjereno na radu sa šest autorskih prikaza: `vlastitih: 0 · prerađenih: 6` prije,
+  `vlastitih: 6 · prerađenih: 0` poslije. Pogađa **svaki** izvor koji uz autorstvo imenuje
+  podlogu, dakle oblik koji profil traži, i nagrađuje brisanje provenijencije — u toj je
+  sesiji autor doista izbrisao „prema ZPD, čl. 28." iz dva izvora da zadovolji mjerilo.
+* **Kvar 48 — rep predaje čitao se s razine fakulteta.** 14 dana iz `efzg.json` pokriva
+  Turnitin, uvez i repozitorij, korake završnog rada; seminarski se predaje e-mailom.
+  Svaki seminarski s rokom kraćim od 14 dana dobivao je „ROK JE PROŠAO ILI GA JEDE
+  ADMINISTRATIVNI REP". Overlay `efzg-rfir-seminarski` dobiva vlastiti blok `predaja`
+  (rep 0, dva stvarna koraka), a `tempo.py` uz brojku ispisuje i odakle je uzeta.
+* **`scripts/slicnost.py`** (novo) — preklapanje rada s referentnim dokumentom po n-gramima
+  nad riječima, uz podjelu na **nužno** (naziv propisa, broj NN, oznaka točke standarda) i
+  **izbježivo** (proza). Mjereno na istom radu prije i poslije prepisivanja: 8-grami
+  2,09 % → 0,91 %, izbježivih 43 → 5. Izlazni kod je uvijek 0: ovo je mjera, ne presuda.
+* **Željezno pravilo 31** — uzorak s ocjenom je istovremeno mjerilo oblika i rizik
+  ponavljanja. Pravila 17 i 24 pokrivaju oblik; sadržajno preklapanje s radom istog
+  kolegija nije mjerio nitko, a mentor koji je oba rada čitao vidi ga bez alata.
+* **Profil.** `efzg.json` dobiva primjerak `efzg-rfir-seminarski-ocjena5-2026` s izmjerenim
+  vrijednostima obranjenog rada; dvije proturječe overlayu (`prijelom_pred_poglavljem`
+  false naspram 8/8 izmjereno, opseg 3000–4000 riječi naspram 3990 riječi na 13 stranica) i
+  obje ostaju zapisane, jer je primjerak opservacija, a Upute su norma.
+
 # v1.9 — `rubrika.py` čita nalaz provjere umjesto da pretpostavlja da je prošla
 
 * **Zašto.** Prethodni unos ostavio je zapisanu granicu: `rubrika.py` gledala je **je li komponenta pokrivena** provjerom, ne **je li provjera prošla**. Komponenta s `igle` ulazila je u „sve pokrivene" i onda kad tih igala u radu nema. Izmjereno nad istim `zadatak.json`-om: `provjeri_predaju.py` javlja `❌ zadatak traži, a u radu nema: kvantitativna analiza`, a `rubrika.py` istodobno `✅ ispunjeno`, pojas **5**. Dva alata, jedan artefakt, suprotan nalaz — i to na ključnom kriteriju, gdje je razlika između 3 i 5. Uzrok nije bila logika čitača nego to što nalaz gatea **nije postojao u obliku koji se dade pročitati**: `provjeri_predaju.py` je ispisivao za čovjeka i vraćao izlazni kod, ništa više.

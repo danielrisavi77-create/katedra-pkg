@@ -481,3 +481,94 @@ suprotan nalaz, i to na ključnom kriteriju. Zato `provjeri_predaju.py` sada zap
 pretpostavlja da je provjera prošla. Bez tog nalaza kriterij ne ide iznad `djelomicno` za
 komponente pokrivene samo iglama — nedostatak dokaza nije dokaz, isto načelo po kojem
 `pojas()` odbija procijeniti pojas kad je ključni kriterij `nepoznato`.
+
+## 45. Primjerak mjeri veličinu pisma iz natpisa prikaza, jer odlomci tijela nemaju izričitu veličinu
+
+`primjerci.py` uzima kao tijelo svaki odlomak koji nije naslov i dulji je od 80 znakova, a
+veličinu čita iz runa pa iz stila. Odlomak koji veličinu nasljeđuje iz `docDefaults` vraća
+`None` i ispada iz moda. Na uzorku s ocjenom 5 tijelo je imalo **59 takvih odlomaka**, a
+jedinih pet s izričitom veličinom bili su natpisi tablica (stil `Caption`, 11 pt) — dulji
+od 80 znakova i formalno nisu naslovi. Mod je zato ispao 11 pt, iako je tijelo 12 pt.
+
+```
+PRIJE:   "velicina_pt": 11.0     (5 natpisa; 59 odlomaka tijela nije brojano)
+POSLIJE: "velicina_pt": 12.0     (docDefaults w:sz=24)
+```
+
+Kvar je tih i skup jer se **širi**: izmjerena vrijednost upisuje se u profil kao primjerak,
+a po željeznom pravilu 17 primjerak je jači od profila. U ovoj je sesiji 11 pt ušlo u
+`resolved_profile.json`, `check_rules` je zatim blokirao vlastiti generirani rad zbog
+„11 pt", a autor je uskladio dokument prema krivoj mjeri. Popravak ima dva dijela: stilovi
+koji nisu tijelo (`Caption`, `table of figures`, `TOC*`, zaglavlja, fusnote) izbacuju se iz
+uzorka, a `None` se čita kao „nasljeđuje iz `docDefaults`" i zamjenjuje stvarnom zadanom
+veličinom. Ograda: mjeri se i dalje mod, pa dokument u kojem tijelo doista ima dvije
+veličine daje onu češću, bez upozorenja.
+
+## 46. Redni broj pravne reference pred velikim slovom lomi rečenicu, pa se mjeri ritam kojega nema
+
+`hr_text._zastiti` štiti točku iza znamenke samo ako iza nje slijedi malo slovo ili zagrada
+(`2020. godine`). U pravnoj prozi iza rednog broja redovito stoji velika kratica
+(`prema članku 6. ZPD-a`, `u točki 47. MRS-a 12`), pa se svaka takva rečenica lomi na dvije.
+
+```python
+>>> recenice("Prema članku 6. ZPD-a osnovica se umanjuje.")
+PRIJE:   ['Prema članku 6.', 'ZPD-a osnovica se umanjuje.']
+POSLIJE: ['Prema članku 6. ZPD-a osnovica se umanjuje.']
+```
+
+Na fixtureu od četiri rečenice pravne proze mjereno je 6 rečenica, medijan 9,5 i 50 %
+kratkih; poslije 4 rečenice, medijan 15,5 i 0 % kratkih. `check_ai_style` na temelju toga
+javlja „staccato" i „rečenica ≤10 riječi iznad praga" na tekstu koji je iznad praga, pa
+autor prepisuje uredne rečenice. Popravak štiti točku iza rednog broja kad joj prethodi
+najavna riječ (`čl`, `st`, `t`, `točk*`, `član*`, `stav*`, `alinej*`, `odjelj*`, `redak`).
+Ograda se izgovara: `To stoji u članku 6. Sljedeće poglavlje…` sada se spaja u jednu
+rečenicu. To je svjestan ustupak — krivo spajanje je rijetko, krivo lomljenje je pogađalo
+svaku rečenicu s pravnom referencom. Isti mehanizam u `rad-audit/common.py` vodi se kao
+`rad-audit` kvar 4.
+
+## 47. `re.IGNORECASE` gasi strukturni znak, pa svaki izvor s provenijencijom postaje tuđe autorstvo
+
+`_TUDJE_AUTORSTVO_RE` razlikuje studentov prikaz od tuđeg po velikom slovu iza korijena
+(`autori Obzor 2020` je tuđe, `obrada autora prema ZPD` nije). Uzorak je bio jedan, s
+`re.IGNORECASE` nad cijelim izrazom, pa je `[A-ZČĆŽŠĐ]` hvatao i mala slova: u nizu
+`izrada autora prema ZPD` podudarnost je bila `autora p`.
+
+```
+"Izvor: izrada autora prema ZPD, čl. 28."   PRIJE: vlastiti=False   POSLIJE: True
+"Izvor: autorov izračun prema ZDPIRP"       PRIJE: vlastiti=False   POSLIJE: True
+"Izvor: autori projekta Obzor 2020"         PRIJE: vlastiti=False   POSLIJE: False
+```
+
+Pogađa **svaki** izvor koji uz autorstvo imenuje i podlogu, a to je oblik koji profil
+traži („Izvor:" ispod prikaza). Na radu sa šest autorskih prikaza mjereno je
+`vlastitih: 0 · prerađenih: 6`, `rubrika` je zbog toga kriterij „Vlastiti doprinos"
+(težina 5, ključni) spustila na `djelomicno`, a pojas na 4. Skuplja je posljedica bila
+ponašanje koje alat time nagrađuje: u ovoj je sesiji autor izbrisao „prema ZPD, čl. 28."
+iz dva izvora **da bi zadovoljio mjerilo**, čime je izgubljena provenijencija koju drugo
+pravilo istog paketa izrijekom traži. Popravak dijeli uzorak na dva: popis zajedničkih
+imenica ostaje neosjetljiv na veličinu slova, strukturni znak postaje osjetljiv.
+
+```
+PRIJE:   prikaza s izvorom: 6 · vlastitih: 0 · prerađenih: 6
+POSLIJE: prikaza s izvorom: 6 · vlastitih: 6 · prerađenih: 0
+```
+
+## 48. Rep predaje pripada vrsti rada, a čitao se s razine fakulteta, pa svaki seminarski kasni
+
+`tempo.py` odbija `predaja.administrativni_rep_dana` od dana do roka. Ta brojka u
+`efzg.json` iznosi 14 i pokriva Turnitin, uvez, unos u repozitorij i prijavu obrane —
+korake **završnog rada**. Seminarski se predaje e-mailom nositelju i nema nijedan od njih,
+ali profil rep ne veže uz vrstu rada, pa ga tempo primjenjuje na sve.
+
+```
+seminarski, rok za 7 dana:
+PRIJE:   • ROK JE PROŠAO ILI GA JEDE ADMINISTRATIVNI REP
+POSLIJE: ✅ U PLANU        (rep 0 dana, izvor: profil)
+```
+
+Svaki seminarski s rokom kraćim od 14 dana, dakle gotovo svaki, dobivao je istu poruku, a
+uz nju i `napredak.py` gasi cijelu procjenu tempa. Popravak je dvodijelan: overlay
+`efzg-rfir-seminarski` dobiva vlastiti blok `predaja` s repom 0 i dva stvarna koraka, a
+`tempo.py` uz brojku ispisuje i **odakle je uzeta** („profil" ili „zadano u tempo.py"),
+jer rep bez izvora ne da se provjeriti. Ograda: rep za druge vrste radova i dalje dolazi s
+razine fakulteta; overlay ga nadjačava samo ondje gdje je izmjeren ili izjavljen.

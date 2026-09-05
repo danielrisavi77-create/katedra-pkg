@@ -541,6 +541,19 @@ def _zastiti(t):
     t = re.sub(r"(\d)\.(?=\s*[a-zčćžšđ(])", r"\1" + _ZASTITA, t)
     t = re.sub(r"(\d)\.(?=\s*\d)", r"\1" + _ZASTITA, t)
     t = re.sub(r"(\d)\.(?=\s*[–—-])", r"\1" + _ZASTITA, t)
+    # Pravna referenca: redni broj iza najavne riječi („prema članku 6. ZPD-a",
+    # „u točki 4. MRS-a 12", „čl. 28.a"). Pravilo iznad štiti točku samo ako iza
+    # nje slijedi malo slovo, pa je svaka takva referenca pred VELIKIM slovom
+    # lomila rečenicu na dvije. Na radu iz poreznog računovodstva mjereno je 193
+    # rečenice ručno naspram 280 alatom, medijan 24 naspram 18, udio kratkih
+    # 10 % naspram 25 % — pa je check_ai_style javljao staccato ritam kojega nema.
+    # Granica: „To stoji u članku 6. Sljedeće poglavlje…" ovdje se spaja u jednu
+    # rečenicu. To je svjestan ustupak: krivo spajanje je rijetko, a krivo
+    # lomljenje je pogađalo svaku rečenicu s pravnom referencom.
+    t = re.sub(r"(?i)\b(čl|st|t|toč|točk\w*|član\w*|stav\w*|alinej\w*|"
+               r"paragraf\w*|odjelj\w*|redak|retku|r\.\s*br)\.?\s*\d+[a-z]?\."
+               r"(?=\s+[A-ZČĆŽŠĐ])",
+               lambda m: m.group(0)[:-1] + _ZASTITA, t)
     # inicijali: "N. Čavlek"
     t = re.sub(r"\b([A-ZČĆŽŠĐ])\.(?=\s+[A-ZČĆŽŠĐ])", r"\1" + _ZASTITA, t)
     return t

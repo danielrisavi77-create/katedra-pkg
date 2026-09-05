@@ -98,8 +98,20 @@ def izracun(plan, stanje, profil=None, danas=None):
         r["poruka"] = f"rok „{rok}” nije u obliku RRRR-MM-DD"
         return r
 
-    rep = ((profil or {}).get("predaja") or {}).get("administrativni_rep_dana")
-    rep = int(rep) if isinstance(rep, (int, float)) else REP_DANA_ZADANO
+    # Rep predaje pripada VRSTI rada, ne fakultetu: koraci koji ga čine (Turnitin,
+    # uvez, repozitorij, prijava obrane) su koraci završnog i diplomskog. Dok se
+    # čitao samo s razine fakulteta, svaki seminarski s rokom kraćim od 14 dana
+    # dobivao je „rok je prošao ili ga jede administrativni rep" — na seminarskom
+    # koji se predaje e-mailom, sedam dana prije roka, to je bila neistina koja
+    # gasi cijelu procjenu tempa. Izvor repa se sada i ispisuje, jer brojka bez
+    # izvora ne da se provjeriti.
+    _pred = (profil or {}).get("predaja") or {}
+    rep = _pred.get("administrativni_rep_dana")
+    if isinstance(rep, (int, float)):
+        r["rep_izvor"] = "profil (predaja.administrativni_rep_dana)"
+    else:
+        rep, r["rep_izvor"] = REP_DANA_ZADANO, "zadano u tempo.py (profil ga ne propisuje)"
+    rep = int(rep)
     do_roka = (d_rok - danas).days
     za_pisanje = do_roka - rep
 
@@ -143,7 +155,7 @@ def ispisi(r):
         print(f"  riječi zabilježeno: {r['rijeci_napisano']}")
     if r["rok"]:
         print(f"\n  rok: {r['rok']} · do roka {r['dana_do_roka']} dana"
-              f" · administrativni rep {r['rep_dana']} dana"
+              f" · administrativni rep {r['rep_dana']} dana ({r.get('rep_izvor', '?')})"
               f" → {r['dana_za_pisanje']} dana pisanja")
     if r["poruka"]:
         print(f"\n  {r['poruka']}")
