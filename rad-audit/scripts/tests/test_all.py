@@ -349,6 +349,73 @@ def test_stvarni_rad():
     check("R35: mije\u0161ana dva oblika JEST nalaz",
           any("dva oblika" in x for x in n), n)
 
+    # 105 — metapodaci (faza A4)
+    import os as _os
+    import tempfile as _tf
+    import zipfile as _zf
+    import provjeri_metapodatke as MP
+    import check_placeholders as PH2
+    from docx import Document as _Doc
+
+    def _s_meta(put, **polja):
+        d = _Doc()
+        d.add_paragraph("Sveu\u010dili\u0161te u Zagrebu")
+        d.add_paragraph("Ana Ani\u0107")
+        d.add_heading("1. UVOD", level=1)
+        d.add_paragraph("Tekst rada.")
+        d.core_properties.author = polja.get("autor", "")
+        d.core_properties.last_modified_by = polja.get("zadnji", "")
+        d.core_properties.title = polja.get("naslov", "")
+        d.save(put)
+        return put
+
+    with _tf.TemporaryDirectory() as dd:
+        r1 = _s_meta(_os.path.join(dd, "a.docx"),
+                     autor="Ana Ani\u0107", zadnji="Provenance Test Generator",
+                     naslov="Naslov")
+        n1 = MP.nalazi(MP.procitaj(r1), "Ana Ani\u0107")
+        poruke = " | ".join(x for _t, x in n1)
+        check("R36: trag alata u lastModifiedBy je gre\u0161ka",
+              any(t == "g" and "odaje alat" in x for t, x in n1), poruke)
+
+        r2 = _s_meta(_os.path.join(dd, "b.docx"),
+                     autor="Student", zadnji="PC", naslov="Naslov")
+        n2 = MP.nalazi(MP.procitaj(r2), "Ana Ani\u0107")
+        check("R36: ostavljeni predlo\u017eak (Student/PC) je gre\u0161ka",
+              sum(1 for t, x in n2 if t == "g" and "predlo\u017eak" in x) == 2,
+              [x for t, x in n2])
+
+        r3 = _s_meta(_os.path.join(dd, "c.docx"),
+                     autor="Marko Marki\u0107", zadnji="Marko Marki\u0107", naslov="Naslov")
+        n3 = MP.nalazi(MP.procitaj(r3), "Ana Ani\u0107")
+        check("R36: autor u metapodacima \u2260 naslovnica je gre\u0161ka",
+              any("ne govore isto" in x for _t, x in n3), [x for t, x in n3])
+
+        n4 = MP.nalazi(MP.procitaj(r1), "Ana Ani\u0107")
+        check("R36: uskla\u0111en autor NIJE nalaz",
+              not any("ne govore isto" in x for _t, x in n4), [x for t, x in n4])
+
+        # --postavi piše u NOVU datoteku i ne dira tragove
+        izl = _os.path.join(dd, "a-meta.docx")
+        MP.postavi(r1, izl, {"zadnji_uredio": "Ana Ani\u0107"}, True)
+        check("R36: --postavi ostavlja izvornik netaknut", _os.path.exists(r1))
+        check("R36: --postavi pi\u0161e novu datoteku", _os.path.exists(izl))
+        m_novi = MP.procitaj(izl)
+        check("R36: upisano lastModifiedBy",
+              m_novi["core"]["zadnji_uredio"] == "Ana Ani\u0107", m_novi["core"])
+        with _zf.ZipFile(r1) as z1, _zf.ZipFile(izl) as z2:
+            check("R36: document.xml NIJE diran (rsid i izmjene ostaju)",
+                  z1.read("word/document.xml") == z2.read("word/document.xml"))
+
+    # 105b — placeholder predloška: oba smjera
+    for tekst, treba in [("[Ime i prezime]", True), ("[Datum obrane]", True),
+                         ("[Internet]", False), ("[12, 13]", False), ("[3]", False),
+                         ("[zavr\u0161ni rad]", False)]:
+        import re as _re
+        uz = [u for u, _o in PH2.UZORCI if "ime|prezime" in u][0]
+        check(f"R36: placeholder {tekst} \u2192 {treba}",
+              bool(_re.search(uz, tekst)) == treba, tekst)
+
     # 78 — DOI nije množenje
     n = _tipografija_nalazi(TY, "DOI: 10.1177/1023263X251338198. Dostupno na mre\u017ei.")
     check("R26: DOI s X me\u0111u znamenkama NIJE mno\u017eenje",

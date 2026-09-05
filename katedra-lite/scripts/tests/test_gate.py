@@ -75,6 +75,8 @@ def main() -> int:
     kidovi = {k.kid for k in predaja}
     check("G8: faza predaja zove provjeri_predaju.py (rad-docx)",
           "predaja_docx" in kidovi, sorted(kidovi))
+    check("G8: faza predaja provjerava metapodatke",
+          "metapodaci" in kidovi, sorted(kidovi))
     check("G8: faza predaja provjerava praćene izmjene",
           "revizije" in kidovi, sorted(kidovi))
     k = next(x for x in predaja if x.kid == "reference_postoje")

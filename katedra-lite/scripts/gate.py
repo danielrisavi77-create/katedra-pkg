@@ -271,6 +271,12 @@ def koraci(faza: str, c: dict) -> list[Korak]:
                  "--json", os.path.join(kat, "pravila.json")),
               treba=[rad, profil],
               zasto="--strogo: advisory profil mijenja tekst nalaza, ne izlazni kod"),
+        Korak("metapodaci", "što dokument o sebi govori u docProps/",
+              ["<RAD_AUDIT>/scripts/provjeri_metapodatke.py", rad,
+               "--json", os.path.join(kat, "metapodaci.json")],
+              treba=[rad], satelit="rad-audit",
+              zasto="metapodaci putuju u repozitorij i na provjeru podudarnosti, "
+                    "a u Wordu se ne vide dok se ne otvore Podaci"),
         Korak("placeholderi", "[TREBA IZVOR] / [PROVJERI STR.] u tekstu, ćelijama i fusnotama",
               _k("check_placeholders.py", rad, "--json",
                  os.path.join(kat, "placeholders.json")),
