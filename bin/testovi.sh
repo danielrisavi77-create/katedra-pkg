@@ -34,6 +34,13 @@ for skill in katedra katedra-lite rad-audit rad-docx fpzg-diplomski replikacija-
     python3 "$KORIJEN/katedra/scripts/zakrpa.py" --provjeri-tvrdnje "$KORIJEN/$skill"
 done
 
+# Katalozi kvarova: numeracija i naslovi. Dosad ih ovaj ulaz nije pokretao, pa je
+# suite bio zelen dok je katalog imao preskoke — a sljedeća bi zakrpa uzela brojeve
+# koji su već potrošeni. Provjera koja nije u jedinom ulazu nije provjera.
+for katalog in katedra-lite rad-audit rad-docx; do
+  pokreni "katalog kvarova: $katalog"     python3 "$KORIJEN/katedra/scripts/kvar.py"       "$KORIJEN/$katalog/references/zamke.md" --provjeri
+done
+
 echo ""
 echo "══════════════════════════════════════════════════════"
 if [ "$PALO" -eq 0 ]; then

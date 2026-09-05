@@ -20,7 +20,12 @@ import os
 import re
 import sys
 
-NASLOV = re.compile(r"^##\s+(\d+)\.\s+(.+?)\s*$", re.M)
+# Raspon (`## 61–63. naslov`) postoji jer neki kvarovi imaju smisla samo
+# zajedno — ista klasa, isti popravak, jedno mjerenje. Alat ih broji kao
+# jedan UNOS koji pokriva više BROJEVA: numeracija se provjerava po
+# brojevima, sadržaj po unosu. Bez toga je grupirani unos ili nevidljiv
+# (drugi format naslova) ili lažni preskok u numeraciji.
+NASLOV = re.compile(r"^##\s+(\d+)(?:\s*[–—-]\s*(\d+))?\.\s+(.+?)\s*$", re.M)
 BROJKA = re.compile(r"\d")
 ISJECAK = re.compile(r"^```|^\s{4}\S", re.M)
 NAJKRACI = 400          # znakova; kraće od toga nije opisan mehanizam nego dojam
@@ -56,7 +61,9 @@ def unosi(tekst):
     out = []
     for i, g in enumerate(m):
         kraj = m[i + 1].start() if i + 1 < len(m) else len(tekst)
-        out.append((int(g.group(1)), g.group(2), tekst[g.end():kraj]))
+        prvi = int(g.group(1))
+        zadnji = int(g.group(2)) if g.group(2) else prvi
+        out.append((prvi, max(prvi, zadnji), g.group(3), tekst[g.end():kraj]))
     return out
 
 
@@ -84,10 +91,12 @@ def provjeri(put, od=None, nastavak_od=None):
         nastavak_od = nastavak_iz_zaglavlja(tekst)
     tvrdi, meki = [], []
     ocekivan, vidjeni = (nastavak_od + 1 if nastavak_od else 1), {}
-    for broj, naslov, tijelo in svi:
+    for broj, do_broja, naslov, tijelo in svi:
         if broj != ocekivan:
             tvrdi.append((broj, f"numeracija preskače — očekivan {ocekivan}"))
-        ocekivan = broj + 1
+        if do_broja < broj:
+            tvrdi.append((broj, f"raspon ide unatrag: {broj}–{do_broja}"))
+        ocekivan = do_broja + 1
         kljuc = naslov.strip().lower()
         if kljuc in vidjeni:
             tvrdi.append((broj, f"isti naslov već nosi kvar {vidjeni[kljuc]}"))
@@ -106,7 +115,9 @@ def provjeri(put, od=None, nastavak_od=None):
     print("=" * 72)
     print(f"KATALOG KVAROVA — {put}")
     print("=" * 72)
-    print(f"unosa: {len(svi)} · zadnji broj: {svi[-1][0]} · sljedeći slobodan: {svi[-1][0] + 1}")
+    _rasponi = sum(1 for u in svi if u[1] > u[0])
+    print(f"unosa: {len(svi)}" + (f" (od toga {_rasponi} s rasponom)" if _rasponi else "")
+          + f" · zadnji broj: {svi[-1][1]} · sljedeći slobodan: {svi[-1][1] + 1}")
     if nastavak_od:
         print(f"fragment: nadovezuje se na unos {nastavak_od}, numeracija se očekuje od {nastavak_od + 1}")
     if od is not None:
@@ -133,7 +144,7 @@ def novi(put, naslov, nastavak_od=None):
     svi = unosi(tekst)
     if nastavak_od is None:
         nastavak_od = nastavak_iz_zaglavlja(tekst)
-    broj = (svi[-1][0] + 1) if svi else ((nastavak_od + 1) if nastavak_od else 1)
+    broj = (svi[-1][1] + 1) if svi else ((nastavak_od + 1) if nastavak_od else 1)
     with open(put, "a", encoding="utf-8") as f:
         f.write(KOSTUR.format(broj=broj, naslov=naslov))
     print(f"✔ dodan kostur kvara {broj}: {naslov}")

@@ -1,3 +1,12 @@
+# v1.9.6 — registar kvarova postaje provjerljiv (kvarovi 74 i 75)
+
+Dva otvorena pitanja iz PR-a #10, oba riješena tako da se **alat proširi, a sadržaj ne dira**.
+
+* **Kvar 74 — `kvar.py` je poznavao samo jedan broj po unosu.** Zakrpa v1.9.5 upisala je četiri unosa koji pokrivaju po tri-četiri kvara (ista klasa, isti popravak, jedno mjerenje). Alat ih u izvornom obliku (`## Kvar 61–63 — …`) **nije vidio uopće**: brojao je 34 unosa, zadnji 57, „sljedeći slobodan: 58" — pa bi sljedeća zakrpa uzela već potrošene brojeve, uz zeleno od alata. Prepisani u oblik koji čita, davali su tri lažna preskoka. Podjela na po jedan broj **nije bila izvediva bez pogađanja**: poruka commita i katalog za skupinu 61–63 navode različite treće stavke, pa nigdje ne stoji koji broj pripada kojoj. Zato naslov sada prima raspon (`## 61–63. naslov`), numeracija se provjerava po **brojevima**, sadržaj po **unosu**, a `--novi` kreće od zadnjeg pokrivenog broja. Poslije: `44 unosa (od toga 4 s rasponom) · zadnji broj: 75 · sljedeći slobodan: 76`, exit 0. Ograda: raspon unatrag (`## 66–64.`) daje tvrdi nalaz.
+* **Kvar 75 — katalozi nisu bili u `bin/testovi.sh`.** Isti repo davao je dvije istine: `kvar.py` exit 1 nad katalogom s tri tvrda nalaza, `bin/testovi.sh` „✅ svih 9 skupina prošlo". Pokretala se ona zelena. Dodane su tri skupine (katedra-lite, rad-audit, rad-docx), suite ide **9 → 12**. Ograda po pravilu 34: prepisan naslov `## 71.` u `## 75.` obara skupinu i cijeli suite.
+
+**Zašto nije prenumerirano.** Brojevi 58–73 već su u opticaju: `test_gate.py` (58), `bolesni_rad.py` (68), `test_all.py` (61–71), `katedra-lite/SKILL.md` (58), poruke commita i `PROMJENE.md`. Prenumeracija bi ih sve razvezala; raspon ih zadržava i čini vidljivima.
+
 # v1.9.5 — `VERSION` prestaje tiho zaostajati (kvar 57, ograda → popravak)
 
 * **Zašto.** Kvar 57 je bio zapisan s ogradom, ne s popravkom: „`VERSION` i dalje piše rukom onaj tko radi commit". Izmjereno 5. 9. 2026. na ovom repou: datoteka je govorila **1.9.2**, a repo je bio **16 commita dalje**, s doktrinom v1.9.4 u `PROMJENE.md`. Svaka sesija koja je poslušala § 0.0 pravilo (4) ispisivala je tu brojku kao činjenicu — točno ona vrsta tihog kvara zbog koje pravilo 20 postoji, samo na razini isporuke.
