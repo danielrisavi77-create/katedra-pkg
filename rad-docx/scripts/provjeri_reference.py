@@ -132,7 +132,7 @@ def main():
         print(f"❌ {len(nalazi)} od {len(unosi)} brojeva ne slaže se s otiskom — "
               f"rad se ne predaje.")
         print("   Ako je razlika u SVIM unosima ista, sadržaj je mjeren iz PDF-a u kojem "
-              "sadržaja još nema (v. rad-docx kvar 24 u zamke.md).")
+              "sadržaja još nema (v. rad-docx kvar 25 u zamke.md).")
     else:
         print(f"✅ svih {len(unosi)} brojeva slaže se sa stvarnim prijelomom.")
     print("\nMjeri se keširana vrijednost polja. Word je osvježava tek kad netko otvori "

@@ -516,7 +516,42 @@ izvan redoslijeda: nema
 
 Prva inačica gledala je tri kontejnera i javljala zeleno nad dokumentom s pet prekršaja.
 
-## 24. `str(None)` je niska „None", pa dokument bez zadanog proreda dobiva grešku da je prored fiksan
+## 24. Komponenta zadatka bez „igala" traži doslovan tekst zahtjeva unutar rada
+
+`provjeri_zadatak` uzima `k.get("igle") or [k["naziv"]]`. Kad komponenta nema igala, alat
+traži **opis zahtjeva** kao nisku u tekstu rada. Zahtjev je opis onoga što rad mora
+zadovoljiti, a ne rečenica koju rad mora sadržavati, pa se ne nalazi nikad.
+
+```python
+    for k in zadatak.get("komponente", []):
+        igle = k.get("igle") or [k["naziv"]]
+        if not any(i in sve for i in igle):
+            P.g(f"zadatak traži, a u radu nema: {k['naziv']}")
+```
+
+Na radu Paroci to je dalo **četiri lažne greške od pet komponenti**, uz poruku „rad se ne
+predaje":
+
+```
+· zadatak traži, a u radu nema: broj stranice i kod PARAFRAZE, ne samo kod doslovnog citata
+· zadatak traži, a u radu nema: svi elementi rada prema Uputama Katedre
+· zadatak traži, a u radu nema: tehničko oblikovanje prema Uputama Katedre
+```
+
+Sva tri zahtjeva bila su ispunjena: svih 65 citata imalo je lokator, 9/9 obaveznih dijelova
+bilo je gotovo, `check_rules` je javljao 0 kršenja od 15 pravila. Lažni nalaz je ovdje skup
+dvostruko, jer stoji pod naslovom „rad se ne predaje" i uči korisnika da tu poruku preskoči.
+
+Popravak: uz komponentu se dopušta polje `provjereno` (`{alat, nalaz, datum}`) za zahtjev
+koji se ne da izraziti niskom. Komponenta s iglama provjerava se kao dosad; komponenta s
+nalazom provjere ispisuje se kao ograničenje s imenom alata i njegovim nalazom; komponenta
+bez jednog i drugog ispisuje se kao „nije strojno provjerljivo", ne kao greška. Greška ostaje
+samo ondje gdje igle postoje, a u radu ih nema.
+
+Mjereno poslije zakrpe na istom radu: `✅ nijedna greška`, uz četiri retka pod
+„OGRANIČENJA — nije provjereno" koji imenuju alat i nalaz.
+
+## 25. `str(None)` je niska „None", pa dokument bez zadanog proreda dobiva grešku da je prored fiksan
 
 `provjeri_predaju.py` mjeri prevladavajuće `line_spacing_rule` po odlomcima. Kad prored
 nigdje nije zadan, `_prevladava` vraća `None`, a `str(None)` daje nisku `"None"` — istinitu
@@ -546,7 +581,7 @@ da ga zapisuje. Popravak isključuje nisku `"None"` iz grane; upozorenje koje st
 stanje ostaje. Ograda: dokument koji prored doista nasljeđuje i dalje treba pogledati, ali
 to je upozorenje, ne zapreka predaji.
 
-## 25. Blokirajuća provjera koja ne postoji javlja se kao „treba ponovna instalacija"
+## 26. Blokirajuća provjera koja ne postoji javlja se kao „treba ponovna instalacija"
 
 `provjeri_reference.py` zove se na osam mjesta u `katedra-lite` (`predaja.md` dvaput,
 `povratak.md` triput, `dijelovi.json` uz dva obavezna dijela, `katedra/references/kvar.md`

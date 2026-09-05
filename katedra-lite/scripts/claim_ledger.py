@@ -130,8 +130,26 @@ def validate_records(
         loc = ev.get("locator") or {}
         if ev.get("schema_version") != 1:
             errors.append(f"evidence #{i}: schema_version mora biti 1")
-        if loc.get("kind") != "page" or not isinstance(loc.get("page"), int) or loc.get("page", 0) < 1:
-            errors.append(f"{ev.get('evidence_id', f'evidence #{i}')}: nedostaje valjani page locator")
+        # Kvar 47: prije je bio dopušten samo `kind: "page"`, pa točka standarda
+        # (MRevS, t. A55), članak propisa (čl. 7. st. 3.) i izvor bez tiskane
+        # paginacije nisu mogli ući u lanac — tvrdnja koja se na njih oslanja
+        # izgledala je kao tvrdnja bez potpore.
+        oznaka_ev = ev.get("evidence_id", f"evidence #{i}")
+        vrsta = loc.get("kind")
+        if vrsta == "page":
+            if not isinstance(loc.get("page"), int) or loc.get("page", 0) < 1:
+                errors.append(f"{oznaka_ev}: nedostaje valjani page locator")
+        elif vrsta == "clause":
+            if not str(loc.get("clause_label") or "").strip():
+                errors.append(f"{oznaka_ev}: `clause` lokator traži nepraznu oznaku "
+                              "`clause_label` (npr. „t. A55”, „čl. 7. st. 3.”)")
+        elif vrsta == "passage":
+            if not str(loc.get("passage") or "").strip():
+                errors.append(f"{oznaka_ev}: `passage` lokator traži neprazan `passage` "
+                              "(izvor bez tiskane paginacije citira se po odlomku)")
+        else:
+            errors.append(f"{oznaka_ev}: nepoznata vrsta lokatora {vrsta!r} — "
+                          "dopušteni su 'page', 'clause' i 'passage'")
         text = str(ev.get("text") or "")
         if not text.strip():
             errors.append(f"{ev.get('evidence_id', f'evidence #{i}')}: prazan evidence text")

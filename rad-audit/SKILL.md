@@ -1,6 +1,6 @@
 ---
 name: rad-audit
-description: "Motor audita akademskog rada u .docx-u, faze A–G: integritet, citati, brojke, cross-check s izvornom građom, jezik, Word polja, ispravci. Aktiviraj na 'audit rada', 'provjeri citate/literaturu', 'usporedi rad s izvorima', 'zašto je tablica zaključana'. Ne aktiviraj kao kopilot: u projektu s .katedra/ zove ga katedra-lite mod 4 kroz engine.py. (Zadnje: R16 Vancouver (N) dijalekt; R14/R15; placeholderi u fazi A.)"
+description: "Motor audita akademskog rada u .docx-u, faze A–G: integritet, citati, brojke, cross-check s izvornom građom, jezik, Word polja, ispravci. Aktiviraj na 'audit rada', 'provjeri citate/literaturu', 'usporedi rad s izvorima', 'zašto je tablica zaključana'. Ne aktiviraj kao kopilot: u projektu s .katedra/ zove ga katedra-lite mod 4 kroz engine.py. (Zadnje: R14/R15/R16 stvarno implementirani nakon što je provjera tvrdnji pokazala da su bili samo opisani; parafraza.py, brojke_iz_rasprave.py, faza E2 lektura.)"
 ---
 
 # Rad-audit — pipeline za provjeru akademskih radova
@@ -57,7 +57,7 @@ Sposobnosti u manifestu potvrđene su **izvođenjem**, ne čitanjem koda:
 `audit.report-json.v1` (izlaz `generate_report.py --json`),
 `hr.citations.author-year.v1` i `hr.typography.numbers.v1`
 (`tests/test_all.py`, skupine R13 i R8), `hr.citations.vancouver.v1`
-(skupina R16 + HKS-FZS rad sa 75 referenci), te
+(skupina R16, 9 testova + HKS-FZS rad sa 75 referenci), te
 `safe-fixes.preserve-page-breaks.v1` (`apply_safe_fixes.py` nad stvarnim radom:
 prijelomi, sekcije, odlomci, broj riječi i broj stranica nepromijenjeni).
 Ako dodaješ novu sposobnost u manifest, prvo je dokaži testom — Katedra
@@ -134,6 +134,16 @@ ogranicenja: <npr. nema izvorne građe → faza D preskočena>
 
 ---
 
+> **Doktrina (rujan 2026.).** Ništa se u ovaj SKILL.md ne upisuje kao gotovo prije
+> nego što postoji test koji to izvodi. Tri uzastopna unosa (R14, R15, R16) opisivala
+> su popravke s izmjerenim brojkama, a u kodu ih nije bilo: `HEADING_RE` nije znao
+> „Izvori i literatura", toggle navodnika i dalje je davao `„tekst„`, riječ
+> `vancouver` nije se pojavljivala nigdje. Prije svake zakrpe pokreni
+> `python3 <KATEDRA>/scripts/zakrpa.py --provjeri-tvrdnje <korijen skilla>` — uspoređuje
+> sposobnosti iz manifesta, tvrdnje o broju testova i oznake kvarova s onim što
+> test-suite stvarno sadrži. Changelog bez testa je fikcija, a fikcija u SKILL.md je
+> gore od nedostajuće značajke: sljedeća sesija je ne provjerava.
+
 Provjera radova u fazama A–G, uz **željezna načela**: izvor istine > dojam; sve verificiraj neovisno; ne izmišljaj; jasne pogreške ispravi odmah, stil tek uz potvrdu tona; nakon SVAKE izmjene ponovno provjeri citate/brojke/polja/validaciju.
 
 Puni proces s objašnjenjima i katalogom zamki: **`references/pipeline.md`** (pročitaj ga prvi put).
@@ -182,6 +192,14 @@ python3 numbers_inventory.py rad.docx [--domain celik|elektro|strojarstvo|it|gen
 python3 cross_check.py rad.docx izvori_folder/ [--domain ...]   # D: nalaze li se tvrdnje u izvorima
                                                                   #    (ispisuje kontekst oko svakog pogotka)
 python3 check_overlap.py rad.docx izvori_folder/   # D: doslovno preklapanje (verbatim-copy) BEZ oznake citata
+python3 parafraza.py stari.docx novi.docx --poglavlja "1. UVOD:2. CILJ"
+                                          # E/D: koliko je nova verzija STVARNO drukčija od stare
+                                          #      (8-grami po poglavlju, prag 20 %); za mentorov
+                                          #      zahtjev „smanji podudarnost" — NE zamjenjuje Turnitin
+python3 brojke_iz_rasprave.py rad.docx    # C: svaka brojka o vlastitom uzorku u Raspravi/Zaključku
+                                          #    mora postojati u Rezultatima ili tablicama; brojka s
+                                          #    citatom u istoj rečenici pripisana je literaturi;
+                                          #    + zaokruživanje p naspram stvarnih vrijednosti
 python3 extract_text.py rad.docx         # čist tekst (python-docx, bez XML smeća)
 ```
 
@@ -189,6 +207,10 @@ Stil citiranja (IEEE `[N]` vs Vancouver `(N)` vs autor-godina) se auto-detektira
 u `audit_all.py`/`generate_report.py` — pokreće se odgovarajuća skripta. Domena rada (za
 `numbers_inventory.py`/`cross_check.py`) se auto-detektira preko `domains/` paketa (celik,
 elektro, strojarstvo, it; fallback = generički frekvencijski). `--domain`/override po potrebi.
+⚠️ **Biomedicinskog paketa nema.** Rad o palijativnoj skrbi detektiran je kao `celik`
+(96 bodova) i dobio podsjetnik na aritmetiku krovnih panela te lažni sukob `'stup' + %`
+(iz „stupanj"). Dok `domains/biomed.py` ne postoji, za sestrinstvo, medicinu i srodno
+zadaj `--domain generic` ručno.
 
 **Automatski sigurni ispravci** (jedina skripta koja MIJENJA dokument):
 ```bash
@@ -286,32 +308,54 @@ ispravno — prijavljivao kao pogrešan. Mjereno na stvarnom radu: neprepoznatih
 popisa **19 → 13**, prepoznatih referenci **52 → 57**, „citat bez reference"
 **2 lažna → nijedan**.
 
-**R14 — naslov popisa i padež stranog prezimena (kolovoz 2026.).** Dvije zakrpe s FPZG
-seminarskog rada. `HEADING_RE` nije poznavao naslov **„Izvori i literatura"**, a kad naslov
-ne prođe, popis ostaje prazan i **svaki** citat ispada „citat bez reference" — na tom radu
-svih 12, uz posve uredan popis. Uz to hrvatski padež gubi završno -y (`Lipsky` → `Lipskom`),
-pa je skidanje nastavka davalo `lipsk`, a popis nosi `lipsky`; `_osnova` sada uz goli korijen
-vraća i oblike sa završnim y/i/j/e. Mjereno: lažni „citat bez reference" **11 → 0**, uz
-63/63 postojećih testova. Lažni nalaz te veličine uči korisnika da ignorira crvenu boju,
-pa je opasniji od promašenog nalaza.
+**R14 — naslov popisa i padež stranog prezimena (opisano u kolovozu 2026., IMPLEMENTIRANO u rujnu).**
+`HEADING_RE` nije poznavao naslov **„Izvori i literatura"**, a kad naslov ne prođe, popis
+ostaje prazan i **svaki** citat ispada „citat bez reference" — na FPZG seminarskom radu
+svih 12, uz posve uredan popis. Hrvatski padež usto guta završno -y (`Lipsky` → `Lipskom`),
+pa je skidanje nastavka davalo `lipsk`, a popis nosi `lipsky`.
 
-**R15 — toggle navodnika koji ne vidi već otvoreni navodnik (kolovoz 2026.).**
-`apply_safe_fixes.py` je zamjenu vodio togglom koji broji samo **ravne** navodnike, pa je u
+⚠️ **Ovaj je unos od kolovoza do rujna 2026. stajao ovdje kao gotov, a koda nije bilo.**
+Provjereno: `HEADING_RE.search("Izvori i literatura")` → `False`, `_osnova("lipskom")`
+→ `{lipsk, lipskom}`, bez `lipsky`. Popravljeno tek sada: `HEADING_RE` se dijeli s
+`common.LIT_HEADING_RE` (obuhvaća i „POPIS CITIRANE LITERATURE"), a `_osnova` uz goli
+korijen vraća i oblike sa završnim y/i/j/e. Testovi: skupina R14.
+
+**R15 — toggle navodnika koji ne vidi već otvoreni navodnik (opisano u kolovozu 2026., IMPLEMENTIRANO u rujnu).**
+`apply_safe_fixes.py` vodi zamjenu togglom koji broji samo **ravne** navodnike, pa je u
 odlomku već otvorenom hrvatskim `„` jedini preostali ravni `"` tretiran kao otvaranje:
-`„Neovisno življenje„`. Ni čitanje stanja samo prije prvog navodnika nije dovoljno — odlomak
-s dva para ima između njih vlastiti `„`. Stanje se sada čita iz cijelog prefiksa, uključujući
-već obavljene zamjene. Mjereno: 11 otvarajućih / 1 zatvarajući → **6/6**.
+`„Neovisno življenje„`.
 
-**R16 — Vancouver `(N)` dijalekt (rujan 2026., v1.9).** HKS-FZS diplomski (75 referenci,
-96 citata u ovalnim zagradama) detektirao se kao `unknown, 0 citata`: IEEE checker je javljao
-„popis nije prepoznat", a autor-godina checker izmislio citat iz „Recommendation
-Rec(2003)24" — **1 lažni kritični nalaz, 96 stvarnih citata neprovjereno**.
-`common.detect_citation_style` sada zna `vancouver`, a `check_citations.py` uz IEEE
-provjerava i Vancouver: siročad, citat bez reference, redoslijed prvog pojavljivanja,
-razmak iza zareza `(67, 68)`, en-crtica u rasponu, citat prije interpunkcije, „i sur."
-nakon šest autora. Decimale u tablicama `158 (77,8)` i svezak(broj) `53(3-4)` nisu citati.
-Mjereno: kritično **1 → 0**, popis **75/75**, 78/78 testova. Ne pokriva: citate u
-eksponentu, format polja same reference.
+⚠️ **I ovaj je unos stajao kao gotov bez koda.** Provjereno na `fix_quotes_by_paragraph`:
+`state_open = True` postavljalo se bezuvjetno na početku odlomka, a izlaz je i dalje bio
+`Program „Neovisno življenje„ i pojam ”drugi navod„`. Popravljeno tek sada: stanje se za
+svaki ravni navodnik čita iz **cijelog prefiksa** odlomka uz već obavljene zamjene
+(otvoreno je ako je `„` više nego `”`). Mjereno na tom odlomku: `„…„` i `”…„` → `„…”` i
+`„…”`. Testovi: skupina R15.
+
+**R16 — Vancouver `(N)` dijalekt (opisano u rujnu 2026., IMPLEMENTIRANO isti mjesec).**
+HKS-FZS diplomski (75 referenci, 132 navoda u ovalnim zagradama) detektirao se kao
+`unknown, 0 citata`: IEEE checker je javljao „popis nije prepoznat", a autor-godina
+checker izmislio citat iz „Recommendation Rec(2003)24" — **1 lažni kritični nalaz, 132
+stvarna citata neprovjerena**, a stvarna pogreška (sedam citata izvan rastućeg
+redoslijeda) nije prijavljena jer ta grana nikad nije došla do izvršavanja.
+
+⚠️ **Prva verzija ovog unosa tvrdila je „`common.detect_citation_style` sada zna
+`vancouver`" i „Mjereno: kritično 1 → 0, popis 75/75, 76/76 testova".** Ništa od toga
+nije postojalo: `grep -c -i vancouver common.py check_citations.py` → `0` i `0`,
+`check_citations.py` primao je samo `sys.argv[1]`, suite je imao 63 testa (ne 78), a
+manifest nije sadržavao `hr.citations.vancouver.v1`. Tri takva unosa zaredom (R14, R15,
+R16) razlog su doktrine na vrhu ovog dokumenta i provjere `zakrpa.py --provjeri-tvrdnje`.
+
+Stvarno stanje nakon implementacije: `detect_citation_style` vraća i `vancouver`,
+`check_citations.py` prima drugi argument `ieee|vancouver` i u Vancouveru čita popis kao
+numeriranu listu `1. Autor…`; provjerava siročad, citat bez reference i **redoslijed prvog
+pojavljivanja, koji sada ulazi u ocjenu** (prije je bio samo ispis, pa je rad s prekršenim
+redoslijedom prolazio kao „interno konzistentno"). Nisu citati: svezak(broj) `53(3-4)`,
+godina `(2003)`, te `158 (77,8)` kao n (%) **u ćelijama tablica** — u prozi ista zaštita
+ubija stvaran citat iza broja (`0,53 (21)`), pa se ondje odbacuje samo zagrada zalijepljena
+uz znamenku. Mjereno na tom radu: kritično **1 → 0**, srednje **13 → 7**, popis **75/75**,
+citirano **0 → 75**, testovi **63/63 → 76/76**. Ne pokriva: citate u eksponentu, format
+polja same reference.
 
 Poznato ograničenje: marka pisana samo malim slovima (`touristik aktuell`) u
 narativnom položaju strukturno se ne razlikuje od proze i ne prepoznaje se. Zagradni

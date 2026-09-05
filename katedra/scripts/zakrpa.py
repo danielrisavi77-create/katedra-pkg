@@ -23,6 +23,9 @@ tablicom promjena i `primijeni.sh` koji radi sigurnosnu kopiju svake prepisane
 datoteke.
 """
 import argparse
+import re
+import subprocess
+import json
 import filecmp
 import os
 import pathlib
@@ -100,14 +103,100 @@ def razlika(izvorni, izmijenjeni):
     return nove, promijenjene, obrisane
 
 
+
+# ---------------------------------------------------------------------------
+# --provjeri-tvrdnje: SKILL.md ne smije tvrditi ono što kod ne radi.
+#
+# Povod (rad-audit, rujan 2026.): SKILL.md je opisivao Vancouver dijalekt kao
+# gotov i dokazan — "common.detect_citation_style sada zna vancouver",
+# "Mjereno: kritično 1 → 0, 78/78 testova", sposobnost hr.citations.vancouver.v1
+# "potvrđena izvođenjem". U kodu: nula pojava riječi vancouver, testova nema,
+# suite ima 63 testa, manifest tu sposobnost ne sadrži. Opis je napisan, kod nije.
+# Drugi slučaj istog mehanizma (prvi: kvar 36), pa prestaje biti kvar i postaje
+# provjera koja se pokreće prije svake zakrpe.
+# ---------------------------------------------------------------------------
+
+SPOSOBNOST_RE = re.compile(r"`([a-z][\w.\-]*\.v\d+)`")
+TESTOVI_RE = re.compile(r"(\d+)\s*/\s*(\d+)\s+testova")
+KVAR_RE = re.compile(r"\*\*(R\d+)\s*[—-]")
+
+
+def provjeri_tvrdnje(korijen):
+    """Vraća popis nalaza (str). Prazan popis = SKILL.md i kod se slažu."""
+    # Apsolutni put je obavezan: test suite se pokreće s `cwd` u `scripts/tests`,
+    # pa bi relativan korijen ondje pokazivao u prazno. Alat je tada ispisivao
+    # „suite se ne može pokrenuti" i obarao provjeru tvrdnji na vlastitom rukovanju
+    # putovima — lažni ❌ iz alata koji upravo lovi tvrdnje bez pokrića.
+    korijen = pathlib.Path(korijen).resolve()
+    skill_md = korijen / "SKILL.md"
+    if not skill_md.exists():
+        return [f"❌ nema {skill_md}"]
+    md = skill_md.read_text(encoding="utf-8")
+    nalazi = []
+
+    # 1) sposobnosti spomenute u SKILL.md naspram manifesta
+    manifesti = list(korijen.glob("scripts/engine_contract.json"))
+    if manifesti:
+        man = json.loads(manifesti[0].read_text(encoding="utf-8"))
+        u_manifestu = set(man.get("capabilities", []))
+        u_opisu = set(SPOSOBNOST_RE.findall(md))
+        for c in sorted(u_opisu - u_manifestu):
+            nalazi.append(f"❌ SKILL.md spominje sposobnost `{c}`, manifest je NEMA")
+        for c in sorted(u_manifestu - u_opisu):
+            nalazi.append(f"⚠ manifest nosi `{c}`, SKILL.md je ne spominje")
+
+    # 2) tvrdnja "N/M testova" naspram stvarnog broja testova
+    testovi = korijen / "scripts" / "tests" / "test_all.py"
+    stvarno = None
+    if testovi.exists():
+        r = subprocess.run([sys.executable, str(testovi)], capture_output=True,
+                           text=True, cwd=str(testovi.parent), timeout=600)
+        m = re.search(r"REZULTATI TESTOVA:\s*(\d+)\s*/\s*(\d+)", r.stdout)
+        if m:
+            stvarno = (int(m.group(1)), int(m.group(2)))
+            if stvarno[0] != stvarno[1]:
+                nalazi.append(f"❌ testovi ne prolaze: {stvarno[0]}/{stvarno[1]}")
+    for m in TESTOVI_RE.finditer(md):
+        tvrdi = (int(m.group(1)), int(m.group(2)))
+        if stvarno is None:
+            nalazi.append(f"❌ SKILL.md tvrdi {tvrdi[0]}/{tvrdi[1]} testova, a suite se ne može pokrenuti")
+        elif tvrdi[1] > stvarno[1]:
+            nalazi.append(f"❌ SKILL.md tvrdi {tvrdi[0]}/{tvrdi[1]} testova, suite ima {stvarno[1]}")
+
+    # 3) svaki kvar R<N> opisan u SKILL.md mora imati test-skupinu "R<N>:"
+    if testovi.exists():
+        t = testovi.read_text(encoding="utf-8")
+        for oznaka in sorted(set(KVAR_RE.findall(md))):
+            if f'"{oznaka}:' not in t and f"'{oznaka}:" not in t:
+                nalazi.append(f"❌ SKILL.md opisuje {oznaka}, a testova s oznakom {oznaka}: nema")
+
+    return nalazi
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--par", action="append", required=True,
-                    metavar="IME:IZVORNI:IZMIJENJENI")
-    ap.add_argument("--izlaz", required=True)
+    ap.add_argument("--par", action="append", metavar="IME:IZVORNI:IZMIJENJENI")
+    ap.add_argument("--izlaz")
     ap.add_argument("--naslov", default="Zakrpa")
+    ap.add_argument("--provjeri-tvrdnje", metavar="KORIJEN_SKILLA",
+                    help="usporedi tvrdnje iz SKILL.md sa stanjem koda i testova")
     a = ap.parse_args()
+
+    if a.provjeri_tvrdnje:
+        nalazi = provjeri_tvrdnje(a.provjeri_tvrdnje)
+        print("=" * 62)
+        print("PROVJERA TVRDNJI —", a.provjeri_tvrdnje)
+        print("=" * 62)
+        for n in nalazi:
+            print(" ", n)
+        tvrdo = [n for n in nalazi if n.startswith("❌")]
+        print("\nREZULTAT:", "✓ SKILL.md i kod se slažu" if not tvrdo
+              else f"❌ {len(tvrdo)} tvrdnja bez pokrića u kodu")
+        return 1 if tvrdo else 0
+
+    if not a.par or not a.izlaz:
+        sys.exit("❌ --par i --izlaz su obavezni kad se gradi zakrpa")
 
     izlaz = pathlib.Path(a.izlaz)
     if izlaz.exists():

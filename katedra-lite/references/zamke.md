@@ -482,7 +482,139 @@ pretpostavlja da je provjera prošla. Bez tog nalaza kriterij ne ide iznad `djel
 komponente pokrivene samo iglama — nedostatak dokaza nije dokaz, isto načelo po kojem
 `pojas()` odbija procijeniti pojas kad je ključni kriterij `nepoznato`.
 
-## 45. Primjerak mjeri veličinu pisma iz natpisa prikaza, jer odlomci tijela nemaju izričitu veličinu
+## 45. Opseg se procjenjuje uz pretpostavku A4, a format papira nitko ne mjeri
+
+`check_rules.py` broj stranica procjenjuje iz broja riječi „(A4, prored 1,5)" i provjerava
+margine, font, prored i poravnanje. Format papira ne provjerava nijedno od 15 pravila.
+
+Na radu Paroci (seminarski, EFZG RFIR) dokument je kroz sve krugove bio **US Letter,
+21,59 × 27,94 cm**, na obje sekcije. Margine su bile točne (2,5 cm), pa je `check_rules`
+davao **14 u skladu, 1 za provjeru, 0 kršenja**, a `gate.py --faza audit` je prolazio.
+Kvar je uhvatio tek `rad-docx/scripts/provjeri_predaju.py --zadatak`, i to slučajno, jer se
+zadatak provjeravao zbog nečeg drugog.
+
+```
+· stranica nije A4 (21.6 × 27.9 cm)
+```
+
+Tih je i skup: rad se ispisuje i predaje u krivom formatu, a razlika je 1,76 cm visine, pa se
+mijenja i prijelom. Poslije prebacivanja na A4 isti je rukopis pao s 20 na 19 stranica, čime
+je cijelo prethodno podešavanje opsega bilo mjereno protiv krive geometrije.
+
+Popravak: pravilo `format.stranica` u `check_rules.py`, s očekivanom vrijednošću iz profila
+(zadano A4, 21,0 × 29,7 cm) i tolerancijom 0,2 cm, kao **kršenje**, ne kao „za provjeru".
+Ograda koja bi ga bila uhvatila: procjena stranica koja se poziva na A4 mora prvo provjeriti
+da dokument jest A4, inače procjenjuje nešto što ne postoji.
+
+## 46. `_empirijski` se hrani statusom dijela koji time postaje ključan
+
+`_empirijski(kat)` vraća `True` ako je dio `metodologija` u statusu `napravljeno` ili
+`provjereno`. Kriterij `metodologija` je `uvjetno_kljucni: "rad ima vlastito istraživanje"` i
+postaje ključan upravo kad je `empirijski` istinit. `citac_dio_metodologija` za `napravljeno`
+i `provjereno` vraća `DJELOMICNO` i nema granu `ISPUNJENO`.
+
+```python
+def _empirijski(kat) -> bool:
+    m = (d.get("dijelovi") or {}).get("metodologija") or {}
+    if m.get("status") in ("napravljeno", "provjereno"):
+        return True
+```
+
+Petlja je zatvorena: označiš da je metodologija napravljena → rad je proglašen empirijskim →
+metodologija postaje ključni kriterij → kriterij vraća `DJELOMICNO` → pojas 4. Izlaza nema
+ni za rad koji metodologiju uistinu ima, ni za rad koji je nema.
+
+Na radu Paroci rubrika je ispisivala „rad je prepoznat kao empirijski" za rad koji u
+potpoglavlju 1.2 izrijekom kaže da **ne provodi vlastito empirijsko istraživanje**. Registar
+dijelova uz `metodologija` sam kaže: „svaki rad s vlastitim istraživanjem; teorijski rad
+umjesto nje ima odjeljak o pristupu i građi". Alat taj uvjet ne čita.
+
+Popravak je dvodijelan. Prvo, `citac_dio_metodologija` za status `provjereno` vraća
+`ISPUNJENO`, a `DJELOMICNO` ostavlja samo za `napravljeno` — razlika između „napisano" i
+„netko je provjerio osam odjeljaka" time dobiva smisao. Drugo, `_empirijski` se ne izvodi iz
+statusa dijela nego iz zapisa u `stanje.json` (`vlastito_istrazivanje: da|ne`), koji se
+postavlja u modu 1 dok je uputa pred očima.
+
+## 47. Lokator dokaza poznaje samo stranicu, pa standardi i propisi ispadaju iz lanca
+
+`validate_records` u `claim_ledger.py` traži `locator.kind == "page"` i cijeli broj
+`locator.page >= 1`. Točka standarda (`t. A55`), članak propisa (`čl. 7. st. 3.`) i odlomak
+izvora bez paginacije ne mogu se izraziti.
+
+Na radu Paroci **10 od 60 dokaza** nije moglo ući u `evidence.jsonl` — MRevS 240, MRevS 315 i
+Zakon o računovodstvu — pa je **5 od 42 tvrdnje** ostalo izvan `claims.jsonl`. Te tvrdnje
+imaju uredan lokator i doslovan navod; jedino ih shema ne prima.
+
+```
+ev_b03215d02346fff7e3dd: nedostaje valjani page locator
+```
+
+Posljedica je gora od izostanka: tvrdnja koja se osloni samo na standard izgleda kao tvrdnja
+bez potpore, a `evidence_gate` je nikad ne vidi. Rad koji uredno citira propis time se mjeri
+kao slabije potkrijepljen od rada koji ga ne citira.
+
+Popravak: `locator.kind` prima i `clause` (točka standarda, članak propisa) i `passage`
+(izvor bez tiskane paginacije, uz `page_label: null` — v. željezno pravilo 28 u
+`katedra-lite/SKILL.md`). Za `clause` se umjesto `page` traži `clause_label` kao neprazna
+niska. Ograda: `evidence_gate` u ispisu i dalje razdvaja stranicu od točke, da se ne bi
+činilo kako je sve mjereno istom mjerom.
+
+## 48. Cross-chapter provjera gleda samo tvrdnje iz lanca, pa proturječje u vlastitim brojkama prolazi
+
+`consistency_check.py` čita `claims.jsonl`, a u lancu su tvrdnje koje se oslanjaju na izvore.
+Brojke koje rad sam izvodi iz vlastite tablice ondje ne postoje, pa ih nitko ne uspoređuje
+međusobno.
+
+Na radu Paroci potpoglavlje 4.3 tvrdilo je da se „posljednja **tri** koraka" odvijaju nad
+već evidentiranim potraživanjem, a potpoglavlje 4.4 i Zaključak da ih je „**šest od sedam**".
+Uz to je 4.3 tvrdilo da je potraživanje evidentirano „na **četvrtome** koraku", dok ga vlastiti
+popis u istom odlomku stavlja na **peti**. Sve je to prošlo:
+
+```
+CROSS-CHAPTER CONSISTENCY
+SUMMARY chapters=10 edges=0 findings=0 blocking=0 coverage=sufficient
+```
+
+Proturječje je nađeno tek čitanjem, u trećem krugu, nakon što su dva kruga alata završila
+bez ijednog blokirajućeg nalaza. Riječ je o brojci koja nosi zaključak rada.
+
+Popravak: lens koji iz tijela rada vadi obrasce `N od M <imenica>` i `<redni broj> korak(u)`
+te uspoređuje pojavnice istoga pojma. Kad se za isti pojam pojave dvije različite vrijednosti,
+to je nalaz razine A, jednako kao brojka koja se ne slaže s izvorom. Alat ne odlučuje koja je
+vrijednost točna — imenuje obje i mjesto na kojem stoje.
+
+Ograda koja bi ga bila uhvatila: faza C već radi „isti pojam, više vrijednosti iste jedinice"
+za mjerne veličine. Ista logika nad brojem koraka i udjelima nije bila primijenjena.
+
+## 49. `drift.py` mjeri samo SKILL.md, a kartica i repo razilaze se i u `scripts/`
+
+`drift.py --kratko` uspoređuje `SKILL.md` account kartice i repoa i vraća 0 kad su isti.
+Skripte ne uspoređuje. Kartica se sinkronizira kao cjelina, pa može nositi **stariji
+`scripts/` uz identičan SKILL.md**, a to je stanje koje alat prijavljuje kao uredno.
+
+Mjereno 4. rujna 2026. na skillu `katedra`: `drift.py --kratko` javio je
+`✅ SKILL.md: kartica i repo su iste (89ba4b59f17d)`, a u istom trenutku:
+
+```
+$ python3 <synced>/katedra/scripts/kvar.py fragment.md --provjeri --nastavak-od 43
+kvar.py: error: unrecognized arguments: --nastavak-od
+
+$ python3 ~/.katedra-pkg/katedra/scripts/kvar.py fragment.md --provjeri --nastavak-od 43
+fragment: nadovezuje se na unos 43, numeracija se očekuje od 44   → izlaz 0
+```
+
+Zastavica je dokumentirana u `SKILL.md`-u i postoji u repou, ali je u kartici nema. To je
+druga pojava kvara 36 („dokumentirana zastavica koju skripte nisu imale") u drugom
+mehanizmu: prvi put je nedostajala svugdje, sada nedostaje samo ondje odakle agent radi.
+Sesija koja se drži doktrine „`<KATEDRA_SKILL>` je ono što je § 0.0 izvezao" na to naleti
+tek kad naredba padne.
+
+Popravak: `drift.py` uspoređuje i `scripts/` (popis datoteka i hash svake), a izlazni kod 1
+daje i kad se SKILL.md poklapa, a skripte ne. Ograda: § 0.0 već traži da se verzija paketa
+ispiše u prvoj poruci; uz nju treba stajati i redak „skripte: kartica == repo" ili razlika,
+jer bez toga „paket 1.9.2" znači samo da je repo dohvaćen, a ne da se iz njega i radi.
+
+## 50. Primjerak mjeri veličinu pisma iz natpisa prikaza, jer odlomci tijela nemaju izričitu veličinu
 
 `primjerci.py` uzima kao tijelo svaki odlomak koji nije naslov i dulji je od 80 znakova, a
 veličinu čita iz runa pa iz stila. Odlomak koji veličinu nasljeđuje iz `docDefaults` vraća
@@ -504,7 +636,7 @@ uzorka, a `None` se čita kao „nasljeđuje iz `docDefaults`" i zamjenjuje stva
 veličinom. Ograda: mjeri se i dalje mod, pa dokument u kojem tijelo doista ima dvije
 veličine daje onu češću, bez upozorenja.
 
-## 46. Redni broj pravne reference pred velikim slovom lomi rečenicu, pa se mjeri ritam kojega nema
+## 51. Redni broj pravne reference pred velikim slovom lomi rečenicu, pa se mjeri ritam kojega nema
 
 `hr_text._zastiti` štiti točku iza znamenke samo ako iza nje slijedi malo slovo ili zagrada
 (`2020. godine`). U pravnoj prozi iza rednog broja redovito stoji velika kratica
@@ -524,9 +656,9 @@ najavna riječ (`čl`, `st`, `t`, `točk*`, `član*`, `stav*`, `alinej*`, `odjel
 Ograda se izgovara: `To stoji u članku 6. Sljedeće poglavlje…` sada se spaja u jednu
 rečenicu. To je svjestan ustupak — krivo spajanje je rijetko, krivo lomljenje je pogađalo
 svaku rečenicu s pravnom referencom. Isti mehanizam u `rad-audit/common.py` vodi se kao
-`rad-audit` kvar 4.
+`rad-audit` kvar 10.
 
-## 47. `re.IGNORECASE` gasi strukturni znak, pa svaki izvor s provenijencijom postaje tuđe autorstvo
+## 52. `re.IGNORECASE` gasi strukturni znak, pa svaki izvor s provenijencijom postaje tuđe autorstvo
 
 `_TUDJE_AUTORSTVO_RE` razlikuje studentov prikaz od tuđeg po velikom slovu iza korijena
 (`autori Obzor 2020` je tuđe, `obrada autora prema ZPD` nije). Uzorak je bio jedan, s
@@ -553,7 +685,7 @@ PRIJE:   prikaza s izvorom: 6 · vlastitih: 0 · prerađenih: 6
 POSLIJE: prikaza s izvorom: 6 · vlastitih: 6 · prerađenih: 0
 ```
 
-## 48. Rep predaje pripada vrsti rada, a čitao se s razine fakulteta, pa svaki seminarski kasni
+## 53. Rep predaje pripada vrsti rada, a čitao se s razine fakulteta, pa svaki seminarski kasni
 
 `tempo.py` odbija `predaja.administrativni_rep_dana` od dana do roka. Ta brojka u
 `efzg.json` iznosi 14 i pokriva Turnitin, uvez, unos u repozitorij i prijavu obrane —

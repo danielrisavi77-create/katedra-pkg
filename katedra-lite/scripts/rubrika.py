@@ -220,9 +220,16 @@ def citac_dio_metodologija(_a, kat):
     if m.get("trazi_profil") == "provjeri" and m.get("status") == "nije-napravljeno":
         return NEPOZNATO, ("nije odlučeno ima li rad vlastito istraživanje — "
                            "odluči s Uputama u ruci (references/metodologija.md)")
-    if m.get("status") in ("napravljeno", "provjereno"):
+    # Kvar 46: obje su vrijednosti prije davale `djelomicno`, pa razlika između
+    # „napisano" i „netko je provjerio osam odjeljaka" nije značila ništa, a
+    # kriterij se nije mogao zatvoriti nijednim postupkom.
+    if m.get("status") == "provjereno":
+        return ISPUNJENO, ("potpunost osam odjeljaka je provjerena"
+                           + (f"; {m['napomena']}" if m.get("napomena") else ""))
+    if m.get("status") == "napravljeno":
         return DJELOMICNO, ("poglavlje postoji; potpunost osam odjeljaka provjerava "
-                            "čovjek (references/metodologija.md §9)")
+                            "čovjek (references/metodologija.md §9), pa se status "
+                            "nakon toga postavlja na `provjereno`")
     return NEISPUNJENO, f"status: {m.get('status')}"
 
 
@@ -374,10 +381,24 @@ def ucitaj_registar(put: str = REGISTAR) -> dict:
 
 
 def _empirijski(kat) -> bool:
+    """Ima li rad vlastito istraživanje.
+
+    Kvar 46: prije se izvodilo iz statusa dijela `metodologija`, a taj dio time
+    postaje uvjetno ključan — petlja u kojoj oznaka „napravljeno" sama sebi
+    stvara kriterij koji zatim ne može zatvoriti. Odgovor je odluka autora i
+    stoji u stanju projekta; registar dijelova je rezerva, i to samo preko
+    `analiza`, koja o metodologiji ne ovisi.
+    """
+    s = _ucitaj(os.path.join(kat, "stanje.json")) or {}
+    odluka = s.get("vlastito_istrazivanje")
+    if isinstance(odluka, bool):
+        return odluka
+    if isinstance(odluka, str) and odluka.strip().lower() in ("da", "ne"):
+        return odluka.strip().lower() == "da"
     d = _ucitaj(os.path.join(kat, "dijelovi.json")) or {}
     m = (d.get("dijelovi") or {}).get("metodologija") or {}
-    if m.get("status") in ("napravljeno", "provjereno"):
-        return True
+    if m.get("status") == "ne-primjenjuje-se":
+        return False
     a = (d.get("dijelovi") or {}).get("analiza") or {}
     return a.get("status") in ("napravljeno", "provjereno")
 

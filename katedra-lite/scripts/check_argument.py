@@ -140,7 +140,13 @@ _TUDJE_AUTORSTVO_IMENICE_RE = re.compile(
     r"studij\w*|istraživanj\w*|istrazivanj\w*|publikacij\w*)\b",
     re.IGNORECASE,
 )
-_TUDJE_AUTORSTVO_IME_RE = re.compile(r"\bautor\w*\s+[A-ZČĆŽŠĐ]")
+# Zastavica se odnosi SAMO na slovo iza korijena. Korijen `autor` traži se i
+# dalje neosjetljivo na veličinu slova: „Izvor: Autor Ivić (2020)" i „Autorica
+# Marić (2019)" tuđe su autorstvo jednako kao njihove male inačice. S uzorkom
+# koji je cijeli osjetljiv na veličinu slova prolazili su kao studentov vlastiti
+# prikaz — lažno zeleno na autorstvu, skuplje od lažno crvenog koje je v1.9.3
+# uklonila. Mjereno na šest redaka izvora: v1.9.3 3 promašaja, ovako 0.
+_TUDJE_AUTORSTVO_IME_RE = re.compile(r"(?i:\bautor\w*)\s+[A-ZČĆŽŠĐ]")
 
 
 def _tudje_autorstvo(t):

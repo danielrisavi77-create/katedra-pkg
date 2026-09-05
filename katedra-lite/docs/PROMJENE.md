@@ -1,29 +1,78 @@
+# v1.9.3 — kako je zakrpa primijenjena, i dva popravka u njoj
+
+Zakrpa je nastala na bazi `fd253b6` (PR #4), pa ne poznaje ni PR #5 ni PR #6. Isporučena je
+i kao bundle, pa je spojena **trosmjerno** umjesto prepisivanjem: `common.py`,
+`provjeri_predaju.py`, `primjerci.py`, `tempo.py`, `hr_text.py` i `check_argument.py` git je
+pomirio sam, a ručno je riješeno sedam sukoba.
+
+* **Numeracija.** Zakrpa je svoje unose numerirala od brojeva koje su u međuvremenu potrošili
+  PR #5 i PR #6. Kako su to različiti kvarovi, a ne verzije istih, pomaknuti su iza
+  postojećih: katedra-lite **45–48 → 50–53**, rad-audit **3–5 → 9–11**, rad-docx
+  **24–25 → 25–26**. Isto vrijedi za doktrinu: `main` već ima željezno pravilo 31 („Rad koji
+  nitko nije pročitao nije provjeren rad"), pa je pravilo o uzorku kao riziku ponavljanja
+  postalo **32**. Uz brojeve su poravnate i **13 unutarnjih referenci** u tekstu zakrpe —
+  prenumeracija bez toga ostavlja upute koje pokazuju na tuđe unose, što je gore od sudara
+  jer izgleda točno.
+* **Otisak motora.** `engine_version` je sha256 nad `rad-audit/scripts/*.py`, pa poslije spoja
+  nije točan nijedan od ponuđenih. Preračunat nad spojenim stablom: **`fb8ae4bb`**. To je
+  ujedno korak koji zakrpa sama traži u svojem kvaru 11.
+
+**Popravak 1 — `check_argument.py`, veličina slova u zastavici tuđeg autorstva.** Zakrpa
+ispravno razdvaja popis imenica od strukturnog znaka, ali je novi uzorak `\bautor\w*\s+[A-Z…]`
+u cijelosti osjetljiv na veličinu slova, pa mu je i **korijen** postao osjetljiv. Time
+„Izvor: Autor Ivić (2020)", „Autori Ivić i Perić (2021)" i „Autorica Marić (2019)" prolaze kao
+**studentov vlastiti prikaz**. Lažno zeleno na autorstvu skuplje je od lažno crvenog koje je
+zakrpa uklonila. Zastavica se sada odnosi samo na slovo iza korijena
+(`(?i:\bautor\w*)\s+[A-ZČĆŽŠĐ]`). Mjereno na šest redaka izvora: zakrpa 3 promašaja, poslije 0,
+uz zadržan popravak („izrada autora prema ZPD, čl. 28." i dalje vlastito).
+
+**Popravak 2 — nije popravak nego mjera koja ne stoji.** UPUTE tvrde „84 testa prolaze", a
+`rad-audit/scripts/tests/test_all.py` **nije u zakrpi**: suite ima 82 testa i svih 82 prolazi.
+Za dva rad-audit popravka (dijalekt lokatora, dijeljenje rečenica) u suiteu nema nijednog
+testa. Po pravilu 8 skilla `katedra` to je tvrdnja bez pokrića; ovdje je zapisana, a ne
+prešućena. Popravci su umjesto toga izmjereni ručno prije/poslije (v. niže).
+
+**Izmjereno na ovom stroju, prije/poslije, nad verzijama iz gita:**
+
+* `hr_text.recenice` — „Prema točki 4. MRS-a 12 odgođena porezna imovina…" prije je bila
+  **dvije** rečenice, sada **jedna**; na fixtureu od četiri rečenice s pravnim referencama
+  5 → 4.
+* `check_argument._tudje_autorstvo` — „Izvor: izrada autora prema ZPD, čl. 28." prije **tuđe**,
+  sada **vlastito** (to je kvar 52), uz zadržano prepoznavanje stvarnog tuđeg autorstva.
+* Katalozi poslije prenumeracije: katedra-lite **30 unosa / zadnji 53**, rad-audit **11 / 11**,
+  rad-docx **26 / 26**, sva tri `kvar.py --provjeri` exit 0.
+* `zakrpa.py --provjeri-tvrdnje` nad `rad-audit` i `katedra-lite`: „✓ SKILL.md i kod se slažu".
+
+**Nije provjereno ovdje:** `profile_resolver.py` ne može validirati razriješeni profil jer na
+ovom stroju nema paketa `jsonschema`, pa je promjena overlaya (`administrativni_rep_dana: 0`
+za seminarski) potvrđena čitanjem JSON-a, ne izvođenjem. Deklarirano ograničenje, ne nalaz.
+
 # v1.9.3 — sesija „porezne olakšice" (5. 9. 2026.): mjerila koja su mjerila krivu stvar
 
 Sve niže potječe iz jedne sesije u kojoj je seminarski rad prošao sve modove uz uzorak s
 ocjenom 5 kao predložak. Zajedničko im je da nijedan nije srušio skriptu: svi su tiho dali
 krivu brojku, a autor je po njoj mijenjao uredan rad.
 
-* **Kvar 45 — `primjerci.py` mjerio je veličinu pisma iz natpisa prikaza.** Odlomak tijela
+* **Kvar 50 — `primjerci.py` mjerio je veličinu pisma iz natpisa prikaza.** Odlomak tijela
   koji veličinu nasljeđuje iz `docDefaults` vraća `None` i ispada iz moda; na uzorku je
   takvih bilo **59**, a jedinih pet s izričitom veličinom bili su natpisi od 11 pt. Mjereno
   `11.0` umjesto `12.0`. Kvar se širi jer po pravilu 17 primjerak nadjačava profil: 11 pt je
   ušlo u `resolved_profile.json` i `check_rules` je zatim blokirao vlastiti generirani rad.
   Popravak izbacuje `Caption`, `table of figures`, `TOC*`, zaglavlja i fusnote iz uzorka
   tijela i čita `docDefaults` kad odlomak nema izričitu veličinu.
-* **Kvar 46 — `hr_text.recenice` lomio je rečenicu na rednom broju pravne reference.**
+* **Kvar 51 — `hr_text.recenice` lomio je rečenicu na rednom broju pravne reference.**
   `prema članku 6. ZPD-a` postajalo je dvije rečenice. Na fixtureu pravne proze: 6 rečenica,
   medijan 9,5 i 50 % kratkih prije, 4 rečenice, medijan 15,5 i 0 % kratkih poslije.
   `check_ai_style` je zbog toga javljao staccato na tekstu iznad praga. Ograda se izgovara:
   `To stoji u članku 6. Sljedeće poglavlje…` sada se spaja u jednu rečenicu.
-* **Kvar 47 — `re.IGNORECASE` gasio je strukturni znak u `check_argument.py`.**
+* **Kvar 52 — `re.IGNORECASE` gasio je strukturni znak u `check_argument.py`.**
   `\bautor\w*\s+[A-ZČĆŽŠĐ]` s `IGNORECASE` hvata i mala slova, pa je `izrada autora prema
   ZPD` davalo podudarnost `autora p` i cijeli izvor prijavljivalo kao tuđe autorstvo.
   Mjereno na radu sa šest autorskih prikaza: `vlastitih: 0 · prerađenih: 6` prije,
   `vlastitih: 6 · prerađenih: 0` poslije. Pogađa **svaki** izvor koji uz autorstvo imenuje
   podlogu, dakle oblik koji profil traži, i nagrađuje brisanje provenijencije — u toj je
   sesiji autor doista izbrisao „prema ZPD, čl. 28." iz dva izvora da zadovolji mjerilo.
-* **Kvar 48 — rep predaje čitao se s razine fakulteta.** 14 dana iz `efzg.json` pokriva
+* **Kvar 53 — rep predaje čitao se s razine fakulteta.** 14 dana iz `efzg.json` pokriva
   Turnitin, uvez i repozitorij, korake završnog rada; seminarski se predaje e-mailom.
   Svaki seminarski s rokom kraćim od 14 dana dobivao je „ROK JE PROŠAO ILI GA JEDE
   ADMINISTRATIVNI REP". Overlay `efzg-rfir-seminarski` dobiva vlastiti blok `predaja`
@@ -32,13 +81,28 @@ krivu brojku, a autor je po njoj mijenjao uredan rad.
   nad riječima, uz podjelu na **nužno** (naziv propisa, broj NN, oznaka točke standarda) i
   **izbježivo** (proza). Mjereno na istom radu prije i poslije prepisivanja: 8-grami
   2,09 % → 0,91 %, izbježivih 43 → 5. Izlazni kod je uvijek 0: ovo je mjera, ne presuda.
-* **Željezno pravilo 31** — uzorak s ocjenom je istovremeno mjerilo oblika i rizik
+* **Željezno pravilo 32** — uzorak s ocjenom je istovremeno mjerilo oblika i rizik
   ponavljanja. Pravila 17 i 24 pokrivaju oblik; sadržajno preklapanje s radom istog
   kolegija nije mjerio nitko, a mentor koji je oba rada čitao vidi ga bez alata.
 * **Profil.** `efzg.json` dobiva primjerak `efzg-rfir-seminarski-ocjena5-2026` s izmjerenim
   vrijednostima obranjenog rada; dvije proturječe overlayu (`prijelom_pred_poglavljem`
   false naspram 8/8 izmjereno, opseg 3000–4000 riječi naspram 3990 riječi na 13 stranica) i
   obje ostaju zapisane, jer je primjerak opservacija, a Upute su norma.
+
+# v1.9 — kvarovi 45–49 sa sesije „rad Paroci", uz pravilo 31
+
+* **Kvar 45 — `check_rules.py`, format papira.** Margine su se mjerile, papir nije, a procjena broja stranica u tom istom modulu pretpostavlja A4. Rad na US Letteru prolazio je sve provjere jer su margine bile točne, iako je razlika 1,76 cm visine. Novo pravilo `format.stranica` čita format iz profila (`format.stranica`, zadano `a4`), tolerancija 0,2 cm, razina **kršenje**, i imenuje nađeni format. Mjereno: isti rad na A4 → 5 u skladu, **0 kršenja**; na Letteru → **1 kršenje**, „nađeno 21.59 × 27.94 cm — to je LETTER".
+* **Kvar 46 — `rubrika.py`, metodologija i `_empirijski`.** `citac_dio_metodologija` davao je `djelomicno` i za `napravljeno` i za `provjereno`, pa razlika između „napisano" i „netko je provjerio osam odjeljaka" nije značila ništa i kriterij se nije mogao zatvoriti nijednim postupkom; sada `provjereno` → `ispunjeno`. `_empirijski` je pak izvodio odgovor iz statusa dijela `metodologija`, a taj dio time postaje uvjetno ključan — petlja u kojoj oznaka sama sebi stvara kriterij. Sada čita odluku autora iz `stanje.json` (`vlastito_istrazivanje`), a registar dijelova je rezerva preko `analiza`. Mjereno: teorijski rad s `metodologija: napravljeno` i `stanje: ne` prije `_empirijski=True`, sada **False**; empirijski rad sa `stanje: da` prije `False`, sada **True**.
+* **Kvar 47 — lokator dokaza.** `claim_ledger.py` dopuštao je samo `kind: "page"`, pa točka standarda, članak propisa i izvor bez tiskane paginacije nisu mogli ući u lanac: tvrdnja koja se na njih oslanja izgledala je kao tvrdnja bez potpore. Sada `page`, **`clause`** (`clause_label`) i **`passage`**, svaki sa svojom provjerom i svojom porukom. `evidence_model.py` uzima `clause_label` u identitet **samo kad postoji**, pa se `ev_` identiteti postojećih `page` zapisa ne mijenjaju — provjereno: isti ulaz daje isti `ev_a80484e4f2e5c` prije i poslije. `evidence_gate.py` u ispisu razdvaja stranicu od točke standarda.
+* **Kvar 48 — `provjeri_brojke_u_tekstu.py` (nova skripta).** `consistency_check.py` uspoređuje tvrdnje iz `claims.jsonl`, a brojka koju rad izvodi iz vlastite tablice ondje ne postoji, pa je nitko ne uspoređuje sa sobom. Nova skripta uspoređuje takve brojke međusobno i imenuje mjesto svake. Mjereno na sintetičkom radu: „5 od 7" u 4.3 naspram „6 od 7" u 4.4 i zaključku → sva tri navoda ispisana s odjeljkom; isti rad usklađen → čisto. U `gate.py --faza audit` ulazi kao **savjet**, ne blokada (fazа audit: 14 → **15** koraka).
+* **Kvar 49 — `drift.py` gleda i `scripts/`.** Kartica i repo razilaze se i izvan SKILL.md-a. Kad jedne strane nema mapu `scripts/`, alat kaže **NIJE izmjereno**, ne „iste".
+* **Željezno pravilo 31 — „Rad koji nitko nije pročitao nije provjeren rad."** Dva kruga alata završila su s „nijedna blokirajuća provjera nije pala", a čitanje je poslije njih našlo **sedam** grešaka, među njima proturječje u brojci koja nosi zaključak; **tri od sedam nastale su u prethodnome krugu, dok su se popravljale mjere**. Pravilo je provedivo: novi dio `citanje_tijela` (`obavezan: uvijek`, razina `rucno`) blokira `dijelovi.py --provjeri --faza predaja` dok se prolaz ne zabilježi — provjereno, izlaz **1** uz „Autorovo čitanje tijela rada" na popisu. To je jedina blokada u paketu koju alat ne može sam zadovoljiti, i to namjerno.
+
+**Što iz zakrpe NIJE uzeto i zašto.** Zakrpa je rađena na bazi prije PR-a #4, pa je njezin `rad-docx/scripts/provjeri_predaju.py` naspram `main`-a imao **0 dodanih i 29 uklonjenih redaka** — točno `--json`, `P.zadatak` i strukturirani nalaz. Preuzimanje bi vratilo kvar 44 unatrag, pa je ta datoteka preskočena; njezin sadržaj (polje `provjereno`) u `main`-u je od PR-a #3. Iz istog razloga je iz `rubrika.py` uzet samo kvar 46, a čitanje `predaja.json` zadržano. `dijelovi.json` je uzet kao jedan novi zapis umjesto cijele datoteke, jer se zakrpina razlikuje i u formatiranju (674 retka šuma oko 20 redaka sadržaja).
+
+**Prenumeracija kataloga.** Zakrpa numerira svoje unose 44–49, a `main` je 44 već potrošio. Zakrpin 45 je **isti kvar** kao 44 u `main`-u (ista funkcija, isti mehanizam, isti popravak) pa se ne upisuje drugi put; ostali su pomaknuti: 44 → 45, a 46–49 ostaju. `kvar.py --provjeri` daje 26 unosa, zadnji 49.
+
+**Jedan popravak u samoj zakrpi.** Docstring `provjeri_brojke_u_tekstu.py` obećavao je „izlazni kod 1 kad postoji proturječje", a alat vraća 0 osim uz `--strogo` — i tako je i ispravno, jer u `gate.py` stoji kao savjet. Uskladeno s ponašanjem: alat pita, ne presuđuje.
 
 # v1.9 — `rubrika.py` čita nalaz provjere umjesto da pretpostavlja da je prošla
 

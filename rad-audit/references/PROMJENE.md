@@ -3,19 +3,60 @@
 > **Zadnji korak svake zakrpe koja dira `rad-audit/scripts/`:** osvježi
 > `engine_contract.json` → `engine_version` na `katedra_adapter.otisak_motora()` i pokreni
 > `tests/test_all.py`. Otisak se računa iz izvora, a u contract se upisuje rukom; bez toga
-> Katedra odbija `DocumentAuditResult`, a `--provjeri` i dalje javlja ✅ (v. kvar 5).
+> Katedra odbija `DocumentAuditResult`, a `--provjeri` i dalje javlja ✅ (v. kvar 11).
 
-* **Kvar 3 — `LOKATOR` poznaje samo dvotočku.** Apa-hr piše `, str. 170`; zagradni parser
+* **Kvar 9 — `LOKATOR` poznaje samo dvotočku.** Apa-hr piše `, str. 170`; zagradni parser
   taj oblik proguta repnom klauzulom, narativni nema, pa `Šimović (2008, str. 6)` nije
   citat. Na radu s pet narativnih i četiri zagradna citata siročad je bilo točno tih pet.
   Mjereno: `Citirano u tekstu 5 → 10`, `SIROČAD 5 → nema`. 84 regresijska testa prolaze.
-* **Kvar 4 — `common.sentences` lomi rečenicu na rednom broju i unutar zagrade.**
+* **Kvar 10 — `common.sentences` lomi rečenicu na rednom broju i unutar zagrade.**
   `prema članku 6. ZPD-a` daje dvije rečenice, `(MRS 12, t. 24.)` daje fragment `24.).` od
   jedne riječi, a nedostajalo je i pravilo o rednom broju pred malim slovom koje
   `katedra-lite/hr_text.py` ima od početka (`od 1.` + `siječnja 2026.`). Mjereno na istom
   radu: `305 → 270` rečenica, medijan `19 → 21,0`, vrlo kratke `24 % → 16 %`; ručno brojenje
   iste proze daje 193 rečenice i medijan 24. Preostalih 16 % nisu rečenice nego brojevi
   naslova koje ekstrakcija ulijeva u isti tok — to je kvar ekstrakcije i mjeri se zasebno.
+
+# Vancouver dijalekt, lektura i tvrdnje koje se provjeravaju (rujan 2026.) — kvarovi 4–8
+
+Zakrpa sa sesije nad diplomskim radom HKS-a (Fakultet zdravstvenih studija, palijativna
+skrb, 75 referenci, 132 navoda oblika `(1)`).
+
+* **Kvar 4 — Vancouver `(N)` dijalekt bio je opisan, a nije bio napisan.** `common.detect_citation_style` poznavao je samo `[N]` i autor–godinu, pa je rad s numeričkim citatom u ovaloj zagradi ispadao `unknown` i pokretala su se **oba pogrešna** checkera: jedini crveni nalaz cijelog audita bio je lažan, a svih 132 stvarnih navoda ostalo je neprovjereno. Teži dio kvara nije bio u kodu nego u `SKILL.md`-u, koji je taj dijalekt opisivao kao gotov i dokazan („mjereno: kritično 1 → 0, 78/78 testova"), dok je `grep -c -i vancouver` nad `common.py` i `check_citations.py` davao `0` i `0`. Druga pojava mehanizma iz kvara 36 (`katedra-lite`), pa je iz nje izvedeno i **željezno pravilo 8 skilla `katedra`**: tvrdnja u SKILL.md-u bez testa je fikcija.
+* **Kvar 5 — redoslijed prvog pojavljivanja nije ulazio u ocjenu.** Provjera je postojala, ali njezin nalaz nije dizao težinu, pa je sedam citata koji krše rastući redoslijed prošlo bez traga.
+* **Kvar 6 — domenska auto-detekcija nema biomedicinu**, pa nad radom iz zdravstvenih studija promašuje u tišini.
+* **Kvarovi 7 i 8 — R14 i R15 opisani, kod nepromijenjen.** `HEADING_RE` i `_osnova` nisu poznavali „Izvori i literatura" ni padež stranog prezimena; toggle navodnika nije vidio već otvoreni navodnik. Sada su implementirani i pokriveni testovima.
+* **Nove skripte.** `parafraza.py` (parafraza bez lokatora), `brojke_iz_rasprave.py` (brojke koje rasprava izvodi iz vlastitih prikaza). Nova referenca `references/lektura.md`.
+* **`katedra/scripts/zakrpa.py --provjeri-tvrdnje`** uspoređuje što `SKILL.md` tvrdi sa stvarnim stanjem: sposobnosti naspram `engine_contract.json` i „N/M testova" naspram pokrenutog suitea. Iza kvara 4 stoji upravo taj alat.
+
+**Test suite: 82/82 prolazi** (prije zakrpe 63). `--provjeri-tvrdnje` nad `rad-audit`: „✓ SKILL.md i kod se slažu", uz jedno savjetodavno ⚠ da manifest nosi `phase.G` koju SKILL.md ne spominje.
+
+## Kako je zakrpa primijenjena
+
+Zip je nastao na bazi **prije** commita `ecfd644` (kvar 2, izvori bez osobnog autora), pa
+kopiranje po datotekama ne bi bilo primjena nego vraćanje unatrag: njegov
+`check_citations_authoryear.py` još nosi `_OBLIK_TVRTKE`, a `common.py` nema `_AY_NAPOMENA`
+ni preskakanje signalnih riječi (`usp.`, `vidi`, `prema`). Zato je zip zapisan na svojoj
+bazi i **spojen trosmjerno**: `common.py`, `check_citations_authoryear.py` i `test_all.py`
+git je pomirio sam, pa oba popravka stoje.
+
+Dva sukoba riješena ručno:
+
+* **`engine_contract.json`** — `engine_version` je sha256 nad `scripts/*.py`, pa poslije
+  spoja nije točan nijedan od dvaju ponuđenih (zip `55757f98`, main `975259d7`). Preračunat
+  nad spojenim stablom: **`1e988db8`**.
+* **`references/zamke.md`** — dva kataloga koja oba počinju od 1. Brojevi iz `main`-a
+  (1 detekcija domene, 2 izvori bez osobnog autora, 3 `updateFields`) ostaju jer se na njih
+  već pozivaju `PROMJENE.md`, katalog `katedra-lite` i opisi PR-ova; zipovi 1–5 pomaknuti su
+  na **4–8**.
+
+**Popravak u samoj zakrpi:** `zakrpa.py --provjeri-tvrdnje` s relativnim putom pokretao je
+test suite s `cwd` u `scripts/tests`, gdje taj put pokazuje u prazno, pa je javljao
+„suite se ne može pokrenuti" i obarao provjeru — lažni ❌ iz alata koji upravo lovi tvrdnje
+bez pokrića. Korijen se sada razrješava u apsolutni put.
+
+**Ostaje za oko:** unosi 7 i 8 nemaju isječak koda ili izlaza koji kvar pokazuje
+(`kvar.py --provjeri` ih javlja kao savjet, izlazni kod 0).
 
 # Faza B: izvori bez osobnog autora (rujan 2026.) — kvar 2
 

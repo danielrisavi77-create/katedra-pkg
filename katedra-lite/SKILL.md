@@ -434,7 +434,20 @@ korak.
     modovima nad gotovim `.docx`-om, ne samo u modu 3. Dva su smjera kvara i oba su
     stvarna: dio rada koji postoji prijavi se kao da ga nema, a opseg se izmjeri prekratak.
 
-31. **Uzorak s ocjenom je mjerilo oblika i rizik ponavljanja, i to se mjeri odvojeno.**
+31. **Rad koji nitko nije pročitao nije provjeren rad.** Alati mjere ono što znaju izmjeriti.
+    Proturječje između dvaju poglavlja, tvrdnja koja je pri cijepanju rečenice izgubila citat
+    i tablica koja ne prikazuje proces opisan u tekstu ne padaju ni na jednoj provjeri. Prije
+    predaje obavezan je jedan prolaz kroz tijelo rada, od Uvoda do Zaključka, i bilježi se u
+    `.katedra/dijelovi.json` kao dio `citanje_tijela` (razina `rucno`); `gate.py --faza predaja`
+    traži ga kao blokirajući. Mjereno na seminarskom radu 4. 9. 2026.: dva kruga alata završila
+    su s „nijedna blokirajuća provjera nije pala", a čitanje je poslije njih našlo **sedam**
+    grešaka, među njima proturječje u brojci koja nosi zaključak (jedno potpoglavlje „posljednja
+    tri koraka", drugo „šest od sedam"). **Tri od sedam nastale su u prethodnome krugu, dok su
+    se popravljale mjere**: cijepanje duge rečenice zbog mjere ritma odvojilo je brojku od
+    njezina citata. Zeleni gate znači da ništa mjereno nije palo, ne da je rad točan. Zato
+    poslije svakoga stilskog prolaza idu i `citati.py` i faza C, ne samo stilski alati.
+
+32. **Uzorak s ocjenom je mjerilo oblika i rizik ponavljanja, i to se mjeri odvojeno.**
     Pravila 17 i 24 govore što uzorak dokazuje o OBLIKU. Ne govore ništa o sadržaju, a kad
     uzorak dolazi s **istog kolegija**, on je i najbliži susjed u prostoru tema: ista
     literatura, isti standardi, isti mentor koji ga je upravo čitao. Zato uz mjerenje oblika
