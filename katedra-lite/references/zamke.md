@@ -841,7 +841,7 @@ s dvjema različitim sadržajima. Ograda dok toga nema: uz verziju ispiši i
 
 ---
 
-## Kvar 58 — gate je zeleno javljao fazu u kojoj se ništa nije pokrenulo
+## 58. gate je zeleno javljao fazu u kojoj se ništa nije pokrenulo
 
 **Kad:** 5. 9. 2026. **Gdje:** `katedra-lite/scripts/gate.py:384` (`zakljucak`).
 
@@ -869,7 +869,7 @@ u `gate.json` pod `sazetak.preskok_dopusten` i ispisuje u završnom retku.
 
 ---
 
-## Kvar 59 — faza audit nije pokretala audit
+## 59. faza audit nije pokretala audit
 
 **Gdje:** `gate.py::koraci("audit")`. Korak `motor` je zvao `engine.py --provjeri`
 (samo razrješavanje motora, `blokira=False`), a pravi audit (`engine.py --audit`,
@@ -883,7 +883,7 @@ koraka bude najmanje šest.
 
 ---
 
-## Kvar 60 — `provjeri_predaju.py` nije bio korak nijednog gatea
+## 60. `provjeri_predaju.py` nije bio korak nijednog gatea
 
 Alat postoji od v1.4 i hvata zastarjele brojke iz modela, `updateFields`, TOC,
 neuravnotežena polja, `REF` bez zabilješke i numeraciju sekcija. Bio je naredba u
@@ -894,7 +894,7 @@ rutinski čitala `.katedra/predaja.json` koji nitko nije napisao.
 
 ---
 
-## Kvar 61–63 — audit koji se smije ignorirati
+## 61. audit koji se smije ignorirati (kvarovi 61–63 u jednom unosu)
 
 * `generate_report.py`: iznimka u modulu upisivala se bez znaka ⚠, pa je ispadala
   iz sažetka i brojača — srušena faza izgledala je kao faza bez nalaza.
@@ -906,7 +906,7 @@ Sada: iznimka je KRITIČNO, faza s izlaznim kodom ≥ 2 ulazi u nalaze kao
 
 ---
 
-## Kvar 64–66 — klase pogrešaka koje nijedan alat nije gledao
+## 64. klase pogrešaka koje nijedan alat nije gledao (kvarovi 64–66 u jednom unosu)
 
 | Kvar | Što je prolazilo | Alat |
 |---|---|---|
@@ -920,7 +920,7 @@ Prije: tekst s dugom crticom i miješanim „45%" / „62 %" dobivao je `✓ tip
 
 ---
 
-## Kvar 67–70 — lažni nalazi koji su gate činili neupotrebljivim
+## 67. lažni nalazi koji su gate činili neupotrebljivim (kvarovi 67–70 u jednom unosu)
 
 * **67** `uskladi_kljuceve.slaze`: prefiks od 4 znaka spajao je `Markov` i
   `Marković` iste godine u isti ključ, pa je pravi citat bez reference nestajao.
@@ -940,7 +940,7 @@ blokade.** Gate koji pada iz krivih razloga zaobiđe se za tjedan dana.
 
 ---
 
-## Kvar 71 — faza A bez izvršitelja
+## 71. faza A bez izvršitelja
 
 `SKILL.md` je fazu A opisivao kao provjeru placeholdera, a alat je bio u drugom
 skillu i nijedan runner ga odavde nije zvao. `[TREBA IZVOR]` u fusnoti prolazio je
@@ -949,7 +949,7 @@ fusnote, endnote, zaglavlja, podnožja), faza A2 u obama runnerima.
 
 ---
 
-## Kvar 72–73 — alat za provjeru tvrdnji bio je i sam tvrdnja bez pokrića
+## 72. alat za provjeru tvrdnji bio je i sam tvrdnja bez pokrića (kvarovi 72–73 u jednom unosu)
 
 `zakrpa.py --provjeri-tvrdnje` nad `katedra-lite` vraćao je „✓ SKILL.md i kod se
 slažu" i izlazni kod 0, jer su sve tri provjere ovisile o `scripts/engine_contract.json`
