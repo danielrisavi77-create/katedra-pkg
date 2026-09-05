@@ -366,6 +366,31 @@ def main():
           C13.parse_ay_narrative(
               "Analiza je provedena u promatranom razdoblju (2021.)") == set())
 
+    # (6) kratica institucije kao ALIAS, ne kao drugi unos u popisu
+    #     Pravilo 34: uz tri slučaja koji moraju proći ide i onaj koji mora pasti,
+    #     inače se ne zna razlikuje li alias išta ili samo gasi nalaze.
+    for opis, redak, alias, glavni in [
+        ("pun naziv pa kratica",
+         "Hrvatska narodna banka (HNB) (2023). Bilten o bankama.", "hnb", "hrvatska"),
+        ("kratica pa pun naziv",
+         "HNB (Hrvatska narodna banka) (2023). Bilten o bankama.", "hrvatska", "hnb"),
+    ]:
+        mapa = B13.biblio_aliasi(redak)
+        check(f"R13: alias institucije — {opis}",
+              mapa.get((alias, "2023")) == (glavni, "2023"), mapa)
+
+    kljucevi, _ = B13.extract_biblio_keys(
+        "Hrvatska narodna banka (HNB) (2023). Bilten o bankama.")
+    check("R13: alias NE stvara drugi unos u popisu (inače lažno siroče)",
+          len(kljucevi) == 1 and ("hrvatska", "2023") in kljucevi, kljucevi)
+
+    check("R13: zagrada bez slova nije alias",
+          B13.biblio_aliasi("Zavod za statistiku (2022) (2022). Ljetopis.") == {},
+          B13.biblio_aliasi("Zavod za statistiku (2022) (2022). Ljetopis."))
+
+    check("R13: osobni autor nema alias",
+          B13.biblio_aliasi("Becker, Gary (2007) Ekonomski pristup.") == {})
+
     test_r16_vancouver()
     test_r14_r15()
 

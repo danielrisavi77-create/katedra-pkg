@@ -1,3 +1,10 @@
+# v1.9.5 — kratica institucije kao alias (kvar 12)
+
+* **Zašto.** `extract_biblio_keys` svodi redak popisa na (prvi pojam, godina). Institucionalni autor nosi oba oblika — pun naziv i kraticu — a koji je „prvi pojam" ovisi o redu zapisa. `Hrvatska narodna banka (HNB) (2023)` daje `hrvatska`, citat `(HNB, 2023)` daje `hnb`, pa isti izvor ispada **istodobno siroče i citat bez reference**. Mjereno na dva institucionalna izvora: **četiri nalaza, nijedan stvaran**, izlaz 1. Obrnuti zapis (`HNB (Hrvatska narodna banka)`) prolazio je slučajno jer je ondje kratica prva — zato je u `POMIRENJE.md` ostao zapisan samo kao sumnja, i to u suprotnom smjeru od onoga u kojem kvar doista postoji.
+* **Popravak.** Kratica u zagradi vodi se kao **alias**, ne kao drugi unos: `biblio_aliasi()` gradi `{(alias, godina): (glavni, godina)}`, a `main` preslikava ključeve iz teksta prije usporedbe. Upisivanje obaju ključeva kao definicija bilo bi lakše i pogrešno — nekorišteni oblik postao bi novo lažno siroče.
+* **Provjereno (5 slučajeva).** pun naziv (kratica) + kratica u tekstu → 0 nalaza · kratica (pun naziv) + kratica → 0 · kratica (pun naziv) + pun naziv → 0 · **stvarno nedostajuća referenca `(Kovač, 2020)` i dalje pada, izlaz 1** (pravilo 34) · popis i dalje ima jedan unos po retku. Suite **82 → 87**: dva smjera, izostanak drugog unosa, zagrada bez slova, osobni autor.
+* **Granica.** Alias se traži samo u institucionalnoj grani i samo u zagradi unutar imena. Kratica koja u popisu nigdje ne stoji uz pun naziv (npr. samo „HNB" u popisu, „Hrvatska narodna banka" u tekstu) i dalje ostaje neuparena — za to nema signala u dokumentu.
+
 # v1.9.3 — dijalekt lokatora i dijeljenje rečenica u pravnoj prozi
 
 > **Zadnji korak svake zakrpe koja dira `rad-audit/scripts/`:** osvježi
