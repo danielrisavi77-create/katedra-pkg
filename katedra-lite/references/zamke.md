@@ -1113,3 +1113,45 @@ Teorijski rad s autor-godina citiranjem i empirijski rad s tablicama podskupina
 pokazuju različite klase lažnih nalaza. Prije nego provjera uđe u blokadu, mora
 proći kroz oba tipa.
 
+---
+
+## Kvar 91 — pravni rad: svaka jedinica iz popisa bila je siroče
+
+**Kad:** 5. 9. 2026. **Kako nađen:** Daniel nije imao pri ruci pravni ni tehnički
+rad, pa su izgrađena dva fixturea koja vjerno nose konvencije tih vrsta: pravni s
+12 fusnota (ibid., op. cit., nav. dj., loc. cit., supra bilj., NN, ECLI, čl. i st.,
+skraćeni oblik) i tehnički s formulama, indeksima, jedinicama (µm, °C, mV/s, Ω cm²),
+rasponima s minusom, `10^5` i kemijskim oznakama (Ti-6Al-4V, NaCl).
+
+**Tehnički rad prošao je čisto**, uz jedan istinit nalaz (`10 x 10 x 2 mm`).
+Konvencije koje su izgledale rizično (pH 7,4, −1,0 V do +1,5 V, 0,05 µm, ±)
+nisu proizvele nijedan lažni nalaz.
+
+**Pravni rad dao je 100 % lažnih kritičnih nalaza.** Rad koji citira U FUSNOTAMA
+nema u tijelu ni `[N]` ni `(N)` ni `(Prezime, godina)`, pa je detektor vraćao
+„unknown", a `generate_report` je unatoč tome puštao autor-godina provjeru. Ona je
+onda **svaku** jedinicu iz popisa proglasila siročetom, jer citata u tijelu doista
+nema. Cijeli citatni sloj bio je neupotrebljiv na pravnom radu.
+
+Sada `common.detect_footnote_citing()` traži dvoje istodobno: fusnote nose oznake
+fusnotnog aparata, a tijelo NEMA vlastitih oznaka citata. Jedno bez drugoga nije
+dovoljno, jer rad s autor-godina citiranjem smije imati i pokoju fusnotu. Kad je
+rad fusnotni, sve tri grane provjere citata se preskaču, a izvještaj **imenuje
+alat koji je za taj rad ispravan** (`provjeri_fusnote.py`), umjesto da šuti.
+
+Prvi test ove funkcije pao je odmah: brojio je samo zagradne citate, pa je rad s
+tri narativna autor-godina citata izgledao kao fusnotni. Narativni se sada broji
+jednako.
+
+**Ograda:** R32, četiri tvrdnje (fusnotni jest; autor-godina nije; bez fusnota
+nije; fusnota bez citatnog aparata nije).
+
+**Stanje na sva četiri rada:**
+
+| Rad | Kritično | Srednje | Kozmetičko |
+|---|---|---|---|
+| politička ekonomija (teorijski, autor-godina) | 0 | 3 | 1 |
+| Znahor (empirijski, Vancouver, 11 tablica) | 0 | 10 | 1 |
+| pravni (fusnotni aparat) | 0 | 0 | 0 |
+| tehnički (formule, jedinice) | 0 | 0 | 1 |
+

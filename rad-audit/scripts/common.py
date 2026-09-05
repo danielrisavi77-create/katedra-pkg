@@ -414,6 +414,42 @@ def parse_ay_citation_group(inner):
     return keys
 
 
+# Kvar 91 (nađen na pravnom fixtureu): rad koji citira U FUSNOTAMA nema u tijelu
+# ni [N] ni (N) ni (Prezime, godina), pa je detektor vraćao „unknown", a onda je
+# generate_report svejedno puštao autor-godina provjeru. Ona je svaku jedinicu iz
+# popisa proglasila SIROČETOM, jer citata u tijelu doista nema. Na pravnom radu s
+# 12 fusnota to je 100 % lažnih kritičnih nalaza.
+#
+# Fusnotni citat prepoznaje se po vlastitom rječniku: ibid., op. cit., nav. dj.,
+# loc. cit., supra, „bilj.", te po tome što jedinice stoje u fusnotama, ne u tekstu.
+FOOTNOTE_CITE_RE = re.compile(
+    r"(?i)\b(ibid\.?|op\.\s*cit\.?|nav\.\s*dj\.?|loc\.\s*cit\.?|cf\.|usp\.|"
+    r"vidi\s+supra|supra\s*,?\s*bilj|bilj\.\s*\d+|infra\b|str\.\s*\d+)")
+
+
+def detect_footnote_citing(footnote_text: str, body_text: str) -> bool:
+    """Citira li rad u fusnotama, a ne u tijelu.
+
+    Traži se dvoje istodobno: fusnote nose oznake fusnotnog aparata (ibid.,
+    op. cit., str. N), a tijelo NEMA vlastitih oznaka citata. Jedno bez drugoga
+    nije dovoljno: rad s autor-godina citiranjem smije imati i pokoju fusnotu.
+    """
+    if not footnote_text or len(footnote_text.strip()) < 40:
+        return False
+    aparat = len(FOOTNOTE_CITE_RE.findall(footnote_text))
+    if aparat < 2:
+        return False
+    # Narativni citat („Prema Marković (2021)") mora se brojati jednako kao
+    # zagradni: prvi test ove funkcije pao je upravo zato što ga nije brojala,
+    # pa je rad s tri autor-godina citata u tijelu izgledao kao fusnotni.
+    u_tijelu = (len(IEEE_CITE_RE.findall(body_text))
+                + len(find_vancouver_citations(body_text))
+                + sum(len(parse_ay_citation_group(m))
+                      for m in CITE_AY_RE.findall(body_text))
+                + len(parse_ay_narrative(body_text)))
+    return u_tijelu <= 1
+
+
 def detect_citation_style(text):
     """Heuristička detekcija: 'ieee' ([N]), 'vancouver' ((N)), 'authoryear'
     (Prezime, GODINA), 'mixed' ili 'unknown'. Vraća (stil, brojači)."""

@@ -242,6 +242,23 @@ def test_stvarni_rad():
           NI2.zbroj_kategorija(["Bilo je ukupno 3 slu\u010daja: 1 i 1 te 0 i 1."]) == [],
           NI2.zbroj_kategorija(["Bilo je ukupno 3 slu\u010daja: 1 i 1 te 0 i 1."]))
 
+    # 91 — rad koji citira u fusnotama ne prolazi kroz autor-godina siročad
+    fus = ("Vidi \u010dl. 141. Ustava, NN 56/90. Ibid., str. 214. "
+           "Barbi\u0107, J., Pravo dru\u0161tava, Zagreb, 2013., str. 87. "
+           "Op. cit. (bilj. 4), str. 91. Nav. dj. (bilj. 6), t. 130.")
+    tijelo = "Na\u010delo vladavine prava sadr\u017eano je u \u010dl. 3. Ustava."
+    check("R32: fusnotni aparat + tijelo bez oznaka = fusnotno citiranje",
+          C.detect_footnote_citing(fus, tijelo), (fus[:60], tijelo))
+    check("R32: rad s autor-godina citatima NIJE fusnotni",
+          not C.detect_footnote_citing(
+              fus, "Prema Marković (2021) i Horvat (2018) te (Kos, 2023) nalaz stoji."),
+          "autor-godina u tijelu")
+    check("R32: bez fusnota nije fusnotni",
+          not C.detect_footnote_citing("", tijelo))
+    check("R32: fusnota bez citatnog aparata nije fusnotni",
+          not C.detect_footnote_citing(
+              "Autorica zahvaljuje mentoru na strpljenju tijekom izrade rada.", tijelo))
+
     # 78 — DOI nije množenje
     n = _tipografija_nalazi(TY, "DOI: 10.1177/1023263X251338198. Dostupno na mre\u017ei.")
     check("R26: DOI s X me\u0111u znamenkama NIJE mno\u017eenje",
