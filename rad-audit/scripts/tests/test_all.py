@@ -640,6 +640,33 @@ def test_manifest():
           "(popravak: python3 osvjezi_contract.py --upisi)",
           r.returncode == 0, r.stdout.strip().splitlines()[-1:] )
 
+    # R23: git s core.autocrlf=true (zadano na Windowsu) piše CRLF u radno stablo.
+    # Dok je otisak hashirao sirove bajtove, isti je commit davao dva otiska, pa je
+    # manifest bio ispravan na jednoj platformi i pogrešan na drugoj — R22 bi tada
+    # padao ovisno o tome tko ga pokreće, a ne o tome slažu li se kod i ugovor.
+    import importlib.util
+    import shutil
+    otisci = {}
+    for ime, pretvori in (("crlf", lambda d: d.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")),
+                          ("lf", lambda d: d.replace(b"\r\n", b"\n"))):
+        t = tempfile.mkdtemp(prefix="otisak_%s_" % ime)
+        for n in os.listdir(SCRIPTS):
+            if n.endswith(".py"):
+                with open(os.path.join(SCRIPTS, n), "rb") as fh:
+                    open(os.path.join(t, n), "wb").write(pretvori(fh.read()))
+        sp = importlib.util.spec_from_file_location("ka_" + ime,
+                                                    os.path.join(t, "katedra_adapter.py"))
+        m = importlib.util.module_from_spec(sp)
+        sys.path.insert(0, t)
+        try:
+            sp.loader.exec_module(m)
+            otisci[ime] = m.otisak_motora()
+        finally:
+            sys.path.pop(0)
+            shutil.rmtree(t, ignore_errors=True)
+    check("R41: otisak motora je isti za CRLF i LF radno stablo",
+          otisci.get("crlf") == otisci.get("lf"), otisci)
+
 
 def main():
     tmp = tempfile.mkdtemp(prefix="rad_audit_fixtures_")
