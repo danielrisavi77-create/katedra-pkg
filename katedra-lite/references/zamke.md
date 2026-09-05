@@ -894,7 +894,7 @@ rutinski čitala `.katedra/predaja.json` koji nitko nije napisao.
 
 ---
 
-## 61. audit koji se smije ignorirati (kvarovi 61–63 u jednom unosu)
+## 61–63. audit koji se smije ignorirati
 
 * `generate_report.py`: iznimka u modulu upisivala se bez znaka ⚠, pa je ispadala
   iz sažetka i brojača — srušena faza izgledala je kao faza bez nalaza.
@@ -906,7 +906,7 @@ Sada: iznimka je KRITIČNO, faza s izlaznim kodom ≥ 2 ulazi u nalaze kao
 
 ---
 
-## 64. klase pogrešaka koje nijedan alat nije gledao (kvarovi 64–66 u jednom unosu)
+## 64–66. klase pogrešaka koje nijedan alat nije gledao
 
 | Kvar | Što je prolazilo | Alat |
 |---|---|---|
@@ -920,7 +920,7 @@ Prije: tekst s dugom crticom i miješanim „45%" / „62 %" dobivao je `✓ tip
 
 ---
 
-## 67. lažni nalazi koji su gate činili neupotrebljivim (kvarovi 67–70 u jednom unosu)
+## 67–70. lažni nalazi koji su gate činili neupotrebljivim
 
 * **67** `uskladi_kljuceve.slaze`: prefiks od 4 znaka spajao je `Markov` i
   `Marković` iste godine u isti ključ, pa je pravi citat bez reference nestajao.
@@ -949,7 +949,7 @@ fusnote, endnote, zaglavlja, podnožja), faza A2 u obama runnerima.
 
 ---
 
-## 72. alat za provjeru tvrdnji bio je i sam tvrdnja bez pokrića (kvarovi 72–73 u jednom unosu)
+## 72–73. alat za provjeru tvrdnji bio je i sam tvrdnja bez pokrića
 
 `zakrpa.py --provjeri-tvrdnje` nad `katedra-lite` vraćao je „✓ SKILL.md i kod se
 slažu" i izlazni kod 0, jer su sve tri provjere ovisile o `scripts/engine_contract.json`
@@ -960,3 +960,58 @@ Dodano: svaka skripta imenovana u `SKILL.md` i `references/*.md` mora postojati 
 paketu ili kod satelita. Odmah je našla dvije rupe: `provjeri_povratak.py` (motor
 cijelog moda 7, opisan u `povratak.md`, nije postojao) i `soffice.py`.
 
+
+## 74. `kvar.py` je poznavao samo jedan broj po unosu, pa je grupirani unos bio ili nevidljiv ili lažni preskok
+
+Zakrpa v1.9.5 upisala je četiri unosa koji svaki pokrivaju tri do četiri kvara, jer su to
+klase s istim popravkom i jednim mjerenjem (`61–63` exit-code disciplina, `64–66` nove
+provjere, `67–70` lažni nalazi, `72–73` alat za tvrdnje). Naslovi su glasili
+`## Kvar 61–63 — naslov`, a `NASLOV` uzorak traži `## <broj>. <naslov>`. Alat ih zato
+**nije vidio uopće**:
+
+```
+prije:    unosa: 34 · zadnji broj: 57 · sljedeći slobodan: 58   ✅ numeracija teče
+stvarno:  katalog nosi unose do broja 73
+```
+
+To je najgori mogući ishod za registar brojeva: sljedeća bi zakrpa uzela 58–73, koje su već
+potrošene, i sudarila se s njima — a alat bi je pritom uvjeravao da je sve u redu. Kad su
+naslovi prepisani u oblik koji alat čita, javio je tri preskoka (`očekivan 62, 65, 68`), što
+je bilo jednako netočno: brojevi nisu preskočeni nego pokriveni.
+
+Razdvajanje na po jedan broj nije bilo moguće bez pogađanja: poruka commita za skupinu 61–63
+navodi `audit_all`, iznimku bez oznake i `cross_check` glob, a katalog za istu skupinu
+navodi `generate_report`, `audit_all:83` i `numbers_inventory`/`check_repetition`. Koji broj
+pripada kojoj stavci ne stoji nigdje, pa bi svaka podjela bila izmišljen podatak.
+
+Popravak je zato u alatu, ne u sadržaju: naslov prima i raspon
+(`## 61–63. naslov`, en dash, em dash ili crtica), `unosi()` vraća i zadnji pokriveni broj,
+numeracija se provjerava **po brojevima** a sadržaj **po unosu**, a `--novi` kreće od zadnjeg
+pokrivenog broja. Poslije:
+
+```
+unosa: 42 (od toga 4 s rasponom) · zadnji broj: 73 · sljedeći slobodan: 74
+✅ numeracija teče, naslovi su različiti, svaki unos ima mjeru i isječak
+```
+
+Ograda: raspon koji ide unatrag (`## 66–64.`) daje tvrdi nalaz, provjereno mutacijom.
+
+---
+
+## 75. Katalozi kvarova nisu bili u jedinom ulazu za testove, pa je suite bio zelen nad pokvarenim registrom
+
+`bin/testovi.sh` postoji da bi „jedan ulaz" dao „jedan izlazni kod", i pokretao je devet
+skupina: tri test suitea i šest provjera tvrdnji. `kvar.py` nije bio među njima. Mjereno na
+stanju u kojem je katalog imao tri tvrda nalaza:
+
+```
+kvar.py katedra-lite/references/zamke.md --provjeri   ❌ KVARI KATALOG: 3   izlaz 1
+bin/testovi.sh                                        ✅ svih 9 skupina prošlo   izlaz 0
+```
+
+Isti repo, dvije istine, a ona koja se pokreće je zelena. Registar brojeva koji nitko ne
+provjerava iz jedinog ulaza nije registar nego dogovor.
+
+Dodane tri skupine (`katalog kvarova: katedra-lite | rad-audit | rad-docx`), suite ide s 9 na
+12. Ograda po pravilu 34: `## 71.` prepisan u `## 75.` obara skupinu i s njom cijeli suite
+(`❌ 1 od 12 skupina palo`, izlaz 1); vraćanjem se vraća i zeleno.
