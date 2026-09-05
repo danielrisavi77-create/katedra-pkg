@@ -1,3 +1,59 @@
+# v1.9.4 — isporuka i doktrina: kvarovi 54–57, pravila 33 i 34
+
+Zakrpa 1 popravljala je alate; ova popravlja **isporuku**. Pisana je nad `e57ac53`, dakle nad
+stanjem koje je repo doista imao, pa je primijenjena bez ijednog sukoba — prvi put u ovom nizu.
+
+* **Kvar 54 — kartica nosi samo `SKILL.md`.** U sesiji bez paketa agent učitava router koji
+  imenuje 18 skripti, a nijedne nema. `drift.py` je to dosad prijavljivao kao ⚠️ *nije
+  izmjereno*, blaže od obične razlike, iako je to najgori mogući ishod. Sada je ❗ nalaz s
+  izlazom 1, i imenuje koliko skripti router traži a nema ih.
+* **Kvar 55 — spremanje kartice briše ono što se ne preda.** `rad-docx/SKILL.md` u repou je
+  nosio opis *promjene* („Ažurira broj kvarova u katalogu zamki s 23 na 31") umjesto opisa
+  skilla; description je vraćen na „Motor izrade predajnog .docx-a…". Odatle pravilo pri
+  spremanju: predaje se **cijeli** `SKILL.md`, jer kartica ga zamjenjuje u cijelosti.
+* **Kvar 56 — `rad-orchestrator` v1.2 u repou, v1.2.1 u kartici.** Presuda ide na različite
+  strane: `SKILL.md` iz kartice, `scripts/rad-orchestrator.js` iz repoa (kartičin nema redak
+  verzije koji njegov vlastiti SKILL.md nalaže). Ovdje je preuzet SKILL.md.
+* **Kvar 57 — mjerila se kriva kopija.** Prva verzija pomirenja uspoređivala je karticu s
+  lokalnim `~/.katedra-pkg` (v1.9.2), dok je remote već nosio v1.9.3; zakrpa pisana nad tom
+  kopijom bila bi numerirana od 50 i sudarila se sa svime što je već u repou.
+* **§ 0.0 kreće od priloga.** Redoslijed je sada: zip/bundle u chatu → git → kartica.
+  Ispravljena je i tvrdnja o egressu: anonimni `clone` javnog repoa **prolazi** i u cloud
+  sesiji; ono što pada je `push`. Doktrina je to prije spajala u jedno.
+* **Pravila 33 i 34.** „Provjera koja ne može pasti nije provjera" i „Provjera se prima tek
+  kad je pokazano da pada." Pravilo 34 platilo se prije isporuke: mutacijski test uhvatio je
+  dva tiha kvara u samom popravku — `ls -d "$KATEDRA_PKG"/*/` ne vidi mapu koja počinje
+  točkom (a zip iz `~/.katedra-pkg` nosi korijen `.katedra-pkg/`), i hrvatski zatvoreni
+  navodnik zapisan kao ASCII `"` koji bi srušio cijeli blok § 0.0 u svakoj sesiji.
+
+## Provjereno pri primjeni
+
+```
+bash -n nad blokom § 0.0                       ✅ (14 bash blokova u SKILL.md-u; provjeren onaj koji se izvršava)
+drift A) stvarno stanje                        ❗ KARTICA NEMA scripts/ — 18 imenovanih skripti · izlaz 1
+drift B) kartica ima scripts/, sve isto        ✅ 72 datoteke · izlaz 0
+drift C) iz kartice obrisan gate.py            ❌ 1 samo u repou (gate.py) · izlaz 1
+drift D) u kartici izmijenjena rubrika.py      ❌ 1 različitih (rubrika.py) · izlaz 1
+kvar.py zamke.md --provjeri                    34 unosa · zadnji 57 · exit 0
+pravila u SKILL.md                             30, 31, 32, 33, 34
+rad-docx description                           „Motor izrade predajnog .docx-a…"
+rad-orchestrator                               v1.2.1
+test suite rad-audita                          82/82 · zakrpa.py --provjeri-tvrdnje ✓ ✓
+```
+
+Mutacije B–D nisu prepisane iz uputa nego ponovljene ovdje, nad lažnom karticom sagrađenom
+iz repoa; D je dodana, jer B i C pokrivaju samo *nedostajuću* datoteku, ne izmijenjenu.
+
+## Zipovi kartica
+
+Pet zipova u `kartice/` uspoređeno je s ovim repoom datoteku po datoteku: **nijedna zajednička
+datoteka se ne razlikuje** (katedra-lite 144, rad-audit 27, rad-docx 16, katedra 8,
+rad-orchestrator 2). Zipovi su strogi podskup repoa — izostavljaju `docs/`, `assets/` i
+`tests/fixtures/`, što kartica ne treba. Učitavanje dakle ne može ništa vratiti unatrag.
+
+**Drugi korak nije opcionalan i ne može se napraviti odavde:** dok zipovi ne odu u uređivač
+skillova, kvar 54 stoji, a `drift.py` s pravom vraća izlaz 1.
+
 # v1.9.3 — kako je zakrpa primijenjena, i dva popravka u njoj
 
 Zakrpa je nastala na bazi `fd253b6` (PR #4), pa ne poznaje ni PR #5 ni PR #6. Isporučena je
