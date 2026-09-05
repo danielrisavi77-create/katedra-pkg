@@ -123,9 +123,11 @@ def main(path):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
+    # `--help` je bez ovoga završavao kao ime datoteke: python-docx bi bacio
+    # PackageNotFoundError i alat bi izgledao pokvareno umjesto da se predstavi.
+    if len(sys.argv) < 2 or {"-h", "--help"} & set(sys.argv[1:]):
         print(__doc__)
-        sys.exit(2)
+        sys.exit(2 if len(sys.argv) < 2 else 0)
     if "--json" in sys.argv:
         put = sys.argv[sys.argv.index("--json") + 1]
         with open(put, "w", encoding="utf-8") as fh:
