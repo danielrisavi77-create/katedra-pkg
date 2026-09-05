@@ -5,6 +5,11 @@
 # u cjelini, pa je "82/82 prolazi" u jednom SKILL.md-u stajalo uz 87 stvarnih
 # testova i uz manifest koji se razišao s kodom.
 set -uo pipefail
+
+# Windows konzola je cp1250, pa ✓/❌ u ispisu testova ruše Python s
+# UnicodeEncodeError — svaka skupina tada „padne" iako je prošla, i jedini ulaz
+# javi „12 od 12 palo" nad zelenim repoom. Mjereno na ovom stroju.
+export PYTHONIOENCODING="${PYTHONIOENCODING:-utf-8}"
 KORIJEN="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 UKUPNO=0
 PALO=0
