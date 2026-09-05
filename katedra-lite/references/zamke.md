@@ -894,7 +894,7 @@ rutinski čitala `.katedra/predaja.json` koji nitko nije napisao.
 
 ---
 
-## 61. audit koji se smije ignorirati (kvarovi 61–63 u jednom unosu)
+## 61–63. audit koji se smije ignorirati
 
 * `generate_report.py`: iznimka u modulu upisivala se bez znaka ⚠, pa je ispadala
   iz sažetka i brojača — srušena faza izgledala je kao faza bez nalaza.
@@ -906,7 +906,7 @@ Sada: iznimka je KRITIČNO, faza s izlaznim kodom ≥ 2 ulazi u nalaze kao
 
 ---
 
-## 64. klase pogrešaka koje nijedan alat nije gledao (kvarovi 64–66 u jednom unosu)
+## 64–66. klase pogrešaka koje nijedan alat nije gledao
 
 | Kvar | Što je prolazilo | Alat |
 |---|---|---|
@@ -920,7 +920,7 @@ Prije: tekst s dugom crticom i miješanim „45%" / „62 %" dobivao je `✓ tip
 
 ---
 
-## 67. lažni nalazi koji su gate činili neupotrebljivim (kvarovi 67–70 u jednom unosu)
+## 67–70. lažni nalazi koji su gate činili neupotrebljivim
 
 * **67** `uskladi_kljuceve.slaze`: prefiks od 4 znaka spajao je `Markov` i
   `Marković` iste godine u isti ključ, pa je pravi citat bez reference nestajao.
@@ -949,7 +949,7 @@ fusnote, endnote, zaglavlja, podnožja), faza A2 u obama runnerima.
 
 ---
 
-## 72. alat za provjeru tvrdnji bio je i sam tvrdnja bez pokrića (kvarovi 72–73 u jednom unosu)
+## 72–73. alat za provjeru tvrdnji bio je i sam tvrdnja bez pokrića
 
 `zakrpa.py --provjeri-tvrdnje` nad `katedra-lite` vraćao je „✓ SKILL.md i kod se
 slažu" i izlazni kod 0, jer su sve tri provjere ovisile o `scripts/engine_contract.json`
@@ -960,9 +960,32 @@ Dodano: svaka skripta imenovana u `SKILL.md` i `references/*.md` mora postojati 
 paketu ili kod satelita. Odmah je našla dvije rupe: `provjeri_povratak.py` (motor
 cijelog moda 7, opisan u `povratak.md`, nije postojao) i `soffice.py`.
 
----
+## 74. Trajna napomena o metodi nosila je znak ⚠, pa je svaki rad — i savršeno čist — imao barem jedan „nalaz"
 
-## Kvarovi 75–78 — prvi prolaz kroz STVARNI rad
+`check_citations_authoryear.py` na kraju ispisa objašnjava kako gradi ključ. To je **napomena
+o metodi**, ne nalaz o radu: vrijedi jednako za čist i za pokvaren rad. Redak je počinjao
+znakom `⚠`, a `generate_report.py` svrstava u nalaze svaki redak s tim znakom, pa je napomena
+ulazila u brojač na **svakom** radu.
+
+```
+prije:   ⚠ HEURISTIKA — ključ je (prvi autor, godina), ne pun popis autora/naslov.
+poslije: NAPOMENA O METODI — ključ je (prvi autor, godina), ne pun popis autora/naslov.
+```
+
+Izmjereno na čistom radu (dva izvora, oba citirana, nijedno siroče): redaka sa znakom `⚠`
+**1 → 0**. Autor zakrpe mjerio je na stvarnom radu (18 odlomaka, 2 izvora) i dobio srednje
+nalaze **2 → 1**, gdje je preostali stvarno pitanje.
+
+Brojač koji nikad ne pokazuje nulu prestaje se čitati — isti mehanizam kao gate koji nikad ne
+pada (kvar 58), samo obrnut: ondje je zeleno bilo lažno, ovdje je crveno. Oba puta signal
+gubi vezu sa stanjem rada.
+
+Ovaj je unos napisan naknadno. Popravak je stigao u seriji v1.9.6 kao commit „kvar 74", ali
+**bez unosa u katalogu**: `kvar.py` je zato javljao `numeracija preskače — očekivan 74`, a
+broj 74 stajao je potrošen u porukama commita i nedostupan sljedećoj zakrpi. Mjerenje gore
+napravljeno je pri upisu, nad verzijama iz gita, a ne prepisano iz poruke commita.
+
+## 75–78. prvi prolaz kroz STVARNI rad
 
 **Kad:** 5. 9. 2026., odmah nakon podizanja blokada. **Rad:** FPZG, preddiplomski,
 politička ekonomija uvjetovanosti, 5 172 riječi, 117 odlomaka, 3 tablice, 2 sekcije.
@@ -992,7 +1015,7 @@ samo stvarni rad pokazuje koliko lažno hvata.
 
 ---
 
-## Kvar 79 — popis literature gutao je sve iza sebe
+## 79. popis literature gutao je sve iza sebe
 
 Svugdje u lancu popis literature se rezao kao „od naslova do KRAJA dokumenta".
 Rad koji iza literature ima Popis tablica, Popis grafikona, sažetak i summary,
@@ -1005,7 +1028,7 @@ naslov istoga ranga (`KRAJ_LITERATURE_RE`). Koriste ga svi potrošači.
 
 ---
 
-## Kvarovi 80–86 — tri stavke koje su ostale nakon v1.9.5
+## 80–86. tri stavke koje su ostale nakon v1.9.5
 
 **80 — službena oznaka akta u jednom obliku.** `Uredba (EU, Euratom) 2020/2092`
 nije prolazila jer je uzorak tražio doslovno `Uredba (EU)`. Propis bez DOI-ja nije
@@ -1072,7 +1095,7 @@ izmišljena, nego da ništa u projektu ne pokazuje da postoji. Savjetodavno u mo
 
 ---
 
-## Kvarovi 87–90 — drugi stvarni rad, druga vrsta rada
+## 87–90. drugi stvarni rad, druga vrsta rada
 
 **Rad:** MEDRI, sveučilišni diplomski sanitarnog inženjerstva, empirijski,
 14 008 riječi, 11 tablica, uzorak n=172, Vancouver numerički. Dakle sve ono
@@ -1115,7 +1138,7 @@ proći kroz oba tipa.
 
 ---
 
-## Kvar 91 — pravni rad: svaka jedinica iz popisa bila je siroče
+## 91. pravni rad: svaka jedinica iz popisa bila je siroče
 
 **Kad:** 5. 9. 2026. **Kako nađen:** Daniel nije imao pri ruci pravni ni tehnički
 rad, pa su izgrađena dva fixturea koja vjerno nose konvencije tih vrsta: pravni s
@@ -1157,7 +1180,7 @@ nije; fusnota bez citatnog aparata nije).
 
 ---
 
-## Kvar 92 — najveći izvor šuma u paketu, nađen tek na stvarnom empirijskom radu
+## 92. najveći izvor šuma u paketu, nađen tek na stvarnom empirijskom radu
 
 **Rad:** HKS, Fakultet zdravstvenih studija, diplomski o palijativnoj skrbi,
 11 438 riječi, 12 tablica, 173 Vancouver citata. Prvi rad iz korpusa koji je
@@ -1217,7 +1240,7 @@ citiranja. Svaki od njih otkrio je barem jedan kvar koji ostali nisu.
 
 ---
 
-## Kvarovi 93–97 — tehnički radovi: popis literature u tri neprepoznata oblika
+## 93–97. tehnički radovi: popis literature u tri neprepoznata oblika
 
 **Radovi:** `Uvod i teorija` (čelične konstrukcije, S235/S355, IEEE `[N]`, 3 749
 riječi) i `Seminar - FER` (komercijalizacija inovacija, autor-godina, 3 922
@@ -1278,7 +1301,7 @@ tehnički tri oblika bibliografske jedinice.
 
 ---
 
-## Kvarovi 98–104 — audit paketa nakon rada Znahor
+## 98–104. audit paketa nakon rada Znahor
 
 Izvor: `AUDITskillovanakonradaZnahor.md`, napisan poslije stvarne sesije na
 diplomskom radu MEDRI (8 297 → 13 830 riječi, 50 stranica, 11 tablica, 56 referenci).
@@ -1357,3 +1380,57 @@ Profil zasad stoji kao datoteka, kao i `hks-fzs`, i **nije upisan u registry**:
 `efzg` zastario. To se ne zaobilazi; upis u registry je zaseban zahvat koji počinje
 ponovnim pokretanjem `faculty_scale_gate.py`.
 
+## 105. `kvar.py` je poznavao samo jedan broj po unosu, pa je grupirani unos bio ili nevidljiv ili lažni preskok
+
+Zakrpa v1.9.5 upisala je četiri unosa koji svaki pokrivaju tri do četiri kvara, jer su to
+klase s istim popravkom i jednim mjerenjem (`61–63` exit-code disciplina, `64–66` nove
+provjere, `67–70` lažni nalazi, `72–73` alat za tvrdnje). Naslovi su glasili
+`## Kvar 61–63 — naslov`, a `NASLOV` uzorak traži `## <broj>. <naslov>`. Alat ih zato
+**nije vidio uopće**:
+
+```
+prije:    unosa: 34 · zadnji broj: 57 · sljedeći slobodan: 58   ✅ numeracija teče
+stvarno:  katalog nosi unose do broja 73
+```
+
+To je najgori mogući ishod za registar brojeva: sljedeća bi zakrpa uzela 58–73, koje su već
+potrošene, i sudarila se s njima — a alat bi je pritom uvjeravao da je sve u redu. Kad su
+naslovi prepisani u oblik koji alat čita, javio je tri preskoka (`očekivan 62, 65, 68`), što
+je bilo jednako netočno: brojevi nisu preskočeni nego pokriveni.
+
+Razdvajanje na po jedan broj nije bilo moguće bez pogađanja: poruka commita za skupinu 61–63
+navodi `audit_all`, iznimku bez oznake i `cross_check` glob, a katalog za istu skupinu
+navodi `generate_report`, `audit_all:83` i `numbers_inventory`/`check_repetition`. Koji broj
+pripada kojoj stavci ne stoji nigdje, pa bi svaka podjela bila izmišljen podatak.
+
+Popravak je zato u alatu, ne u sadržaju: naslov prima i raspon
+(`## 61–63. naslov`, en dash, em dash ili crtica), `unosi()` vraća i zadnji pokriveni broj,
+numeracija se provjerava **po brojevima** a sadržaj **po unosu**, a `--novi` kreće od zadnjeg
+pokrivenog broja. Poslije:
+
+```
+unosa: 42 (od toga 4 s rasponom) · zadnji broj: 73 · sljedeći slobodan: 74
+✅ numeracija teče, naslovi su različiti, svaki unos ima mjeru i isječak
+```
+
+Ograda: raspon koji ide unatrag (`## 66–64.`) daje tvrdi nalaz, provjereno mutacijom.
+
+---
+
+## 106. Katalozi kvarova nisu bili u jedinom ulazu za testove, pa je suite bio zelen nad pokvarenim registrom
+
+`bin/testovi.sh` postoji da bi „jedan ulaz" dao „jedan izlazni kod", i pokretao je devet
+skupina: tri test suitea i šest provjera tvrdnji. `kvar.py` nije bio među njima. Mjereno na
+stanju u kojem je katalog imao tri tvrda nalaza:
+
+```
+kvar.py katedra-lite/references/zamke.md --provjeri   ❌ KVARI KATALOG: 3   izlaz 1
+bin/testovi.sh                                        ✅ svih 9 skupina prošlo   izlaz 0
+```
+
+Isti repo, dvije istine, a ona koja se pokreće je zelena. Registar brojeva koji nitko ne
+provjerava iz jedinog ulaza nije registar nego dogovor.
+
+Dodane tri skupine (`katalog kvarova: katedra-lite | rad-audit | rad-docx`), suite ide s 9 na
+12. Ograda po pravilu 34: `## 71.` prepisan u `## 75.` obara skupinu i s njom cijeli suite
+(`❌ 1 od 12 skupina palo`, izlaz 1); vraćanjem se vraća i zeleno.

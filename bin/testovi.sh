@@ -5,6 +5,11 @@
 # u cjelini, pa je "82/82 prolazi" u jednom SKILL.md-u stajalo uz 87 stvarnih
 # testova i uz manifest koji se razišao s kodom.
 set -uo pipefail
+
+# Windows konzola je cp1250, pa ✓/❌ u ispisu testova ruše Python s
+# UnicodeEncodeError — svaka skupina tada „padne" iako je prošla, i jedini ulaz
+# javi „12 od 12 palo" nad zelenim repoom. Mjereno na ovom stroju.
+export PYTHONIOENCODING="${PYTHONIOENCODING:-utf-8}"
 KORIJEN="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 UKUPNO=0
 PALO=0
@@ -32,6 +37,13 @@ pokreni "katedra-lite: gate" \
 for skill in katedra katedra-lite rad-audit rad-docx fpzg-diplomski replikacija-pspp; do
   pokreni "tvrdnje: $skill" \
     python3 "$KORIJEN/katedra/scripts/zakrpa.py" --provjeri-tvrdnje "$KORIJEN/$skill"
+done
+
+# Katalozi kvarova: numeracija i naslovi. Dosad ih ovaj ulaz nije pokretao, pa je
+# suite bio zelen dok je katalog imao preskoke — a sljedeća bi zakrpa uzela brojeve
+# koji su već potrošeni. Provjera koja nije u jedinom ulazu nije provjera.
+for katalog in katedra-lite rad-audit rad-docx; do
+  pokreni "katalog kvarova: $katalog"     python3 "$KORIJEN/katedra/scripts/kvar.py"       "$KORIJEN/$katalog/references/zamke.md" --provjeri
 done
 
 echo ""
