@@ -17,6 +17,7 @@ se postiže zaglavljem „nadovezuje se na unos N” u prvom retku fragmenta.
 """
 import argparse
 import os
+import io
 import re
 import sys
 
@@ -25,6 +26,12 @@ import sys
 # jedan UNOS koji pokriva više BROJEVA: numeracija se provjerava po
 # brojevima, sadržaj po unosu. Bez toga je grupirani unos ili nevidljiv
 # (drugi format naslova) ili lažni preskok u numeraciji.
+# Oblik koji registar NE čita, ali se stalno pojavljuje u zakrpama:
+# `## Kvar 58 — naslov`, `## Kvarovi 61–63 — naslov`. Takav unos alat ne vidi,
+# pa katalog izgleda kraći nego što jest, „sljedeći slobodan" pokazuje na broj
+# koji je već potrošen, i sljedeća zakrpa se s njim sudari. Zato se prepoznaje
+# izrijekom i prijavljuje kao tvrdi nalaz, uz naredbu koja ga popravlja.
+NASLOV_TUDJI = re.compile(r"^##\s+Kvar(?:ovi)?\s+(\d+)(?:\s*[\u2013\u2014-]\s*(\d+))?\s+[\u2013\u2014-]\s+(.+?)\s*$", re.M)
 NASLOV = re.compile(r"^##\s+(\d+)(?:\s*[–—-]\s*(\d+))?\.\s+(.+?)\s*$", re.M)
 BROJKA = re.compile(r"\d")
 ISJECAK = re.compile(r"^```|^\s{4}\S", re.M)
@@ -55,6 +62,29 @@ popravak mora sadržavati i ogradu koja bi ga bila uhvatila.>
 """
 
 
+def tudji_naslovi(tekst):
+    """[(redak, naslov)] za naslove u obliku koji registar ne čita."""
+    return [(tekst[:m.start()].count("\n") + 1, m.group(0).strip())
+            for m in NASLOV_TUDJI.finditer(tekst)]
+
+
+def popravi_naslove(put):
+    """Prevede `## Kvar N — X` u `## N. X`. Vraća broj prevedenih naslova."""
+    tekst = io.open(put, encoding="utf-8", newline="").read()
+    kraj = "\r\n" if "\r\n" in tekst else "\n"
+    t = tekst.replace("\r\n", "\n")
+
+    def zamijeni(m):
+        prvi, zadnji, naslov = m.group(1), m.group(2), m.group(3)
+        broj = prvi if not zadnji else "%s\u2013%s" % (prvi, zadnji)
+        return "## %s. %s" % (broj, naslov)
+
+    novo, n = NASLOV_TUDJI.subn(zamijeni, t)
+    if n:
+        io.open(put, "w", encoding="utf-8", newline="").write(novo.replace("\n", kraj))
+    return n
+
+
 def unosi(tekst):
     """[(broj, naslov, tijelo)] u redoslijedu pojavljivanja."""
     m = list(NASLOV.finditer(tekst))
@@ -83,6 +113,7 @@ def provjeri(put, od=None, nastavak_od=None):
     """
     tekst = open(put, encoding="utf-8").read()
     svi = unosi(tekst)
+    tudji = tudji_naslovi(tekst)
     if not svi:
         print(f"❌ {put}: ne nalazim nijedan unos oblika „## <broj>. <naslov>\"")
         return 1
@@ -123,6 +154,16 @@ def provjeri(put, od=None, nastavak_od=None):
     if od is not None:
         print(f"sadržaj se provjerava od kvara {od} nadalje")
 
+    if tudji:
+        print(f"\n❌ NASLOVI KOJE REGISTAR NE ČITA: {len(tudji)}")
+        for redak, naslov in tudji[:8]:
+            print(f"   · redak {redak}: {naslov[:78]}")
+        if len(tudji) > 8:
+            print(f"   … i još {len(tudji) - 8}")
+        print("   Ovi unosi ne postoje za alat: katalog izgleda kraći nego što jest,")
+        print("   a „sljedeći slobodan” pokazuje na broj koji je već potrošen.")
+        print(f"   Popravak: python3 kvar.py {put} --popravi-naslove")
+
     if tvrdi:
         print(f"\n❌ KVARI KATALOG: {len(tvrdi)}")
         for broj, poruka in tvrdi:
@@ -136,7 +177,7 @@ def provjeri(put, od=None, nastavak_od=None):
 
     print("\nAlat ne procjenjuje je li popravak dobar ni imenuje li naslov mehanizam —")
     print("to čita čovjek. Mjerilo je u references/kvar.md.")
-    return 1 if tvrdi else 0
+    return 1 if (tvrdi or tudji) else 0
 
 
 def novi(put, naslov, nastavak_od=None):
@@ -157,6 +198,10 @@ def main():
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("katalog")
     ap.add_argument("--provjeri", action="store_true")
+    ap.add_argument("--popravi-naslove", dest="popravi_naslove", action="store_true",
+                    help="prevedi `## Kvar N — X` u `## N. X` (oblik koji registar čita)")
+    ap.add_argument("--sljedeci", action="store_true",
+                    help="ispiši samo prvi slobodan broj — za zakrpu koja tek piše unos")
     ap.add_argument("--novi", metavar="NASLOV")
     ap.add_argument("--od", type=int, metavar="N",
                     help="provjeravaj sadržaj samo od kvara N nadalje")
@@ -165,6 +210,17 @@ def main():
                          "numeracija se očekuje od N+1 (isto daje zaglavlje "
                          "„nadovezuje se na unos N”)")
     a = ap.parse_args()
+    if a.popravi_naslove:
+        n = popravi_naslove(a.katalog)
+        print("prevedeno naslova: %d" % n if n else "nijedan naslov nije trebalo prevesti")
+        sys.exit(0)
+    if a.sljedeci:
+        # Za zakrpu koja tek piše unos: broj se pita OVDJE, a ne pretpostavlja iz
+        # vlastite grane. Sudari 74, 105 i 106 nastali su upravo tako.
+        svi = unosi(io.open(a.katalog, encoding="utf-8").read())
+        nast = nastavak_iz_zaglavlja(io.open(a.katalog, encoding="utf-8").read())
+        print((svi[-1][1] + 1) if svi else ((nast + 1) if nast else 1))
+        sys.exit(0)
     if a.novi:
         sys.exit(novi(a.katalog, a.novi, a.nastavak_od))
     sys.exit(provjeri(a.katalog, a.od, a.nastavak_od))

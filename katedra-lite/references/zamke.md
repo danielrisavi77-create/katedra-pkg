@@ -2122,3 +2122,42 @@ CRLF stablo i LF stablo daju isti `b133a824`.
 Ograda: `R41` u `rad-audit/scripts/tests/test_all.py` gradi dvije kopije motora, jednu u CRLF
 i jednu u LF, i traži isti otisak. Mutacijom provjereno da pada — vraćanje starog načina
 hashiranja obara R41 i R22 (185 → 183 prošlo), povratak popravka vraća 185/185.
+
+## 116. Naslov u obliku koji registar ne čita bio je tišina, pa je „sljedeći slobodan” pokazivao na potrošen broj
+
+`kvar.py` čita `## N. naslov` i `## N–M. naslov`. Zakrpe su četiri puta zaredom pisale
+`## Kvar N — naslov` i `## Kvarovi N–M — naslov` (v1.9.5, v1.9.6, v1.9.7, v1.9.10). Takav
+unos alat **ne vidi** — ne kao pogrešku, nego ga uopće nema:
+
+```
+katalog nosi unose do broja 73
+alat javlja:  unosa: 34 · zadnji broj: 57 · sljedeći slobodan: 58   ✅ numeracija teče
+```
+
+Zeleno nad registrom koji je kraći nego što jest. Posljedica je sudar: sljedeća zakrpa uzme
+„slobodan” broj koji je već potrošen, pa se pri spajanju mora prenumerirati. Dogodilo se s
+brojevima 74, 105, 106 i 107 — svaki put ručno, svaki put nakon što je zakrpa već napisana.
+
+Popravak ima dva dijela, jer kvar ima dva kraja.
+
+**Oblik se prijavljuje i popravlja.** Naslov u tuđem obliku sada je **tvrdi nalaz** s
+naredbom koja ga prevodi:
+
+```
+❌ NASLOVI KOJE REGISTAR NE ČITA: 1
+   · redak 2126: ## Kvarovi 116–118 — proba tudjeg oblika
+   Popravak: python3 kvar.py <katalog> --popravi-naslove
+```
+
+Mjereno na toj probi: prije popravka `--sljedeci` javlja **116** iako unos tvrdi 116–118;
+poslije popravka **119**. Prijevod ne dira sadržaj, samo naslov.
+
+**Broj se pita, ne pretpostavlja.** `--sljedeci` ispisuje prvi slobodan broj iz kataloga u
+koji unos ide. Sudari su nastali tako što su dvije grane brojile od istog mjesta ne znajući
+jedna za drugu; zakrpa koja pita cilj ne može promašiti. Oboje zapisano u
+`katedra/references/kvar.md`.
+
+Ograda: `katedra/scripts/tests/test_kvar.py` (šest provjera, skupina „katedra: registar
+kvarova” u `bin/testovi.sh`) traži da se tuđi oblik prepozna, da katalog s njim **ne prođe**,
+da ga `--popravi-naslove` prevede i da ispravan katalog ostane nepromijenjen. Skill `katedra`
+do sada nije imao nijedan test, a drži registar na koji se pozivaju svi ostali skillovi.
