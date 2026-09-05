@@ -44,8 +44,22 @@ import vjestine  # noqa: E402
 
 FAZE = ("plan", "pisanje", "audit", "predaja")
 
+# Kvar 112: do v1.9.9 su „provjera se NIJE POKRENULA" i „provjera se JE pokrenula
+# i utvrdila da se na ovaj rad ne odnosi" bile isto stanje. Nakon kvara 58
+# preskočeno blokira, pa je pravni rad bez hipoteza i bez p-vrijednosti PADAO na
+# fazi audit, iako su obje provjere uredno odradile svoj posao i rekle da nemaju
+# što mjeriti. Pravilo 20 razlikuje pad od prolaza; ovo je ista razlika jedan
+# stupanj finije:
+#
+#   ok             provjera je prošla
+#   nalaz          provjera je našla problem                     → blokira
+#   neprimjenjivo  provjera se izvela i NE ODNOSI se na ovaj rad → ne blokira
+#   preskočeno     provjera se NIJE izvela, nema ulaza           → blokira
+#   pukao          provjera se srušila                           → blokira
 OK, NALAZ, PRESKOCENO, PUKAO = "ok", "nalaz", "preskoceno", "pukao"
-ZNAK = {OK: "✅", NALAZ: "❌", PRESKOCENO: "➖", PUKAO: "💥"}
+NEPRIMJENJIVO = "neprimjenjivo"
+ZNAK = {OK: "✅", NALAZ: "❌", PRESKOCENO: "➖", PUKAO: "💥",
+        NEPRIMJENJIVO: "◦"}
 
 
 class Korak:
@@ -425,7 +439,11 @@ def pokreni(korak: Korak, cwd: str, suho: bool) -> dict:
         stanje = OK
     elif kod == 1:
         stanje = NALAZ
-    elif korak.satelit and kod in (3, 4):
+    elif kod == 3:
+        # Izlazni kod 3 je ugovor: „izvela sam se, i na ovom se radu ne mogu
+        # primijeniti". Vrijedi i za skripte paketa, ne samo za satelite.
+        stanje = NEPRIMJENJIVO
+    elif korak.satelit and kod == 4:
         stanje = PRESKOCENO
     else:
         stanje = PUKAO
@@ -462,7 +480,8 @@ def _tablica(rezultati: list[dict], faza: str, suho: bool) -> None:
         znak = "·" if r["stanje"] == "planirano" else ZNAK.get(r["stanje"], "?")
         tezina = "blokira" if r["blokira"] else "savjet"
         print(f"{znak} {r['naziv']:<52} {tezina}")
-        if r["stanje"] in (PRESKOCENO, PUKAO, "planirano") and r.get("razlog"):
+        if r["stanje"] in (PRESKOCENO, PUKAO, NEPRIMJENJIVO, "planirano") \
+                and r.get("razlog"):
             print(f"     {r['razlog']}")
         if r["stanje"] == PUKAO and r.get("greska"):
             prva = r["greska"].splitlines()[0][:200]
@@ -494,6 +513,7 @@ def zakljucak(rezultati: list[dict],
     nepokrenuti = [r for r in rezultati
                    if r["blokira"] and r["stanje"] == PRESKOCENO
                    and r["korak"] not in dop]
+    neprimjenjivi = [r["korak"] for r in rezultati if r["stanje"] == NEPRIMJENJIVO]
     izuzeti = [r["korak"] for r in rezultati
                if r["blokira"] and r["stanje"] == PRESKOCENO
                and r["korak"] in dop]
@@ -503,6 +523,7 @@ def zakljucak(rezultati: list[dict],
         "blokira": [r["korak"] for r in blokirajuci],
         "nepokrenuto": [r["korak"] for r in nepokrenuti],
         "preskok_dopusten": {k: dop[k] for k in izuzeti},
+        "neprimjenjivo": neprimjenjivi,
     }
     return (1 if (blokirajuci or nepokrenuti) else 0), sazetak
 
@@ -566,7 +587,11 @@ def main(argv=None) -> int:
 
     kod, s = zakljucak(rezultati, dopusteni)
     print(f"\n{s['ok']} prošlo · {s['nalaz']} nalaza · "
-          f"{s['preskoceno']} preskočeno · {s['pukao']} alat pukao")
+          f"{s['preskoceno']} preskočeno · {len(s['neprimjenjivo'])} neprimjenjivo · "
+          f"{s['pukao']} alat pukao")
+    if s["neprimjenjivo"]:
+        print("◦ ne odnosi se na ovaj rad (provjera se izvela i to utvrdila): "
+              + ", ".join(s["neprimjenjivo"]))
     if s["pukao"]:
         print("💥 alat koji je pukao NIJE provjera koja je prošla — "
               "riješi to prije nego zaključiš da je faza čista.")

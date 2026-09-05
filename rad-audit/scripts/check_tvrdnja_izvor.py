@@ -25,7 +25,7 @@ i unosi bez priložene datoteke broje se i ispisuju kao nepokriveno. Alat ne zna
 je li izvor koji nije priložen krivo citiran; zna samo da ga nije provjerio.
 
 Izlazni kod: 1 ako ima pripisivanja krivom izvoru ili nenađenih brojki, 0 inače,
-2 ako mapa ne postoji.
+3 ako mapa ne postoji (izvori nisu priloženi — granica, ne pad).
 """
 from __future__ import annotations
 
@@ -192,7 +192,10 @@ def main(argv=None) -> int:
         print(f"❌ nema mape izvora: {mapa_put}")
         print("   Bez nje se veza tvrdnja↔izvor ne može provjeriti, samo pogađati.")
         print("   Izgradi je: mapa_izvora.py rad.docx --izvori izvori/ --izgradi izvori/mapa.json")
-        return 2
+        # Kvar 112: nedostatak mape je DEKLARIRANA GRANICA (izvori nisu priloženi),
+        # ne pad alata. Kod 2 je gate vodio kao „alat pukao" na svakom radu bez
+        # priložene građe, dakle na većini.
+        return 3
 
     n = provjeri(a.rad, a.izvori, mapa_put)
     ispisi(n)

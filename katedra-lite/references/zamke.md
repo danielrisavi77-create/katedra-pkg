@@ -1990,7 +1990,54 @@ pitanje odgovoreno), ne sadržajni (je li odgovor točan). Za to postoji željez
 pravilo 31 i obavezan korak `citanje_tijela`, i to je pošten odgovor, ne rupa
 koju treba zatvoriti skriptom.
 
-## 112. `kvar.py` je poznavao samo jedan broj po unosu, pa je grupirani unos bio ili nevidljiv ili lažni preskok
+## 112. „nije se pokrenula" i „ne odnosi se na ovaj rad" bili su isto stanje
+**Kad:** 5. 9. 2026., nađen na pitanje „jesmo li gotovi", provjerom umjesto
+procjene. **Uzrok: moja vlastita zakrpa iz istoga dana.**
+
+Kvar 58 je uveo da preskočena blokirajuća provjera blokira, i to je bilo točno:
+provjera koja se nije pokrenula nije provjera koja je prošla. Ali faze C3, C4 i
+G1, dodane nekoliko sati poslije, vraćaju kod 3 kad se **izvedu i utvrde da se
+na taj rad ne odnose** (rad nema hipoteza, nema p-vrijednosti, nema brojčanih
+tablica). Gate je kod 3 mapirao u `preskočeno`, pa je **pravni seminarski rad
+padao na fazi audit** iako su sve tri provjere uredno odradile svoj posao.
+
+Izmjereno na stvarnom pravnom radu, prije i poslije:
+
+```
+prije:   ⛔ NIJE POKRENUTO, a blokira: dosljednost, hipoteze, statistika
+poslije: ◦ ne odnosi se na ovaj rad: odlomci, tvrdnja_izvor, hipoteze,
+           tablice, statistika
+         ⛔ NIJE POKRENUTO, a blokira: dosljednost      ← jedini stvaran
+```
+
+Pravilo 20 razlikuje pad od prolaza. Ovo je ista razlika jedan stupanj finije, i
+sada je stanje pet, ne četiri:
+
+| stanje | značenje | blokira |
+|---|---|---|
+| `ok` | provjera je prošla | ne |
+| `nalaz` | provjera je našla problem | **da** |
+| `neprimjenjivo` | provjera se IZVELA i utvrdila da se ne odnosi na ovaj rad | ne |
+| `preskočeno` | provjera se NIJE izvela, nema ulaza | **da** |
+| `pukao` | provjera se srušila | **da** |
+
+Razlika je cijela poanta: `neprimjenjivo` je **nalaz o radu** (teorijski rad nema
+hipoteze i to je uredu), `preskočeno` je **nalaz o projektu** (ulaz fali i to
+netko mora riješiti).
+
+Usput je istim mjerenjem nađeno da `check_tvrdnja_izvor.py` vraća 2 kad nema
+`izvori/mapa.json`, pa je gate na svakom radu bez priložene građe, dakle na
+većini, javljao „alat pukao".
+
+**Ograda:** G13, tri tvrdnje, uključujući onu da preskočeno i dalje blokira i kad
+u istoj fazi postoji neprimjenjiva provjera.
+
+**Pouka koja ide uz kvar 91:** svaka nova provjera koja se doda u gate mora se
+pokrenuti na radu **na koji se ne odnosi**, ne samo na onom na koji se odnosi.
+Fixture za to postoji: pravni rad nema ni hipoteza, ni p-vrijednosti, ni
+brojčanih tablica.
+
+## 113. `kvar.py` je poznavao samo jedan broj po unosu, pa je grupirani unos bio ili nevidljiv ili lažni preskok
 
 Zakrpa v1.9.5 upisala je četiri unosa koji svaki pokrivaju tri do četiri kvara, jer su to
 klase s istim popravkom i jednim mjerenjem (`61–63` exit-code disciplina, `64–66` nove
@@ -2027,7 +2074,7 @@ Ograda: raspon koji ide unatrag (`## 66–64.`) daje tvrdi nalaz, provjereno mut
 
 ---
 
-## 113. Katalozi kvarova nisu bili u jedinom ulazu za testove, pa je suite bio zelen nad pokvarenim registrom
+## 114. Katalozi kvarova nisu bili u jedinom ulazu za testove, pa je suite bio zelen nad pokvarenim registrom
 
 `bin/testovi.sh` postoji da bi „jedan ulaz" dao „jedan izlazni kod", i pokretao je devet
 skupina: tri test suitea i šest provjera tvrdnji. `kvar.py` nije bio među njima. Mjereno na

@@ -33,6 +33,15 @@ def r(korak, stanje, blokira=True):
 
 def main() -> int:
     # ── zakljucak() ───────────────────────────────────────────────────────
+    # Kvar 112: neprimjenjivo ≠ preskočeno
+    kod, sz = gate.zakljucak([r("hipoteze", gate.NEPRIMJENJIVO)])
+    check("G13: neprimjenjiva BLOKIRAJUĆA provjera NE blokira", kod == 0, (kod, sz))
+    check("G13: i imenuje se pod 'neprimjenjivo'",
+          sz["neprimjenjivo"] == ["hipoteze"], sz)
+    kod, _ = gate.zakljucak([r("hipoteze", gate.NEPRIMJENJIVO),
+                             r("pravila", gate.PRESKOCENO)])
+    check("G13: preskočeno i dalje blokira uz neprimjenjivo", kod == 1, kod)
+
     kod, s = gate.zakljucak([r("pravila", gate.PRESKOCENO)])
     check("G1: preskočen BLOKIRAJUĆI korak daje izlazni kod 1", kod == 1, (kod, s))
     check("G1: i imenuje se pod 'nepokrenuto'", s["nepokrenuto"] == ["pravila"], s)
