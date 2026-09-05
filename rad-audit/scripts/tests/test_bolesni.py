@@ -106,6 +106,31 @@ def main() -> int:
           "negativna kontrola: zdravi rad prolazi bez kritičnih nalaza "
           f"(kod {rz.returncode}, kritičnih {len(kriticni_z)})")
 
+    # ── tipovi rada koje sintetički fixture ne pokriva ────────────────────
+    # Kvar 91: pravni rad (fusnotni aparat) i tehnički rad (formule, jedinice)
+    # ruše i pale drukčije provjere od teorijskoga i empirijskoga. Oba fixturea
+    # su ČISTA: nijedan ne smije proizvesti kritični nalaz.
+    fiks = os.path.join(HERE, "fixtures")
+    for ime, dopusteno_kozmeticko in [("pravni.docx", 0), ("tehnicki.docx", 1)]:
+        put = os.path.join(fiks, ime)
+        if not os.path.exists(put):
+            tvrdi(False, f"fixture nedostaje: {ime}")
+            continue
+        izl = os.path.join(radni, ime + ".json")
+        subprocess.run(
+            [sys.executable, os.path.join(SCRIPTS, "generate_report.py"), put,
+             "--out", os.path.join(radni, ime + ".md"), "--json", izl],
+            capture_output=True, text=True, cwd=SCRIPTS)
+        with open(izl, encoding="utf-8") as fh:
+            dd = json.load(fh)
+        tvrdi(dd["counts"]["kritično"] == 0,
+              f"čist {ime}: nula kritičnih nalaza "
+              f"(dobiveno {dd['counts']['kritično']}: "
+              f"{[x['line'][:70] for x in dd['findings']['kritično']]})")
+        tvrdi(dd["counts"]["kozmetičko"] <= dopusteno_kozmeticko,
+              f"čist {ime}: najviše {dopusteno_kozmeticko} kozmetičkih "
+              f"(dobiveno {dd['counts']['kozmetičko']})")
+
     print("=" * 56)
     print(f"REZULTAT: {prosli}/{prosli + len(pali)} prošlo")
     if pali:

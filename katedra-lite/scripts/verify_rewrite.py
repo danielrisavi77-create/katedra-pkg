@@ -302,6 +302,15 @@ def usporedi(prije_p, poslije_p, zahvat='geometrija', citatni_stil='autor-godina
     nalazi = []
 
     # --- markeri: doslovno i istim redoslijedom
+    # Kvar 99 (audit Znahor, A3): pod zahvatom `stil` tipografski popravak
+    # (nedjeljivi razmak uz mjernu jedinicu, dvostruki razmak, NFD → NFC) mijenja
+    # NIZ markera, iako ne mijenja ni jednu riječ. Provjera je tako blokirala
+    # upravo onaj zahvat radi kojeg se pokreće: popravak sam sebe nije puštao.
+    # Bjelina se zato pod `stil` normalizira; pod `lomljenje` i `geometrija`
+    # marker i dalje mora biti doslovan.
+    if zahvat == "stil":
+        m_a = [norm_rec(_nfc(x).replace("\u00a0", " ")) for x in m_a]
+        m_b = [norm_rec(_nfc(x).replace("\u00a0", " ")) for x in m_b]
     if m_a != m_b:
         raz = [(x, y) for x, y in zip(m_a, m_b) if x != y]
         nalazi.append(("x", f"markeri (naslovi/natpisi) se razlikuju: "

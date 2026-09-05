@@ -367,3 +367,46 @@ točno koje su. Preflight koji propušta rad da ne bi razočarao nikome ne poma�
   Preflight izveden iz profila + hodogram unatrag od roka. Zadnji korak gatea je
   `rubrika.py` — pojas i popis onoga što ga drži; to je ono što se kaže studentu, ne „rad je
   spreman". Ako fakultet traži formalnu bibliografiju u zasebnom formatu, ponudi `export_bibliography.py` (v1.1) za BibTeX/RIS izvoz iz `.katedra/izvori.json`. **Obavezno prije predaje: `scripts/provjeri_sazetak.py rad.docx --tablica`** — sažetak se piše rano i poslije se ne dira, a rad se mijenja; mentor ga čita prvi. **Obavezno nad konačnim PDF-om: `rad-docx/scripts/provjeri_reference.py`** — svaka tvrdnja o stranici (sadržaj, popisi prikaza, unakrsne reference) mjeri se protiv stvarnog prijeloma. Dokument koji je sam sa sobom dosljedan i dalje može imati sve brojeve krive.
+
+---
+
+## Opseg se MJERI, ne procjenjuje
+
+Nastalo iz stvarnog kvara (audit Znahor). Rad je imao 79 stranica, Naputak
+dopušta 50. Prva pretpostavka, i autorova i moja, bila je da prostor jedu tablice
+i slike.
+
+**Izmjereno:** dokument bez ijedne tablice i slike ima 63 stranice, s njima 68.
+Prikazi koštaju **5 stranica**; ostatak je dvostruko prorezan tekst. Skraćivanje
+prikaza dalo bi 5 od potrebnih 29 stranica i potrošilo dan.
+
+Postupak prije svake odluke o skraćivanju:
+
+1. Konvertiraj u PDF i prebroji stranice
+   (`soffice --headless --convert-to pdf`, pa prebroji `/Type /Page`).
+2. Napravi verziju **bez prikaza** i prebroji ponovno.
+   Razlika je stvarna cijena prikaza.
+3. Tek onda odluči što se krati.
+
+**Nasljedno pravilo: prije svake odluke o skraćivanju stoji jedno mjerenje.**
+Na tom je radu teorijski dio otišao sa 7 026 na 3 581 riječ uz zadržanih svih 40
+citata, i to je provjereno programski, ne okom.
+
+---
+
+## Rad koji se ne može poslati nije predan
+
+Predaja nije samo „je li rad ispravan" nego i „može li fizički otići". Rad od
+1,5 MB ne prolazi kroz alate za e-poštu jer se privitak predaje kao base64 unutar
+poziva.
+
+`provjeri_predaju.py` zato ispisuje redak `težina:` s udjelom medija i mrtvih
+dijelova. Verzija za slanje se radi zasebno:
+
+```bash
+python3 <RAD_DOCX>/scripts/priprema_slanja.py rad.docx --izlaz rad-za-slanje.docx
+```
+
+Arhivska verzija ostaje netaknuta. Poslije pripreme se **provjeri broj stranica**:
+mora biti isti kao u izvorniku.
+

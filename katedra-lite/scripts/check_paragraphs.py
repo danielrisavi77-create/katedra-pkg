@@ -299,6 +299,17 @@ def main():
     try:
         args.min, args.max = resolve_paragraph_thresholds(profile, args.min, args.max)
     except ProfileRuleError as e:
+        # Kvar 98 (audit Znahor, A1): kad profil fakulteta jednostavno NE PROPISUJE
+        # duljinu odlomka, ovo je izlazilo kroz ap.error, dakle izlazni kod 2, i
+        # gate ga je trajno vodio kao „alat pukao". Alat nije pukao: nema što
+        # mjeriti. To je deklarirana granica i ide u „preskočeno" (kod 3), točno
+        # kako pravilo 20 razlikuje ta dva stanja.
+        if "nije razriješen" in str(e):
+            print(f"➖ {e}", file=sys.stderr)
+            print("   Profil ovog fakulteta ne propisuje duljinu odlomka, pa se ona "
+                  "ne provjerava.", file=sys.stderr)
+            print("   Ako je želiš provjeriti ipak: --min N --max M.", file=sys.stderr)
+            return 3
         ap.error(str(e))
     # Q6b-zakrpa: procjena se kalibrira iz profila, a ne fiksnih 84 znaka.
     if args.znakova_po_retku is None:

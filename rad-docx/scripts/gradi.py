@@ -203,8 +203,17 @@ def izgradi(graditelj, md, docx_out, profil, sadrzaj):
     if r.returncode or not os.path.exists(docx_out):
         sys.exit(f"❌ graditelj nije proizveo {docx_out}\n{r.stdout}\n{r.stderr}")
     # nedjeljivi blokovi + prijelomi + blokovi.json
-    run([sys.executable, str(TU / "prikazi.py"), docx_out,
-         "--prelomi", "prelomi.json", "--blokovi-out", "blokovi.json"])
+    # Kvar 83: povratna vrijednost se nije gledala. Kad prikazi.py padne,
+    # blokovi.json ostane od PROŠLE izgradnje i mjeri se pogrešan skup blokova,
+    # a petlja se uredno „stabilizira" na tuđim brojevima.
+    r = run([sys.executable, str(TU / "prikazi.py"), docx_out,
+             "--prelomi", "prelomi.json", "--blokovi-out", "blokovi.json"])
+    if r.returncode:
+        sys.exit(f"❌ prikazi.py nije prošao (kod {r.returncode})\n{r.stdout}\n{r.stderr}")
+    if os.path.exists("blokovi.json") and os.path.exists(docx_out) \
+            and os.path.getmtime("blokovi.json") < os.path.getmtime(docx_out):
+        sys.exit("❌ blokovi.json je stariji od dokumenta — zaostao je iz ranije "
+                 "izgradnje. Obriši ga i pokreni ponovno.")
 
 
 def main():
@@ -219,6 +228,9 @@ def main():
                     help="naredba koja iz RAD_MD pravi RAD_DOCX (pandoc + polja)")
     ap.add_argument("--izlaz", default="rad.docx")
     ap.add_argument("--krugova", type=int, default=6)
+    ap.add_argument("--zadrzi-stanje", dest="zadrzi_stanje", action="store_true",
+                    help="ne premještaj toc/prelomi/natpisi iz ranije izgradnje "
+                         "(samo za namjeran nastavak, nikad za novu izgradnju)")
     ap.add_argument("--provjeri", action="store_true",
                     help="samo provjeri zavisnosti i izađi")
     a = ap.parse_args()
@@ -236,6 +248,28 @@ def main():
         return
     mjerenje = all(stanje[x] for x in ("soffice", "pdfinfo", "pdftotext"))
 
+    # Kvar 84: toc.json, prelomi.json i natpisi.json nisu se brisali na početku,
+    # pa je prvi krug mogao dati tri „=" i poruku „stabilno" uspoređujući novo
+    # mjerenje sa zaostalim stanjem prethodne izgradnje — brojevi stranica koji
+    # pripadaju drugom dokumentu. Fiksna točka mora se dosegnuti u OVOM prolazu.
+    if not a.zadrzi_stanje:
+        staro = "_stanje_prosli"
+        os.makedirs(staro, exist_ok=True)
+        for f in ("toc.json", "prelomi.json", "natpisi.json"):
+            if os.path.exists(f):
+                shutil.move(f, os.path.join(staro, f))
+        print(f"stanje petlje iz ranije izgradnje premješteno u {staro}/")
+
+    profil_json = {}
+    if a.profil and os.path.exists(a.profil):
+        try:
+            profil_json = json.load(open(a.profil, encoding="utf-8"))
+        except (OSError, ValueError):
+            profil_json = {}
+    pocetak_tijela = int(
+        (profil_json.get("format", {}).get("numeracija", {}) or {})
+        .get("tijelo_pocinje_od", 1) or 1)
+
     model = json.load(open(a.model, encoding="utf-8")) if os.path.exists(a.model) else None
     md = "_rad.md"
     nerazrjeseni, n_pogl = sastavi(a.rukopis, model, md, a.dijelovi)
@@ -247,10 +281,16 @@ def main():
           f" · model: {'da' if model else 'ne'}")
 
     if not mjerenje:
+        # Kvar 82: ovdje se vraćalo bez izlaznog koda, dakle 0, pa je svaki
+        # nadređeni alat vidio uspjeh. Predajni .docx je nastajao bez ijednog
+        # izmjerenog broja stranice i bez prisilnih prijeloma, a gate je bio zelen.
+        # Kod 4 gate.py već zna preslikati u „preskočeno" za satelite, dakle u
+        # deklariranu granicu umjesto u tihi prolaz.
         print("⚠️  nema LibreOffice/Poppler — gradim bez mjerenja (SMANJENI OPSEG)")
         izgradi(a.graditelj, md, a.izlaz, a.profil, "zivi")
-        print(f"✅ {a.izlaz} — brojevi u sadržaju ostaju na Wordu, prikazi neprovjereni")
-        return
+        print(f"⚠️  {a.izlaz} — brojevi u sadržaju ostaju na Wordu, prikazi NEPROVJERENI")
+        print("   Ovo NIJE dovršena izgradnja: izlazni kod 4 (smanjeni opseg).")
+        return 4
 
     # ── petlja do fiksne točke ──
     for krug in range(1, a.krugova + 1):
@@ -258,8 +298,14 @@ def main():
         izgradi(a.graditelj, md, "_pregled.docx", a.profil, "staticni")
         if not u_pdf("_pregled.docx", "_pregled.pdf"):
             sys.exit("❌ pretvorba pregleda u PDF nije uspjela")
+        # Kvar 85: gradi.py nikad nije prosljeđivao --pocetak-tijela, pa je
+        # izmjeri.py pomak računao od PRVOG naslova rukopisa. U FPZG strukturi
+        # prvi je dio predtekst.md, dakle naslov prednjeg dijela: svi brojevi u
+        # sadržaju i popisima bili su pomaknuti za konstantu, a ograda protiv
+        # rasapa to ne vidi jer raspon ostaje netaknut.
         r = run([sys.executable, str(TU / "izmjeri.py"), "_pregled.pdf",
                  "--naslovi", "naslovi.json", "--blokovi", "blokovi.json",
+                 "--pocetak-tijela", str(pocetak_tijela),
                  "--toc-out", "_toc_novo.json", "--prelomi-out", "_prelomi_novo.json",
                  "--natpisi-out", "_natpisi_novo.json", "--json"])
         if r.returncode:
@@ -298,4 +344,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # Kvar 82: main() je vraćao 4 za smanjeni opseg, a ulaz ga je zvao bez
+    # sys.exit, pa je izlazni kod ostajao 0.
+    sys.exit(main() or 0)

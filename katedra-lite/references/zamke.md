@@ -960,8 +960,427 @@ Dodano: svaka skripta imenovana u `SKILL.md` i `references/*.md` mora postojati 
 paketu ili kod satelita. Odmah je našla dvije rupe: `provjeri_povratak.py` (motor
 cijelog moda 7, opisan u `povratak.md`, nije postojao) i `soffice.py`.
 
+## 74. Trajna napomena o metodi nosila je znak ⚠, pa je svaki rad — i savršeno čist — imao barem jedan „nalaz"
 
-## 74. `kvar.py` je poznavao samo jedan broj po unosu, pa je grupirani unos bio ili nevidljiv ili lažni preskok
+`check_citations_authoryear.py` na kraju ispisa objašnjava kako gradi ključ. To je **napomena
+o metodi**, ne nalaz o radu: vrijedi jednako za čist i za pokvaren rad. Redak je počinjao
+znakom `⚠`, a `generate_report.py` svrstava u nalaze svaki redak s tim znakom, pa je napomena
+ulazila u brojač na **svakom** radu.
+
+```
+prije:   ⚠ HEURISTIKA — ključ je (prvi autor, godina), ne pun popis autora/naslov.
+poslije: NAPOMENA O METODI — ključ je (prvi autor, godina), ne pun popis autora/naslov.
+```
+
+Izmjereno na čistom radu (dva izvora, oba citirana, nijedno siroče): redaka sa znakom `⚠`
+**1 → 0**. Autor zakrpe mjerio je na stvarnom radu (18 odlomaka, 2 izvora) i dobio srednje
+nalaze **2 → 1**, gdje je preostali stvarno pitanje.
+
+Brojač koji nikad ne pokazuje nulu prestaje se čitati — isti mehanizam kao gate koji nikad ne
+pada (kvar 58), samo obrnut: ondje je zeleno bilo lažno, ovdje je crveno. Oba puta signal
+gubi vezu sa stanjem rada.
+
+Ovaj je unos napisan naknadno. Popravak je stigao u seriji v1.9.6 kao commit „kvar 74", ali
+**bez unosa u katalogu**: `kvar.py` je zato javljao `numeracija preskače — očekivan 74`, a
+broj 74 stajao je potrošen u porukama commita i nedostupan sljedećoj zakrpi. Mjerenje gore
+napravljeno je pri upisu, nad verzijama iz gita, a ne prepisano iz poruke commita.
+
+## 75–78. prvi prolaz kroz STVARNI rad
+
+**Kad:** 5. 9. 2026., odmah nakon podizanja blokada. **Rad:** FPZG, preddiplomski,
+politička ekonomija uvjetovanosti, 5 172 riječi, 117 odlomaka, 3 tablice, 2 sekcije.
+
+Prvi puni prolaz dao je **2 kritična i 2 kozmetička nalaza, a nijedan nije bio
+greška u radu**. To je opasniji ishod od propuštene greške: gate koji puca iz
+krivih razloga zaobiđe se za tjedan dana i onda više ne hvata ni prave greške.
+
+| Kvar | Lažni nalaz | Uzrok | Zakrpa |
+|---|---|---|---|
+| 75 | „Putnamovo (1988)", „Closina (2021)", „Thinusinu (2025)" kao CITAT BEZ REFERENCE, a jedinice kao SIROČAD | `_osnova` je znala padeže, ali ne **posvojne pridjeve**, koje hrvatski akademski tekst tvori redovito | `_POSVOJNI` uzorak `(ov\|ev\|in)(a\|o\|u\|e\|i\|om\|im\|oj\|og\|…)?$` |
+| 76 | „Notes from Poland (2026)" citiran, a u popisu stoji | narativni uzorak prekida se na maloj riječi u sredini imena, pa je ključ iz teksta `poland`, a iz popisa `notes` | svaka velikim slovom pisana riječ institucionalnog imena postaje alias |
+| 77 | 9 „engleskih polunavodnika" | U+2019 između slova je **apostrof** („Orbán's", „the EU's"), a rad ima engleske naslove u popisu | broji se samo U+2018 i U+2019 koji nije među slovima; stvarno stanje: 2 |
+| 78 | „slovo 'x' kao množenje" | DOI `10.1177/1023263X251338198` | granice tokena: ni s jedne strane ne smije biti slovo, kosa crta ni točka |
+
+Poslije zakrpa: **kritično 0, kozmetičko 1**, izlazni kod 0. Preostala tri
+savjetodavna nalaza su stvarna pitanja (`updateFields: NE`, `pageBreakBefore: 5`).
+
+**Ograda:** `rad-audit/scripts/tests/test_all.py`, skupine R23–R26, svaka s
+**oba smjera**: posvojni pridjev spaja Putnamovo s Putnam, ali NE spaja Putnamovo
+s Kovač; apostrof nije nalaz, ali pravi polunavodnici jesu; DOI nije množenje,
+ali „80 x 80 mm" jest.
+
+**Pravilo koje iz ovoga slijedi:** provjera podignuta u blokadu mora prije toga
+proći kroz barem jedan stvarni rad. Sintetički fixture pokazuje da alat hvata;
+samo stvarni rad pokazuje koliko lažno hvata.
+
+---
+
+## 79. popis literature gutao je sve iza sebe
+
+Svugdje u lancu popis literature se rezao kao „od naslova do KRAJA dokumenta".
+Rad koji iza literature ima Popis tablica, Popis grafikona, sažetak i summary,
+dakle standardna FPZG struktura, davao je **30 bibliografskih jedinica umjesto
+27**: redci popisa prikaza i rečenice sažetka brojali su se kao jedinice.
+
+Sada `common.dio_literature()` omeđuje popis s obje strane; kraj je prvi sljedeći
+naslov istoga ranga (`KRAJ_LITERATURE_RE`). Koriste ga svi potrošači.
+**Ograda:** R27.
+
+---
+
+## 80–86. tri stavke koje su ostale nakon v1.9.5
+
+**80 — službena oznaka akta u jednom obliku.** `Uredba (EU, Euratom) 2020/2092`
+nije prolazila jer je uzorak tražio doslovno `Uredba (EU)`. Propis bez DOI-ja nije
+nepotvrđena jedinica.
+
+**81 — nenađen blok nije obarao mjerenje.** `izmjeri.py` je prikaz kojemu natpis
+ili „Izvor:" nije nađen u PDF-u ispisivao u JSON i to je bilo sve. Takav prikaz
+ispada i iz `prelomi.json` (pa se lomi preko dvije stranice) i iz `natpisi.json`
+(pa nema retka u popisu prikaza), a `gradi.py` javi „✅ stabilno". Fiksna točka
+izračunata nad nepotpunim skupom nije fiksna točka. Izuzetak: `--dopusti-nenadene`.
+
+**82 — smanjeni opseg izgledao je kao uspjeh.** Bez LibreOfficea `gradi.py` je
+gradio dokument bez ijednog izmjerenog broja stranice i vraćao 0. Sada vraća 4,
+kod koji `gate.py` već preslikava u „preskočeno", dakle u deklariranu granicu.
+Uz to je ulazna točka zvala `main()` bez `sys.exit`, pa je i 4 postajalo 0.
+
+**83 — `prikazi.py` je smio pasti.** Povratna vrijednost se nije gledala, pa je
+`blokovi.json` ostajao od prošle izgradnje i mjerio se pogrešan skup blokova.
+Dodana je i provjera da `blokovi.json` nije stariji od dokumenta.
+
+**84 — fiksna točka protiv zaostalog stanja.** `toc.json`, `prelomi.json` i
+`natpisi.json` nisu se brisali na početku, pa je prvi krug mogao dati tri „=" i
+poruku „stabilno" uspoređujući novo mjerenje sa stanjem prethodne izgradnje.
+Sada se premještaju u `_stanje_prosli/`; `--zadrzi-stanje` je svjestan izuzetak.
+
+**85 — pomak numeracije od krivog mjesta.** `gradi.py` nikad nije prosljeđivao
+`--pocetak-tijela`, pa je pomak računat od PRVOG naslova rukopisa. U FPZG
+strukturi prvi je dio predtekst, pa su svi brojevi u sadržaju i popisima bili
+pomaknuti za konstantu. Ograda protiv rasapa to ne vidi jer raspon ostaje
+netaknut, pa se petlja uredno stabilizirala na pogrešnim brojevima. Sada se
+`tijelo_pocinje_od` čita iz profila.
+
+**86 — popis prikaza bez parityja.** Nitko nije uspoređivao broj natpisa u tijelu
+s brojem redaka u popisu, ni provjeravao je li numeracija po vrsti neprekinuta.
+Rad je išao u predaju s osam tablica i šest redaka u popisu, ili s „Tablica 1, 2,
+2, 4", jer `SEQ` polje razliku maskira dok se ne osvježi.
+
+---
+
+## Nova faza D2 i B2 — dvije klase koje nijedan alat nije gledao
+
+**D2, `check_tvrdnja_izvor.py`.** `cross_check.py` traži brojku kao podniz po SVIM
+izvorima ZAJEDNO, pa brojka koja postoji u izvoru A, a pripisana je izvoru B,
+prolazi čista. To je oblik pogreške koji recenzent nađe za dvije minute, a alat
+nije nalazio nikad. Veza se ne da pogoditi iz teksta: zapisuje se jednom u
+`izvori/mapa.json` (`mapa_izvora.py --izgradi` daje prijedlog uparen po prezimenu
+i godini u imenu datoteke). Tri ishoda: potvrđeno, PRIPISANO KRIVOM IZVORU (uz
+popis izvora u kojima brojka stvarno jest), nije nađeno. Granice se broje i
+ispisuju: rečenice bez citata, citati bez unosa u mapi, jedinice bez priložene
+datoteke.
+
+**B2, `check_reference_exists.py`.** Sloj provjere citata gledao je samo
+ZATVORENOST skupa, pa je izmišljena jedinica koja JE citirana prolazila kao
+potpuno čista. Sada se svaka jedinica svrstava po tome čime je potkrijepljena:
+građa, identifikator (DOI, valjan ISBN, URL), službena oznaka (NN, ECLI, CELEX,
+COM, uredba, presuda) ili NEPOTVRĐENA. Alat ne tvrdi da je nepotvrđena jedinica
+izmišljena, nego da ništa u projektu ne pokazuje da postoji. Savjetodavno u modu
+4, `--strogo` u modu 6.
+
+**Ograde:** R27–R29 (11 tvrdnji), G7b i G8 u `test_gate.py`.
+
+**Izmjereno na stvarnom radu:** 27 jedinica, 21 s identifikatorom, 6 službenih,
+0 nepotvrđenih. Prije zakrpe 80 i 79: 30 „jedinica" i 4 lažno nepotvrđene.
+
+---
+
+## 87–90. drugi stvarni rad, druga vrsta rada
+
+**Rad:** MEDRI, sveučilišni diplomski sanitarnog inženjerstva, empirijski,
+14 008 riječi, 11 tablica, uzorak n=172, Vancouver numerički. Dakle sve ono
+čega u prvom radu (teorijski, autor-godina) nije bilo.
+
+Prvi prolaz: **0 kritičnih, 15 srednjih, 3 kozmetička**. Kritičnih nije bilo, ali
+su tri klase srednjih i kozmetičkih nalaza bile lažne, i sve tri iz koda napisanog
+istoga dana.
+
+**87 — crta u umetnutom položaju.** Provjeru je trebalo maknuti, ne popraviti.
+U hrvatskom je crta (–) ISPRAVAN znak za umetanje („rad – uz ogradu – pokazuje"),
+jednako kao za raspone; nepravilna je duga crtica (—), koje u hrvatskom nema.
+Provjera je prijavila 18 ispravnih umetanja. **Pogrešna provjera nije stroža
+provjera, nego provjera koja uči autora krivo.**
+
+**88 — veličina podskupine nije proturječje.** `uzorak_nalazi` je hvatao SVAKI
+broj uz imenicu, pa je u empirijskom radu s tablicama podskupina prijavljivao
+`ispitan: 11, 27, 45, 114, 127, 129` i `sudion: 2, 27, 29, … 172`. To su veličine
+podskupina i legitimno se razlikuju. Namjera je bila proturječna veličina UKUPNOG
+uzorka, pa broj sada mora stajati u okviru koji govori o cjelini (`OKVIR_UKUPNO`),
+a rečenica ne smije nositi oznaku podskupine (`OZNAKA_PODSKUPINE`).
+
+**89 — sitni brojevi se zbrajaju slučajno.** „ukupno 3 = 1 + 1 + 0 + 1" nije skup
+kategorija. Prag: ukupno ≥ 20 i svaka kategorija > 0.
+
+**90 — engleska posvojna množina.** Zakrpa 77 je popravila `Orbán’s`, ali ne i
+`students’`, `consumers’`, `Scientists’`: apostrof je uvijek IZA slova, a navodnik
+je onaj kojemu slovo ne PRETHODI. Druga polovica uvjeta bila je suvišna i lažna.
+
+Poslije: **0 kritičnih, 10 srednjih, 1 kozmetički**, i taj jedan je stvaran
+(zatvarajući navodnik U+201C umjesto U+201D, 14×). Prvi rad nepromijenjen
+(0 kritičnih), dakle zakrpe nisu zamijenile jedan šum drugim.
+
+**Ograda:** R30 i R31, svaka s oba smjera.
+
+**Pravilo koje iz ovoga slijedi, dopunjeno:** jedan stvarni rad nije dovoljan.
+Teorijski rad s autor-godina citiranjem i empirijski rad s tablicama podskupina
+pokazuju različite klase lažnih nalaza. Prije nego provjera uđe u blokadu, mora
+proći kroz oba tipa.
+
+---
+
+## 91. pravni rad: svaka jedinica iz popisa bila je siroče
+
+**Kad:** 5. 9. 2026. **Kako nađen:** Daniel nije imao pri ruci pravni ni tehnički
+rad, pa su izgrađena dva fixturea koja vjerno nose konvencije tih vrsta: pravni s
+12 fusnota (ibid., op. cit., nav. dj., loc. cit., supra bilj., NN, ECLI, čl. i st.,
+skraćeni oblik) i tehnički s formulama, indeksima, jedinicama (µm, °C, mV/s, Ω cm²),
+rasponima s minusom, `10^5` i kemijskim oznakama (Ti-6Al-4V, NaCl).
+
+**Tehnički rad prošao je čisto**, uz jedan istinit nalaz (`10 x 10 x 2 mm`).
+Konvencije koje su izgledale rizično (pH 7,4, −1,0 V do +1,5 V, 0,05 µm, ±)
+nisu proizvele nijedan lažni nalaz.
+
+**Pravni rad dao je 100 % lažnih kritičnih nalaza.** Rad koji citira U FUSNOTAMA
+nema u tijelu ni `[N]` ni `(N)` ni `(Prezime, godina)`, pa je detektor vraćao
+„unknown", a `generate_report` je unatoč tome puštao autor-godina provjeru. Ona je
+onda **svaku** jedinicu iz popisa proglasila siročetom, jer citata u tijelu doista
+nema. Cijeli citatni sloj bio je neupotrebljiv na pravnom radu.
+
+Sada `common.detect_footnote_citing()` traži dvoje istodobno: fusnote nose oznake
+fusnotnog aparata, a tijelo NEMA vlastitih oznaka citata. Jedno bez drugoga nije
+dovoljno, jer rad s autor-godina citiranjem smije imati i pokoju fusnotu. Kad je
+rad fusnotni, sve tri grane provjere citata se preskaču, a izvještaj **imenuje
+alat koji je za taj rad ispravan** (`provjeri_fusnote.py`), umjesto da šuti.
+
+Prvi test ove funkcije pao je odmah: brojio je samo zagradne citate, pa je rad s
+tri narativna autor-godina citata izgledao kao fusnotni. Narativni se sada broji
+jednako.
+
+**Ograda:** R32, četiri tvrdnje (fusnotni jest; autor-godina nije; bez fusnota
+nije; fusnota bez citatnog aparata nije).
+
+**Stanje na sva četiri rada:**
+
+| Rad | Kritično | Srednje | Kozmetičko |
+|---|---|---|---|
+| politička ekonomija (teorijski, autor-godina) | 0 | 3 | 1 |
+| Znahor (empirijski, Vancouver, 11 tablica) | 0 | 10 | 1 |
+| pravni (fusnotni aparat) | 0 | 0 | 0 |
+| tehnički (formule, jedinice) | 0 | 0 | 1 |
+
+---
+
+## 92. najveći izvor šuma u paketu, nađen tek na stvarnom empirijskom radu
+
+**Rad:** HKS, Fakultet zdravstvenih studija, diplomski o palijativnoj skrbi,
+11 438 riječi, 12 tablica, 173 Vancouver citata. Prvi rad iz korpusa koji je
+dohvaćen iz Drivea, a ne priložen u chatu.
+
+Fusnotno prepoznavanje (kvar 91) potvrđeno je na **stvarnom** pravnom radu:
+seminarski s Pravnog fakulteta, 105 fusnota (12 409 znakova: `Ibid.`, `Vidi:`,
+`Narodne novine, br. 71/2023`, `Zbornik PFZ, vol. 61, br. 1, 2011., str. 65.`),
+bez ijedne oznake citata u tijelu. Prepoznat kao fusnotni, autor-godina siročad
+se ne prijavljuje, `provjeri_fusnote.py` uredno pročitao svih 105 i dao dva
+smislena savjeta o lancu `ibid.`
+
+Ali medicinski rad je razotkrio nešto veće. Detektor „isti pojam, više
+vrijednosti iste jedinice" proizveo je **11 „sukoba", svaki s 12 do 30
+vrijednosti**, a ključevi su bili funkcijske riječi:
+
+```
+⚠ 'samo' + %: 12,6, 13,8, 15,9, 18, 23,5, 29,1, 31,0, 32,0, 32,2, 35, 37,4, …
+⚠ 'odnosno' + %: 3,63, 12,7, 13,8, 38,9, 41,5, 43,6, 50, 54,1, 65,7, 70,5, …
+⚠ 'naspram' + %: 6,2, 46,7, 48,1, 62,1, 80,0
+⚠ 'godina' + %: 28,1, 29, 30, 39, 42, 43,1, 45, 45,8, 46,7, 48,1, 50,7, 56, …
+```
+
+Nijedan nije bio nalaz. U empirijskom radu postoci se **po definiciji**
+razlikuju; skup od dvadeset vrijednosti nije proturječje nego raspodjela. Ovo je
+kod koji je u paketu stajao od početka, dakle nije nastao u ovom ciklusu, i
+upravo zato je opasan: šum koji je uvijek bio ondje uči autora da preskoči
+srednju kategoriju u cijelosti.
+
+Tri ograde, sve tri nužne: ključ ne smije biti funkcijska riječ (ona stoji uz
+svaki broj), skup od više od tri vrijednosti je raspodjela i ne prijavljuje se
+(ali se BROJI i izgovara), ključ mora biti dulji od tri znaka.
+
+**Izmjereno:** HKS s 16 srednjih nalaza na 5, i svih pet je stvarno
+(`updateFields: NE`; dva skupa kategorija bez uputnice; 7 postotaka bez razmaka
+naspram 193 s razmakom). Pravni rad zadržao je oba svoja nalaza, jer su ondje
+ključevi sadržajni pojmovi s po dvije vrijednosti.
+
+**Ograda:** R33, oba smjera (osam postotaka uz „samo" nije sukob; dvije
+vrijednosti uz sadržajni pojam jest).
+
+---
+
+## Korpus na kojem je lanac provjeren
+
+| Rad | Tip | Citiranje | Kritično | Srednje |
+|---|---|---|---|---|
+| politička ekonomija (FPZG) | teorijski | autor-godina | 0 | 3 |
+| Znahor (MEDRI) | empirijski, 11 tablica | Vancouver | 0 | 10 |
+| palijativna skrb (HKS) | empirijski, 12 tablica | Vancouver, 173 citata | 0 | 5 |
+| obiteljsko pravo (PFZG) | pravni | 105 fusnota | 0 | 6 |
+| tehnički fixture | formule, jedinice | autor-godina | 0 | 0 |
+| pravni fixture | 12 fusnota | fusnotni aparat | 0 | 0 |
+
+Četiri stvarna rada iz četiri različita fakulteta i tri različita stila
+citiranja. Svaki od njih otkrio je barem jedan kvar koji ostali nisu.
+
+---
+
+## 93–97. tehnički radovi: popis literature u tri neprepoznata oblika
+
+**Radovi:** `Uvod i teorija` (čelične konstrukcije, S235/S355, IEEE `[N]`, 3 749
+riječi) i `Seminar - FER` (komercijalizacija inovacija, autor-godina, 3 922
+riječi, 4 tablice). Peti i šesti stvarni rad, i prvi s IEEE stilom.
+
+Prvi prolaz: FER seminar **16 kritičnih nalaza „citat bez reference"**, a svaka
+je jedinica bila uredno u popisu. Uzrok: raščlamba popisa poznavala je samo
+godinu u zagradi u prvih 120 znakova retka. Tri oblika koje nije poznavala, sva
+tri uobičajena u hrvatskim tehničkim i medicinskim popisima:
+
+| Kvar | Oblik | Primjer |
+|---|---|---|
+| 93 | godina na kraju retka | `Hrvatski zavod za javno zdravstvo. Atlas. Zagreb: HZJZ, 2024.` |
+| 93 | naziv institucije s malim riječima u sredini | `Državni zavod za statistiku. Istraživanje…` |
+| 97 | godina uz broj sveska, iza nje stranice | `Medicina Fluminensis. Vol. 57, br. 4(2021), str. 328–340.` |
+
+**94 — akronim u nakladničkom dijelu.** Institucija se u tekstu citira akronimom
+(`DZS, 2024`, `HZJZ, 2024`, `WIPO, 2025`), a u popisu je raspisana, s akronimom
+tek iza mjesta izdanja. Alias je dotad hvatao samo akronim u zagradi uz autora.
+Prvi pokušaj zakrpe uzimao je **svaku veliku riječ retka**, pa je `Ljetopis` iz
+naslova postao alias i odmah oborio postojeći test R13. Traži se isključivo
+akronim.
+
+**95 — hrvatski izvor prikaza.** `(autorski sažetak prema: Podobnik, 2026)` i
+`(autorska analiza prema: Porter, 2008)` davali su ključ `autorski`, jer je
+uzorak skidao samo golo „prema" na početku segmenta.
+
+**96 — razlika izrečena u istoj rečenici.** „Čelik S355 nije krući od čelika
+S235" nosi obje vrijednosti u istoj rečenici, dakle razlika je izrečena i pitanje
+„je li razlika deklarirana" ima odgovor u samom tekstu. Isto za visinu na strehi
+i na sljemenu (4,50 m i 6,50 m).
+
+**Izmjereno:** FER seminar 16 kritičnih na 0; čelične konstrukcije 5 srednjih na
+1. Preostali jedan nalaz na čeličnim konstrukcijama je **istinit**: redoslijed
+prvog pojavljivanja IEEE navoda je 1, 2, **4, 3**, 5, dakle `[4]` stoji prije
+`[3]`, što u numeriranju po pojavljivanju treba prenumerirati.
+
+**Ograda:** R34, jedanaest tvrdnji, uključujući negativnu (`autorska` ne smije
+biti ključ) i test da alias ne nastaje iz naslova.
+
+---
+
+## Korpus na kojem je lanac provjeren (šest radova, pet fakulteta, četiri stila)
+
+| Rad | Tip | Citiranje | Kritično | Srednje |
+|---|---|---|---|---|
+| politička ekonomija (FPZG) | teorijski | autor-godina | 0 | 3 |
+| Znahor (MEDRI) | empirijski, 11 tablica | Vancouver | 0 | 9 |
+| palijativna skrb (HKS) | empirijski, 12 tablica | Vancouver, 173 citata | 0 | 5 |
+| obiteljsko pravo (PFZG) | pravni | 105 fusnota | 0 | 4 |
+| čelične konstrukcije | tehnički | IEEE `[N]` | 1 (istinit) | 1 |
+| komercijalizacija (FER) | pregledni | autor-godina | 0 | 2 |
+
+**Svaki od šest radova otkrio je barem jedan kvar koji nijedan drugi nije.**
+To više nije dojam nego mjerenje: teorijski rad dao je posvojne pridjeve,
+empirijski veličine podskupina i raspodjele postotaka, pravni fusnotni aparat,
+tehnički tri oblika bibliografske jedinice.
+
+---
+
+## 98–104. audit paketa nakon rada Znahor
+
+Izvor: `AUDITskillovanakonradaZnahor.md`, napisan poslije stvarne sesije na
+diplomskom radu MEDRI (8 297 → 13 830 riječi, 50 stranica, 11 tablica, 56 referenci).
+Nalazi su tamo podijeljeni po tome **tko griješi**, i to je razlikovanje zadržano.
+
+### Zajednički obrazac triju kvarova
+
+Autor audita ga imenuje točno: **alat mjeri pogrešnu razinu dokumenta.** Prored se
+čita iz stila `Normal` umjesto iz odlomka koji nosi sliku; numeracija iz posljednje
+sekcije umjesto iz one u kojoj kreće; marker se uspoređuje doslovno iako je zahvat
+tipografski. Nije riječ o tri neovisna buga nego o jednoj navici: **uzeti prvi
+dohvatljivi nositelj svojstva umjesto onoga koji svojstvo stvarno nosi.**
+
+| Kvar | Alat | Što je bilo | Što je sada |
+|---|---|---|---|
+| 98 | `check_paragraphs.py` | profil bez `format.odlomak` → `ap.error`, kod 2, trajno „alat pukao" | kod 3 = preskočeno, deklarirana granica (pravilo 20) |
+| 99 | `verify_rewrite.py` | marker se uspoređuje doslovno, pa tipografski popravak (NBSP, dvostruki razmak) blokira sam sebe | pod `--zahvat stil` bjelina se normalizira; pod `lomljenje` i `geometrija` marker ostaje doslovan |
+| 100 | `provjeri_predaju.py` | numeracija se tražila u `sekcije[-1]`, a to je u radu s 12 sekcija prilog | traži se sekcija koja numeraciju RESTARTA, u bilo kojoj poziciji |
+| 101 | `provjeri_predaju.py` | „prored je fiksan — inline slike se obrežu" i kad nijedna slika nije u fiksno prorezanom odlomku | nalaz samo za odlomke koji STVARNO nose sliku; inače upozorenje |
+| 102 | `check_typography.py` | bezuvjetno tražen zatvarajući U+201D | dijalekt `ihjj` / `njem`, kao Vancouver u `citation_dialects.py`; nalaz je NEDOSLJEDNOST, ne izbor |
+| 103 | `provjeri_prikaze.py` | nijedan alat nije gledao ŠTO je u slici | `_rub_odrezan()`: ne-bijeli pikseli na rubu platna |
+| 104 | `inventar_paketa.py` | mrtvi medijski dijelovi nevidljivi | `mrtvi_mediji()` + `tezina()` + `priprema_slanja.py` |
+
+### 103 — jedina rupa koju je našlo oko, a ne alat
+
+Legenda grafikona „zeleno: unutar sigurnog prostora" izašla je iz platna i u radu
+je pisalo `zeleno: unutar sigurnog pros`. Rad je prošao `provjeri_prikaze.py`,
+`gate --faza audit`, sve faze rad-audita i `provjeri_predaju.py`. Nijedan alat to
+nije vidio jer **svi mjere sliku kao pravokutnik** (dpi, širina, omjer, skala), a
+nijedan ne gleda sadržaj. `matplotlib` odsijeca tiho: bez upozorenja, bez iznimke,
+bez traga u datoteci.
+
+Provjereno na fixtureu s dvije slike: pogodila je točno onu odrezanu
+(`lijevo 16 px, gore 16 px, dolje 14 px`), a čistu je pustila. Granica je
+deklarirana: grafikon s punim pozadinskim ispunom (heatmap, fotografija) pali ovo
+uvijek, pa postoji `--dopusti-rub` umjesto tihog gašenja.
+
+### 104 — 749 kB nevidljivog sadržaja
+
+Zamjena slike ostavlja stari PNG u `word/media/`: relacija ostaje, referenca u
+`document.xml` nestaje. Na stvarnom radu **49 % datoteke**. Uz težinu nosi i
+**staru verziju grafikona**, dostupnu svakome tko raspakira .docx — za rad koji ide
+na provjeru podudarnosti i u repozitorij to je sadržaj, ne higijena.
+`priprema_slanja.py` piše ZASEBNU izlaznu datoteku; arhivska verzija ostaje
+netaknuta.
+
+### Doktrina koja je iz audita ušla u reference
+
+* `predaja.md` — **opseg se mjeri, ne procjenjuje** (izmjereno: prikazi su nosili
+  5 od 29 stranica koje je trebalo skratiti; pretpostavka bi stajala dan) i
+  **rad koji se ne može poslati nije predan** (1,5 MB ne prolazi kroz e-poštu).
+* `stil_pipeline.md` — **stilske dimenzije su spregnute** (skraćivanje rečenica
+  srušilo koheziju s 15+ na 13,4 i podiglo dvotočja na 3,9/1000) i **strojni stil
+  ne hvata kvarove koje sam zahvat proizvodi** (metrika kohezije mjeri prisutnost
+  veznih sredstava, pa je zahvat koji ih umeće prazno formalno poboljšanje).
+* `pisanje.md` — **redoslijed zahvata je lanac ovisnosti**: renumeracija →
+  zamjena teksta → tipografija → naslovnice → sekcije → polja.
+* `docx_zamke.md` (nova) — šest zamki, među njima najskuplja: `doc.paragraphs`
+  gradi NOVE omotače, pa `if p is sadrzaj` nikad nije istina i kod pisan da nešto
+  preskoči obriše sve. U stvarnoj sesiji obrisalo je 489 odlomaka.
+
+### Profil `mefri-sanitarno`
+
+Napravljen iz Naputka MEDRI 2025./2026. (12 pt, rubnici 2,5 cm, dvostruki prored,
+broj stranice donji desni kut, naslovi tablica iznad a slika ispod, Vancouver po
+redoslijedu pojavljivanja, sažetak ≤ 250 riječi, 15–50 stranica od Uvoda nadalje).
+Status `nepotvrdeno`, jer je dokument čitan preko sažimača: izravno preuzimanje
+nije prošlo kroz proxy i **egress nije zaobiđen**.
+
+Trošak nepostojanja profila je izmjeren u auditu: bez `resolved_profile.json` gate
+je preskočio **4 od 15 koraka**, uključujući jedan blokirajući, a sažetak je i dalje
+govorio „nijedna blokirajuća provjera nije pala". Taj je dio popravljen kvarom 58.
+
+Profil zasad stoji kao datoteka, kao i `hks-fzs`, i **nije upisan u registry**:
+`profile_registry.py --write` odbija generirati jer je admission bundle hash za
+`efzg` zastario. To se ne zaobilazi; upis u registry je zaseban zahvat koji počinje
+ponovnim pokretanjem `faculty_scale_gate.py`.
+
+## 105. `kvar.py` je poznavao samo jedan broj po unosu, pa je grupirani unos bio ili nevidljiv ili lažni preskok
 
 Zakrpa v1.9.5 upisala je četiri unosa koji svaki pokrivaju tri do četiri kvara, jer su to
 klase s istim popravkom i jednim mjerenjem (`61–63` exit-code disciplina, `64–66` nove
@@ -998,7 +1417,7 @@ Ograda: raspon koji ide unatrag (`## 66–64.`) daje tvrdi nalaz, provjereno mut
 
 ---
 
-## 75. Katalozi kvarova nisu bili u jedinom ulazu za testove, pa je suite bio zelen nad pokvarenim registrom
+## 106. Katalozi kvarova nisu bili u jedinom ulazu za testove, pa je suite bio zelen nad pokvarenim registrom
 
 `bin/testovi.sh` postoji da bi „jedan ulaz" dao „jedan izlazni kod", i pokretao je devet
 skupina: tri test suitea i šest provjera tvrdnji. `kvar.py` nije bio među njima. Mjereno na

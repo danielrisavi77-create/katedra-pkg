@@ -160,3 +160,59 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+def mrtvi_mediji(put: str) -> list[tuple[str, str, int]]:
+    """Medijski dijelovi koje document.xml više ne referencira.
+
+    Kvar 104 (audit Znahor, B2): zamjena slike novim grafikonom ostavlja stari
+    PNG u `word/media/`. Relacija ostaje u `document.xml.rels`, ali je
+    `document.xml` više ne koristi. Na stvarnom radu je to bilo **749 kB
+    nevidljivog sadržaja, 49 % datoteke**, i nijedan alat to nije prijavljivao.
+
+    Nije samo higijena: u mrtvom dijelu ostaje STARA verzija grafikona,
+    dostupna svakome tko raspakira .docx. Za rad koji ide na provjeru
+    podudarnosti i u repozitorij to je pitanje sadržaja, ne težine.
+
+    Vraća [(rId, put_u_paketu, bajtova)].
+    """
+    import re
+    import zipfile
+    import xml.etree.ElementTree as ET
+    NS_R = "{http://schemas.openxmlformats.org/package/2006/relationships}"
+    mrtvi = []
+    with zipfile.ZipFile(put) as z:
+        doc = z.read("word/document.xml").decode("utf-8", "ignore")
+        rabljeni = set(re.findall(r'r:(?:embed|link|id)="([^"]+)"', doc))
+        try:
+            rels = ET.fromstring(z.read("word/_rels/document.xml.rels"))
+        except KeyError:
+            return []
+        imena = set(z.namelist())
+        for rel in rels:
+            meta = rel.get("Target") or ""
+            if "media" not in meta or rel.get("Id") in rabljeni:
+                continue
+            ime = "word/" + meta.lstrip("/").replace("../", "")
+            if ime in imena:
+                mrtvi.append((rel.get("Id"), ime, z.getinfo(ime).file_size))
+    return mrtvi
+
+
+def tezina(put: str) -> dict:
+    """Težina paketa i udio medija, sa zasebnim udjelom mrtvoga.
+
+    B3 iz istog audita: rad je bio gotov, ispravan i NEPOŠILJIV — 1,5 MB ne
+    prolazi kroz alat za e-poštu jer se privitak predaje kao base64. Predaja
+    nije samo „je li rad ispravan" nego i „može li fizički otići".
+    """
+    import os
+    import zipfile
+    uk = os.path.getsize(put)
+    medij = 0
+    with zipfile.ZipFile(put) as z:
+        for i in z.infolist():
+            if i.filename.startswith("word/media/"):
+                medij += i.file_size
+    mrtvo = sum(b for _, _, b in mrtvi_mediji(put))
+    return {"paket_bajtova": uk, "medij_bajtova": medij, "mrtvo_bajtova": mrtvo}
+

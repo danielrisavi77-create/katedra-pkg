@@ -161,6 +161,270 @@ def test_v195():
           CO.LIT_HEADING_RE is C.LIT_HEADING_RE)
 
 
+
+def test_stvarni_rad():
+    """Kvarovi 75–78 — lažni nalazi nađeni na stvarnom radu (FPZG, 5 172 riječi).
+
+    Prvi puni prolaz novoga gatea kroz stvarni rad dao je 2 kritična i 2
+    kozmetička nalaza, a nijedan nije bio greška u radu. Gate koji tako puca
+    prestaje se čitati, pa je svaki od njih zaslužio test.
+    """
+    import common as C
+    import check_citations_authoryear as AY
+    import check_typography as TY
+
+    # 75 — posvojni pridjev od prezimena
+    for oblik, prezime in [("putnamovo", "putnam"), ("putnamovim", "putnam"),
+                           ("closina", "closa"), ("thinusinu", "thinus")]:
+        siroces, bez_ref = AY.uskladi_kljuceve({(oblik, "2021")}, {(prezime, "2021")})
+        check(f"R23: posvojni pridjev {oblik} ~ {prezime}",
+              not siroces and not bez_ref, (oblik, prezime, siroces, bez_ref))
+
+    # ne smije spojiti dva različita autora
+    siroces, bez_ref = AY.uskladi_kljuceve({("putnamovo", "2021")}, {("kovac", "2021")})
+    check("R23: posvojni pridjev NE spaja različita prezimena",
+          bool(siroces and bez_ref), (siroces, bez_ref))
+
+    # 76 — institucionalni autor s malom riječi u sredini
+    aliasi = AY.biblio_aliasi("Notes from Poland (2026) President vetoes bill.")
+    check("R24: 'Notes from Poland' daje alias poland → notes",
+          aliasi.get(("poland", "2026")) == ("notes", "2026"), aliasi)
+    kljucevi, _ = AY.extract_biblio_keys("Notes from Poland (2026) President vetoes bill.")
+    check("R24: alias NE stvara drugi unos u popisu",
+          len(kljucevi) == 1, kljucevi)
+    # regresija zakrpe za 76: sirovi ključ se dodaje samo za institucionalna
+    # imena, nikad kad je prva riječ uvodna („Prema Marković" ≠ ključ `prema`)
+    k = C.parse_ay_narrative("Prema Marković (2021) izlaznost raste.")
+    check("R24: 'Prema Marković' ne daje ključ 'prema'",
+          ("prema", "2021") not in k and ("marković", "2021") in k, k)
+    # Narativni uzorak iz „Notes from Poland" uhvati samo „Poland"; vezu na
+    # jedinicu iz popisa uspostavlja alias, ne parser. Test ide end-to-end.
+    k = C.parse_ay_narrative("Izvor: Notes from Poland (2026).")
+    aliasi = AY.biblio_aliasi("Notes from Poland (2026) President vetoes bill.")
+    razrijeseni = {aliasi.get(x, x) for x in k}
+    check("R24: alias vezuje 'poland' iz teksta na 'notes' iz popisa",
+          ("notes", "2026") in razrijeseni, (k, razrijeseni))
+
+    # 77 — apostrof u engleskom naslovu nije polunavodnik
+    n = _tipografija_nalazi(TY, "Alcidi (2026) Orb\u00e1n\u2019s defeat opens the door to EU funds.")
+    check("R25: apostrof (U+2019 među slovima) NIJE nalaz",
+          not any("polunavodnic" in x for x in n), n)
+    n = _tipografija_nalazi(TY, "Sanctions in the \u2018Rule of Law\u2019 Conflict.")
+    check("R25: pravi polunavodnici JESU nalaz",
+          any("polunavodnic" in x for x in n), n)
+
+    # 87 — crta u umetnutom položaju je ISPRAVNA u hrvatskom
+    n = _tipografija_nalazi(TY, "Rad \u2013 uz ogradu \u2013 pokazuje pomak.")
+    check("R30: crta u umetnutom polo\u017eaju NIJE nalaz (hrvatski)",
+          not any("umetnut" in x for x in n), n)
+    n = _tipografija_nalazi(TY, "Rad \u2014 uz ogradu \u2014 pokazuje pomak.")
+    check("R30: duga crtica JEST nalaz", any("duga crtica" in x for x in n), n)
+
+    # 90 — engleska posvojna množina nije polunavodnik
+    n = _tipografija_nalazi(TY, "Scientists\u2019 warning on affluence. University students\u2019 behavior.")
+    check("R30: posvojna mno\u017eina (students\u2019) NIJE polunavodnik",
+          not any("polunavodnic" in x for x in n), n)
+
+    # 88 — veličina podskupine nije proturječje ukupnog uzorka
+    import numbers_inventory as NI2
+    n = NI2.uzorak_nalazi([
+        "U analizu je u\u0161lo 172 ispitanika.",
+        "Prema spolu, 114 ispitanika bile su \u017eene.",
+        "Odgovor je dalo 45 ispitanika u dobi do 21 godine."])
+    check("R31: veli\u010dine podskupina NISU proturje\u010dje", n == [], n)
+    n = NI2.uzorak_nalazi([
+        "U analizu je u\u0161lo 172 ispitanika.",
+        "Ukupno je sudjelovalo 180 ispitanika."])
+    check("R31: dvije razli\u010dite veli\u010dine UKUPNOG uzorka JESU nalaz", len(n) == 1, n)
+
+    # 89 — sitni brojevi se zbrajaju slučajno
+    check("R31: 'ukupno 3 = 1+1+0+1' nije skup kategorija",
+          NI2.zbroj_kategorija(["Bilo je ukupno 3 slu\u010daja: 1 i 1 te 0 i 1."]) == [],
+          NI2.zbroj_kategorija(["Bilo je ukupno 3 slu\u010daja: 1 i 1 te 0 i 1."]))
+
+    # 91 — rad koji citira u fusnotama ne prolazi kroz autor-godina siročad
+    fus = ("Vidi \u010dl. 141. Ustava, NN 56/90. Ibid., str. 214. "
+           "Barbi\u0107, J., Pravo dru\u0161tava, Zagreb, 2013., str. 87. "
+           "Op. cit. (bilj. 4), str. 91. Nav. dj. (bilj. 6), t. 130.")
+    tijelo = "Na\u010delo vladavine prava sadr\u017eano je u \u010dl. 3. Ustava."
+    check("R32: fusnotni aparat + tijelo bez oznaka = fusnotno citiranje",
+          C.detect_footnote_citing(fus, tijelo), (fus[:60], tijelo))
+    check("R32: rad s autor-godina citatima NIJE fusnotni",
+          not C.detect_footnote_citing(
+              fus, "Prema Marković (2021) i Horvat (2018) te (Kos, 2023) nalaz stoji."),
+          "autor-godina u tijelu")
+    check("R32: bez fusnota nije fusnotni",
+          not C.detect_footnote_citing("", tijelo))
+    check("R32: fusnota bez citatnog aparata nije fusnotni",
+          not C.detect_footnote_citing(
+              "Autorica zahvaljuje mentoru na strpljenju tijekom izrade rada.", tijelo))
+
+    # 92 — raspodjela postotaka nije sukob
+    import io as _io, contextlib as _cx
+    from unittest import mock as _mock
+    import numbers_inventory as NI3
+
+    def _inv(tekst):
+        buf = _io.StringIO()
+        with _mock.patch.object(NI3, "load_docx_text",
+                                lambda p, include_tables=True: (tekst, [], None)):
+            with _cx.redirect_stdout(buf):
+                NI3.main("(test)")
+        return buf.getvalue()
+
+    raspodjela = " ".join(
+        f"Samo {v} % ispitanika dalo je taj odgovor." for v in
+        ["12,6", "13,8", "15,9", "20,1", "23,5", "28,1", "29,1", "32,0"])
+    izlaz = _inv(raspodjela)
+    check("R33: osam postotaka uz 'samo' NIJE sukob",
+          "'samo' + %" not in izlaz, izlaz[-400:])
+    check("R33: raspodjela se izrijekom broji, ne prešućuje",
+          "raspodjela, ne sukob" in izlaz or "nema" in izlaz, izlaz[-300:])
+
+    sukob = ("Udio zaposlenih iznosio je 12,5 %. "
+             "U drugom poglavlju udio zaposlenih iznosi 17,5 %.")
+    izlaz = _inv(sukob)
+    check("R33: dvije vrijednosti uz sadr\u017eajni pojam JESU sukob",
+          "zaposlenih" in izlaz and "⚠" in izlaz, izlaz[-400:])
+
+    # 93–97 — oblici popisa literature nađeni na stvarnim tehničkim radovima
+    JEDINICE = [
+        ("93: godina na kraju retka",
+         "Hrvatski zavod za javno zdravstvo. Hrvatski dan mo\u017edanog udara. "
+         "Zagreb: HZJZ, 2024.", ("hrvatski", "2024")),
+        ("93: institucija s malim rije\u010dima u nazivu",
+         "Dr\u017eavni zavod za statistiku. Istra\u017eivanje i razvoj u 2023., "
+         "priop\u0107enje ZTI-2024-2-1. Zagreb: DZS, 2024.", ("dr\u017eavni", "2024")),
+        ("97: godina uz broj sveska",
+         "Bezak, B., Kova\u010di\u0107, S. i Brali\u0107, M. Mehani\u010dka trombektomija. "
+         "Medicina Fluminensis. Vol. 57, br. 4(2021), str. 328\u2013340.", ("bezak", "2021")),
+        ("97: strani \u010dasopis s to\u010dkom iza broja",
+         "Luengo-Fernandez, R. i Leal, J. Economic burden of stroke across Europe. "
+         "European Stroke Journal. Vol. 5, br. 1(2020), str. 17\u201325.",
+         ("luengo-fernandez", "2020")),
+    ]
+    for opis, redak, ocekivano in JEDINICE:
+        kljucevi, _ = AY.extract_biblio_keys(redak)
+        check(f"R34: {opis}", ocekivano in kljucevi, (redak[:60], kljucevi))
+
+    # 94 — akronim iz nakladničkog dijela je alias
+    for redak, alias, glavni in [
+        ("Hrvatski zavod za javno zdravstvo. Atlas. Zagreb: HZJZ, 2024.",
+         "hzjz", "hrvatski"),
+        ("Dr\u017eavni zavod za statistiku. Istra\u017eivanje. Zagreb: DZS, 2024.",
+         "dzs", "dr\u017eavni"),
+    ]:
+        mapa = AY.biblio_aliasi(redak)
+        check(f"R34: akronim {alias.upper()} je alias za {glavni}",
+              mapa.get((alias, "2024")) == (glavni, "2024"), mapa)
+
+    # 95 — hrvatski izvor prikaza „(autorski sažetak prema: X, 2026)"
+    for tekst, ocekivan in [
+        ("(autorski sa\u017eetak prema: Podobnik, 2026)", "podobnik"),
+        ("(autorska analiza prema: Porter, 2008)", "porter"),
+        ("(Izvor: izrada autora prema: Murray, 2010)", "murray"),
+    ]:
+        k = C.parse_ay_citation_group(tekst.strip("()"))
+        check(f"R34: izvor prikaza daje klju\u010d {ocekivan}",
+              any(x[0] == ocekivan for x in k), (tekst, k))
+    k = C.parse_ay_citation_group("autorska analiza prema: Porter, 2008")
+    check("R34: 'autorska' NIJE klju\u010d",
+          not any(x[0].startswith("autorsk") for x in k), k)
+
+    # 96 — razlika izrečena u istoj rečenici je deklarirana
+    izlaz = _inv("\u010celik S355 nije kru\u0107i od \u010delika S235. "
+                 "Granica popu\u0161tanja iznosi 235 N i 355 N.")
+    check("R34: obje vrijednosti u istoj re\u010denici nisu sukob",
+          "izre\u010deno je u istoj re\u010denici" in izlaz or "'\u010delik'" not in izlaz,
+          izlaz[-350:])
+
+    # 102 — dijalekt navodnika (audit Znahor, B4)
+    hr_ihjj = "Tekst \u201eprvi\u201d i \u201edrugi\u201d navod."
+    hr_njem = "Tekst \u201eprvi\u201c i \u201edrugi\u201c navod."
+    for opis, tekst in [("IHJJ \u201e\u2026\u201d", hr_ihjj), ("njema\u010dki \u201e\u2026\u201c", hr_njem)]:
+        n = _tipografija_nalazi(TY, tekst)
+        check(f"R35: dosljedan dijalekt ({opis}) NIJE nalaz",
+              not any("zatvaraju\u0107eg navodnika" in x for x in n), (opis, n))
+    n = _tipografija_nalazi(TY, "Tekst \u201eprvi\u201d i \u201edrugi\u201c navod.")
+    check("R35: mije\u0161ana dva oblika JEST nalaz",
+          any("dva oblika" in x for x in n), n)
+
+    # 78 — DOI nije množenje
+    n = _tipografija_nalazi(TY, "DOI: 10.1177/1023263X251338198. Dostupno na mre\u017ei.")
+    check("R26: DOI s X me\u0111u znamenkama NIJE mno\u017eenje",
+          not any("mno\u017eenje" in x for x in n), n)
+    n = _tipografija_nalazi(TY, "Uzorak je bio 80 x 80 mm.")
+    check("R26: pravo 'x' kao mno\u017eenje JEST nalaz",
+          any("mno\u017eenje" in x for x in n), n)
+
+
+
+def test_izvori():
+    """R27–R29 — veza tvrdnja↔izvor, postojanje jedinice, granica popisa."""
+    import os
+    import tempfile
+    import common as C
+    import check_tvrdnja_izvor as TI
+    import check_reference_exists as RE
+    from docx import Document
+
+    # 79 — popis literature završava na sljedećem naslovu, ne na kraju dokumenta
+    body = ("Tijelo rada.\nLiteratura\nHorvat, S. (2018). Knjiga. Zagreb: A.\n"
+            "Popis tablica\nTablica 1. Nesto\t10\nSažetak\nRad analizira nesto.")
+    lit = C.dio_literature(body)
+    check("R27: popis literature staje na 'Popis tablica'",
+          "Horvat" in lit and "Tablica 1" not in lit and "analizira" not in lit,
+          repr(lit))
+    check("R27: bez naslova popisa vraća prazno",
+          C.dio_literature("Samo tijelo bez popisa.") == "")
+
+    with tempfile.TemporaryDirectory() as radni:
+        izvori = os.path.join(radni, "izvori")
+        os.makedirs(izvori)
+        with open(os.path.join(izvori, "Closa_2021_x.txt"), "w", encoding="utf-8") as f:
+            f.write("Council held 12 hearings. Support stood at 62,1 %.")
+        with open(os.path.join(izvori, "Thinus_2025_y.txt"), "w", encoding="utf-8") as f:
+            f.write("Compliance improved by 16,3 percentage points.")
+        mapa = os.path.join(izvori, "mapa.json")
+        with open(mapa, "w", encoding="utf-8") as f:
+            f.write('{"closa-2021":{"datoteka":"Closa_2021_x.txt"},'
+                    '"thinus-2025":{"datoteka":"Thinus_2025_y.txt"}}')
+
+        d = Document()
+        d.add_heading("1. UVOD", level=1)
+        d.add_paragraph("Vijeće je održalo 12 saslušanja (Closa, 2021).")
+        d.add_paragraph("Usklađenost se popravila za 16,3 postotnih bodova (Closa, 2021).")
+        d.add_paragraph("Potpora je iznosila 88,4 % (Thinus, 2025).")
+        d.add_heading("Literatura", level=1)
+        d.add_paragraph("Closa, Carlos (2021) Institutional logics. JCMS.")
+        d.add_paragraph("Thinus, Pauline (2025) Transactional Approach. JCMS.")
+        rad = os.path.join(radni, "rad.docx")
+        d.save(rad)
+
+        n = TI.provjeri(rad, izvori, mapa)
+        check("R28: točno pripisana brojka je potvrđena", n["potvrdeno"] >= 1, n["potvrdeno"])
+        krivi = [x["broj"] for x in n["krivi_izvor"]]
+        check("R28: brojka iz drugog izvora je PRIPISANO KRIVOM IZVORU",
+              "16,3" in krivi, n["krivi_izvor"])
+        nema = [x["broj"] for x in n["nije_nadeno"]]
+        check("R28: brojke koje nema nigdje su NIJE NAĐENO", "88,4" in nema, n["nije_nadeno"])
+
+        r = RE.provjeri(rad, izvori, mapa)
+        check("R29: jedinica s priloženom građom nije nepotvrđena",
+              len(r["nepotvrdeno"]) == 0, r)
+
+    # 80 — službena oznaka akta u više oblika
+    for akt in ["Uredba (EU, Euratom) 2020/2092 Europskog parlamenta i Vijeća od 2020.",
+                "Zakon o radu, NN 93/14, 2014.",
+                "Presuda Suda EU, ECLI:EU:C:2024:493, 2024."]:
+        check(f"R29: službena oznaka prepoznata: {akt[:28]}",
+              bool(RE.SLUZBENI.search(akt)), akt)
+
+    # ISBN kontrolna znamenka
+    check("R29: valjan ISBN-13 prolazi", RE._isbn_valjan("978-3-16-148410-0"))
+    check("R29: neispravan ISBN-13 pada", not RE._isbn_valjan("978-3-16-148410-1"))
+
+
 def _tipografija_nalazi(TY, tekst):
     """Pokreni tipografske provjere nad golim tekstom, bez .docx-a."""
     import io
@@ -486,6 +750,8 @@ def main():
     test_r16_vancouver()
     test_r14_r15()
     test_v195()
+    test_stvarni_rad()
+    test_izvori()
     test_manifest()
 
     # --- report ---

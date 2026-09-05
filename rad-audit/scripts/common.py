@@ -150,6 +150,40 @@ def sentences(text):
     return [s.strip() for s in parts if len(s.strip()) > 3]
 
 
+# Kvar 79 (nađen na stvarnom radu, 5.9.2026.): popis literature se svugdje rezao
+# kao „od naslova do KRAJA dokumenta". U radu koji iza literature ima Popis
+# tablica, Popis grafikona, sažetak i summary — dakle u standardnoj FPZG
+# strukturi — sve je to ulazilo u popis literature. Posljedice: redci popisa
+# prikaza i rečenice sažetka brojali su se kao bibliografske jedinice, a
+# `unmatched` brojač je rastao bez razloga.
+#
+# Popis literature završava na PRVOM sljedećem naslovu istoga ranga.
+KRAJ_LITERATURE_RE = re.compile(
+    r"(?im)^\s*(?:\d+\.?\s*)?"
+    r"(?:POPIS\s+(?:TABLICA|GRAFIKONA|SLIKA|PRIKAZA|PRILOGA|KRATICA|SIMBOLA)"
+    r"|PRILO(?:G|ZI)(?:\s+\d+)?"
+    r"|SA[ŽZ]ETAK|SUMMARY|ABSTRACT|KLJU[ČC]NE\s+RIJE[ČC]I|KEYWORDS"
+    r"|[ŽZ]IVOTOPIS|IZJAVA(?:\s+O\s+\w+)*|SADR[ŽZ]AJ)\s*:?\s*$"
+)
+
+
+def dio_literature(body: str) -> str:
+    """Tekst popisa literature, omeđen s obje strane.
+
+    Vraća prazan niz kad naslova popisa nema. Kraj je prvi sljedeći naslov
+    istoga ranga (popis prikaza, prilozi, sažetak, izjava), ili kraj dokumenta.
+    """
+    m = list(LIT_HEADING_RE.finditer(body or ""))
+    if not m:
+        return ""
+    pocetak = m[-1].end()
+    kraj = len(body)
+    k = KRAJ_LITERATURE_RE.search(body, pocetak)
+    if k:
+        kraj = k.start()
+    return body[pocetak:kraj]
+
+
 def parse_citation_group(inner):
     """'[19, 21]' / '[19–22]' -> set brojeva."""
     nums = set()
@@ -320,6 +354,18 @@ def parse_ay_narrative(text):
             if not kljuc or kljuc in UVODNE_RIJECI:
                 continue
             out.add((kljuc, (god + sufiks).lower()))
+            # Kvar 76: institucionalni autor od više riječi („Notes from Poland")
+            # u popisu daje ključ prve riječi (`notes`), a u tekstu je uvodna
+            # riječ preskočena pa je ključ bio `poland`. Ista jedinica, dva
+            # ključa, pa i lažno siroče i lažni citat bez reference. Za višečlano
+            # ime dodaje se i ključ PRVE riječi, bez preskakanja.
+            # Zakrpa za kvar 76 najprije je dodavala SVAKI sirovi ključ, pa je
+            # „Prema Marković (2021)" opet davalo ključ `prema` — kvar 70 u novom
+            # obliku. Sirovi ključ se dodaje samo ako prva riječ NIJE uvodna,
+            # dakle samo za institucionalna imena („Notes from Poland").
+            sirovi = kljuc_prezimena(imena)
+            if sirovi and sirovi != kljuc and sirovi not in UVODNE_RIJECI:
+                out.add((sirovi, (god + sufiks).lower()))
     return out
 
 
@@ -345,6 +391,14 @@ def parse_ay_segment(seg):
     # su dvije funkcije istog alata davale različite ključeve za isti citat.
     # Lokator stranice iza godine ("Becker, 2007: 45") ovdje se prepoznaje i
     # odbacuje: on je oznaka mjesta u izvoru, ne dio identiteta.
+    # Kvar 95: hrvatski izvor prikaza redovito glasi „(autorski sažetak prema:
+    # Podobnik, 2026)" ili „(autorska analiza prema: Porter, 2008)". Uzorak je
+    # skidao samo golo „prema" na početku, pa je ključ ispadao „autorski" i
+    # svaki takav izvor prijavljivan kao citat bez reference.
+    seg = re.sub(r"^.{0,60}?\bprema\s*:\s*", "", seg.strip(), flags=re.IGNORECASE)
+    seg = re.sub(r"^(?:izvor|izrada|obrada|prilagođeno|prilagodeno|autorski|autorska|"
+                 r"autorsko|vlastita|vlastiti)\b[^:]{0,40}:\s*", "", seg,
+                 flags=re.IGNORECASE)
     seg = re.sub(r"^(?:usp\.|vidi|vidjeti|prema|cf\.)\s+", "", seg.strip(),
                  flags=re.IGNORECASE)
     m = re.match(r"\s*(.+?),\s*(\d{4})\.?([a-z]?)" + LOKATOR +
@@ -366,6 +420,42 @@ def parse_ay_citation_group(inner):
         if k:
             keys.add(k)
     return keys
+
+
+# Kvar 91 (nađen na pravnom fixtureu): rad koji citira U FUSNOTAMA nema u tijelu
+# ni [N] ni (N) ni (Prezime, godina), pa je detektor vraćao „unknown", a onda je
+# generate_report svejedno puštao autor-godina provjeru. Ona je svaku jedinicu iz
+# popisa proglasila SIROČETOM, jer citata u tijelu doista nema. Na pravnom radu s
+# 12 fusnota to je 100 % lažnih kritičnih nalaza.
+#
+# Fusnotni citat prepoznaje se po vlastitom rječniku: ibid., op. cit., nav. dj.,
+# loc. cit., supra, „bilj.", te po tome što jedinice stoje u fusnotama, ne u tekstu.
+FOOTNOTE_CITE_RE = re.compile(
+    r"(?i)\b(ibid\.?|op\.\s*cit\.?|nav\.\s*dj\.?|loc\.\s*cit\.?|cf\.|usp\.|"
+    r"vidi\s+supra|supra\s*,?\s*bilj|bilj\.\s*\d+|infra\b|str\.\s*\d+)")
+
+
+def detect_footnote_citing(footnote_text: str, body_text: str) -> bool:
+    """Citira li rad u fusnotama, a ne u tijelu.
+
+    Traži se dvoje istodobno: fusnote nose oznake fusnotnog aparata (ibid.,
+    op. cit., str. N), a tijelo NEMA vlastitih oznaka citata. Jedno bez drugoga
+    nije dovoljno: rad s autor-godina citiranjem smije imati i pokoju fusnotu.
+    """
+    if not footnote_text or len(footnote_text.strip()) < 40:
+        return False
+    aparat = len(FOOTNOTE_CITE_RE.findall(footnote_text))
+    if aparat < 2:
+        return False
+    # Narativni citat („Prema Marković (2021)") mora se brojati jednako kao
+    # zagradni: prvi test ove funkcije pao je upravo zato što ga nije brojala,
+    # pa je rad s tri autor-godina citata u tijelu izgledao kao fusnotni.
+    u_tijelu = (len(IEEE_CITE_RE.findall(body_text))
+                + len(find_vancouver_citations(body_text))
+                + sum(len(parse_ay_citation_group(m))
+                      for m in CITE_AY_RE.findall(body_text))
+                + len(parse_ay_narrative(body_text)))
+    return u_tijelu <= 1
 
 
 def detect_citation_style(text):

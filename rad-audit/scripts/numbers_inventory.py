@@ -89,18 +89,65 @@ def main(path, domain_override=None):
             if k in sl:
                 for m in unit_re.finditer(s):
                     kw_vals[k][m.group(2)].add(m.group(1))
-    conflicts = []
+    # Kvar 92 (nađen na stvarnom empirijskom radu, HKS, 173 Vancouver citata):
+    # ovaj je detektor na radu s postocima proizvodio 11 „sukoba", svaki s 12 do
+    # 30 vrijednosti, a ključevi su bili funkcijske riječi: „samo + %: 12,6, 13,8,
+    # 15,9, 18, …", „odnosno + %", „naspram + %", „godina + %". Ni jedan nije bio
+    # nalaz. U empirijskom radu postoci se PO DEFINICIJI razlikuju; skup od
+    # dvadeset vrijednosti nije proturječje nego raspodjela.
+    #
+    # Tri ograde, sve tri nužne:
+    #   1. ključ ne smije biti funkcijska riječ (ona stoji uz svaki broj),
+    #   2. skup od više od tri vrijednosti je raspodjela, ne sukob,
+    #   3. ključ mora biti dovoljno dug da bude pojam, ne veznik.
+    NIJE_POJAM = {
+        "samo", "odnosno", "naspram", "dakle", "ukupno", "također", "takoder",
+        "godina", "godine", "godini", "cjelina", "cjelini", "dok", "već", "vec",
+        "više", "vise", "manje", "oko", "gotovo", "približno", "priblizno",
+        "prosječno", "prosjecno", "otprilike", "barem", "najmanje", "najviše",
+        "najvise", "svega", "tek", "čak", "cak", "iznad", "ispod", "između",
+        "izmedu", "prema", "unutar", "putem", "pomoću", "pomocu",
+    }
+    NAJVISE_VRIJEDNOSTI = 3
+
+    # Kvar 96: „Čelik S355 zbog toga nije krući od čelika S235" nosi obje
+    # vrijednosti u ISTOJ rečenici, dakle razlika je izrečena. Isto vrijedi za
+    # visinu na strehi i na sljemenu. Pitanje „je li razlika deklarirana" ima
+    # odgovor u samom tekstu, pa se ne postavlja.
+    recenice_svih = sentences(text)
+
+    def _izrecena(vrijednosti):
+        for r in recenice_svih:
+            if all(v in r for v in vrijednosti):
+                return True
+        return False
+
+    conflicts, raspodjele, izrecene = [], 0, 0
     for k, units in sorted(kw_vals.items()):
+        if k.lower() in NIJE_POJAM or len(k) < 4 or k.isdigit():
+            continue
         for u, vals in sorted(units.items()):
-            if len(vals) >= 2:
-                vv = sorted(vals, key=lambda x: float(x.replace(",", ".")))
-                conflicts.append((k, u, vv))
-    print("\nKandidati za sukob (isti pojam, više vrijednosti iste jedinice):")
+            if len(vals) < 2:
+                continue
+            vv = sorted(vals, key=lambda x: float(x.replace(",", ".")))
+            if len(vv) > NAJVISE_VRIJEDNOSTI:
+                raspodjele += 1
+                continue
+            if _izrecena(vv):
+                izrecene += 1
+                continue
+            conflicts.append((k, u, vv))
+    print("\nKandidati za sukob (isti pojam, dvije ili tri vrijednosti iste jedinice):")
     if conflicts:
         for k, u, vv in conflicts:
             print(f"  ⚠ '{k}' + {u}: {', '.join(vv)}  — provjeri je li razlika deklarirana u radu")
     else:
         print("  nema")
+    if raspodjele:
+        print(f"  ({raspodjele} pojmova ima više od {NAJVISE_VRIJEDNOSTI} vrijednosti — "
+              f"to je raspodjela, ne sukob, i ne prijavljuje se)")
+    if izrecene:
+        print(f"  ({izrecene} razlika izrečeno je u istoj rečenici — deklarirano)")
 
     # Kvar 65: zbroj_kategorija() i uzorak_nalazi() bile su definirane ISPOD
     # bloka `if __name__ == "__main__"`, pa ih ni main() ni generate_report
@@ -175,7 +222,10 @@ def zbroj_kategorija(recenice: list[str], tolerancija: int = 0) -> list[dict]:
             continue
         for izostavi in range(-1, len(ostali)):
             skup = [b for i, b in enumerate(ostali) if i != izostavi]
-            if abs(sum(skup) - ukupno) <= tolerancija and len(skup) >= 3:
+            # Kvar 89: bez donjeg praga uzorak je „ukupno 3 = 1 + 1 + 0 + 1"
+            # proglašavao skupom kategorija. Male brojke se zbrajaju slučajno.
+            if (abs(sum(skup) - ukupno) <= tolerancija and len(skup) >= 3
+                    and ukupno >= 20 and all(b > 0 for b in skup)):
                 uputnica = bool(_re.search(r"\([^)]*\d{4}[^)]*\)", r))
                 nalazi.append({
                     "vrsta": "ZBROJ_KATEGORIJA",
@@ -211,6 +261,26 @@ def _osnova(rijec: str) -> str:
     return r
 
 
+# Kvar 88 (nađen na drugom stvarnom radu): prva izvedba je hvatala SVAKI broj uz
+# imenicu, pa je u empirijskom radu s tablicama podskupina prijavljivala
+# „ispitan: 11, 27, 45, 114, 127, 129" — dakle veličine podskupina, koje se
+# legitimno razlikuju. Provjera koja u radu s tablicama uvijek opali je šum.
+#
+# Traži se samo ono što je i bila namjera: proturječna veličina UKUPNOG uzorka.
+# Zato broj mora stajati u okviru koji govori o cjelini, a rečenica ne smije
+# nositi oznaku podskupine.
+OKVIR_UKUPNO = _re.compile(
+    r"(?i)\b(?:ukupno|sveukupno|u\s+analizu\s+je\s+u[šs]lo|analizom\s+je\s+obuhva[ćc]en\w*"
+    r"|obuhva[ćc]en\w*\s+je|obuhvatil\w+|sudjeloval\w+\s+je|sudjelovalo"
+    r"|uzork\w+\s+(?:od|je\s+[čc]inil\w+)|ispunil\w+\s+je|odazval\w+\s+se"
+    r"|kona[čc]n\w+\s+uzor\w+|N\s*=)\W{0,20}$")
+
+OZNAKA_PODSKUPINE = _re.compile(
+    r"(?i)(od\s+toga|njih\b|%|posto\b|skupin\w+|kategorij\w+|podskupin\w+"
+    r"|me[đd]u\s+|prema\s+(?:spolu|dobi|godini|studij\w+)|tablic\w+|slik\w+"
+    r"|redak|stupac|u\s+dobi|starij\w+|mla[đd]\w+)")
+
+
 def uzorak_nalazi(recenice):
     """Isti pojam, dvije različite veličine: „obuhvatilo je 147 ispitanika" i
     „u uzorku je bilo 152 ispitanika".
@@ -223,7 +293,12 @@ def uzorak_nalazi(recenice):
     uzorak = _re.compile(
         r"(?<![\w.,])(\d{1,6})\s+([A-Za-zČĆŽŠĐčćžšđ]{4,})", _re.UNICODE)
     for r in recenice:
-        for broj, rijec in uzorak.findall(r):
+        if OZNAKA_PODSKUPINE.search(r):
+            continue                      # rečenica opisuje dio, ne cjelinu
+        for m in uzorak.finditer(r):
+            broj, rijec = m.group(1), m.group(2)
+            if not OKVIR_UKUPNO.search(r[:m.start()]):
+                continue                  # broj ne stoji u okviru ukupnog uzorka
             osn = _osnova(rijec)
             if not any(osn.startswith(_osnova(i)[:5]) for i in IMENICE_UZORKA):
                 continue

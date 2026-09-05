@@ -30,7 +30,7 @@ import check_citations_authoryear
 import check_typography
 import check_repetition
 import numbers_inventory
-from common import load_docx_text, detect_citation_style
+from common import load_docx_text, load_supplementary_text, detect_citation_style
 
 CRITICAL_HINTS = [
     # Kvar 61: iznimka u modulu upisivala se kao "[greška u modulu: ...]" BEZ
@@ -100,19 +100,41 @@ def main(argv):
     body, cells, _ = load_docx_text(path, include_tables=True)
     style, style_counts = detect_citation_style(body + "\n" + "\n".join(cells))
     style_note = f"[detektiran stil citiranja: {style} {style_counts}]"
+
+    # Kvar 91: rad koji citira u fusnotama (pravni, dio humanistike) nema oznaka
+    # citata u tijelu, pa je autor-godina provjera svaku jedinicu iz popisa
+    # proglašavala siročetom. Za takav rad citatni aparat provjerava
+    # katedra-lite/provjeri_fusnote.py, ne ovaj sloj.
+    from common import detect_footnote_citing
+    sup_all = load_supplementary_text(path)
+    fusnotni = detect_footnote_citing(sup_all.get("footnotes", ""),
+                                      body + "\n" + "\n".join(cells))
+    if fusnotni:
+        phases.append((
+            "B — Citiranje (fusnotni aparat)",
+            "[rad citira U FUSNOTAMA: ibid./op. cit./nav. dj./str. N, a tijelo nema "
+            "vlastitih oznaka citata]\n"
+            "Provjera citata autor-godina i [N] NIJE pokrenuta: nad ovakvim radom ona "
+            "svaku jedinicu iz popisa prijavljuje kao siroče, što je lažni nalaz.\n"
+            "Citatni aparat ovoga rada provjerava se posebno:\n"
+            "  python3 <katedra-lite>/scripts/provjeri_fusnote.py rad.docx\n"
+            "  (ibid. bez prethodnika, skraćeni oblik bez punog, numeracija, "
+            "supra/infra uputnice)\n"
+            "Popis literature i dalje prolazi provjeru oblika jedinice i postojanja.",
+            0))
     # ISTA logika kao audit_all.py — za "mixed" se pokreću OBA checkera + upozorenje
     # (raniji drift: generate_report je za mixed preskakao IEEE provjeru, pa je alat
     # za finalnu isporuku prijavljivao manje nego terminal-ispis)
-    if style in ("ieee", "unknown", "mixed"):
+    if not fusnotni and style in ("ieee", "unknown", "mixed"):
         txt, code = run_captured(check_citations.main, path, "ieee")
         phases.append(("B — Citiranje (IEEE [N])", style_note + "\n" + txt, code))
-    if style == "vancouver" or (style in ("unknown", "mixed") and style_counts.get("vancouver", 0)):
+    if not fusnotni and style == "vancouver" or (style in ("unknown", "mixed") and style_counts.get("vancouver", 0)):
         txt, code = run_captured(check_citations.main, path, "vancouver")
         phases.append(("B — Citiranje (Vancouver (N))", style_note + "\n" + txt, code))
-    if style in ("authoryear", "unknown", "mixed"):
+    if not fusnotni and style in ("authoryear", "unknown", "mixed"):
         txt, code = run_captured(check_citations_authoryear.main, path)
         phases.append(("B — Citiranje (autor-godina)", style_note + "\n" + txt, code))
-    if style == "mixed":
+    if style == "mixed" and not fusnotni:
         phases.append(("B — Napomena o stilu",
                        "⚠ oba stila citiranja detektirana u sličnoj mjeri — provjeri ručno koristi li "
                        "rad dosljedno JEDAN stil ili je miješanje namjerno (npr. norme u uglatim "

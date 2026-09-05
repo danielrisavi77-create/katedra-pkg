@@ -114,7 +114,31 @@ def _sirina_teksta_cm(d):
         return None
 
 
-def analiziraj(put):
+
+def _rub_odrezan(im, prag_piksela=3, tolerancija=240):
+    """Ne-bijeli pikseli koji dodiruju rub platna: sadržaj je vjerojatno odrezan.
+
+    Kvar 103 (audit Znahor, B1): grafikon iz matplotliba odsijeca sadržaj TIHO —
+    bez upozorenja, bez iznimke, bez traga u datoteci. Na stvarnom radu je
+    legenda „zeleno: unutar sigurnog prostora" izašla iz platna i u dokumentu je
+    pisalo „zeleno: unutar sigurnog pros". Rad je prošao provjeri_prikaze.py,
+    gate --faza audit, sve faze rad-audita i provjeri_predaju.py: **nijedan alat
+    to nije vidio**, jer svi mjere sliku kao pravokutnik (dpi, širina, omjer,
+    skala), a nijedan ne gleda što je U NJOJ. Nađeno je okom, slučajno.
+
+    Vraća {rub: broj piksela}; prazan dict znači čisto.
+    """
+    import numpy as np
+    a = np.asarray(im.convert("RGB"))
+    if a.ndim != 3 or min(a.shape[:2]) < 3:
+        return {}
+    ne_bijelo = a.sum(axis=2) < tolerancija * 3
+    rubovi = {"lijevo": ne_bijelo[:, 0].sum(), "desno": ne_bijelo[:, -1].sum(),
+              "gore": ne_bijelo[0, :].sum(), "dolje": ne_bijelo[-1, :].sum()}
+    return {k: int(v) for k, v in rubovi.items() if v >= prag_piksela}
+
+
+def analiziraj(put, dopusti_rub=False):
     from PIL import Image
     d, slike = _slike(put)
     sirina_teksta = _sirina_teksta_cm(d)
@@ -201,6 +225,23 @@ def analiziraj(put):
             r["nalazi"].append((PRESKOK, "PNG nema zapisan dpi, pa se skaliranje i "
                                          "veličina pisma ne mogu izračunati — izvezi s "
                                          "`savefig(..., dpi=…)` da bi ovo bilo mjerljivo"))
+
+        # nalaz 6: sadržaj odrezan rubom platna
+        try:
+            odrezano = _rub_odrezan(im)
+        except Exception as e:  # noqa: BLE001
+            odrezano = {}
+            r["nalazi"].append((PRESKOK, f"rub platna nije izmjeren: {e}"))
+        r["rub"] = odrezano
+        if odrezano:
+            gdje = ", ".join(f"{k} ({v} px)" for k, v in odrezano.items())
+            stanje = PRESKOK if dopusti_rub else LOSE
+            r["nalazi"].append((stanje,
+                                f"sadržaj dodiruje rub platna: {gdje} — tekst ili crtež "
+                                f"je vjerojatno odrezan. Provjeri bbox_inches='tight' "
+                                f"ili subplots_adjust." +
+                                (" (--dopusti-rub: prijavljeno kao granica)"
+                                 if dopusti_rub else "")))
         redci.append(r)
 
     return {"sirina_teksta_cm": round(sirina_teksta, 2) if sirina_teksta else None,
@@ -236,6 +277,10 @@ def main(argv=None) -> int:
         description="Slike i grafikoni: rezolucija, širina, omjer, veličina pisma.")
     ap.add_argument("rad", help=".docx")
     ap.add_argument("--json", dest="kao_json", metavar="PUT")
+    ap.add_argument("--dopusti-rub", dest="dopusti_rub", action="store_true",
+                    help="grafikon s namjernim punim ispunom preko cijelog platna "
+                         "(heatmap, fotografija) pali provjeru ruba uvijek; ovime "
+                         "ostaje deklarirana granica umjesto greške")
     args = ap.parse_args(argv)
 
     if not os.path.exists(args.rad):
@@ -245,7 +290,7 @@ def main(argv=None) -> int:
         print("❌ očekuje se .docx", file=sys.stderr)
         return 2
     try:
-        r = analiziraj(args.rad)
+        r = analiziraj(args.rad, args.dopusti_rub)
     except ImportError as e:
         print(f"❌ nedostaje knjižnica: {e} (treba Pillow)", file=sys.stderr)
         return 2

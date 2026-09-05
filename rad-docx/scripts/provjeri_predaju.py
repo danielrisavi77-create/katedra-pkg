@@ -90,6 +90,12 @@ class Provjera:
         # nigdje nije postojao u obliku koji se dade pročitati.
         self.zadatak = None
 
+        # B3: činjenice koje nisu ni greška ni upozorenje, ali moraju biti
+        # ispisane (težina paketa), inače se o njima ne odlučuje.
+        self.cinjenice = []
+
+    def redak(self, x): self.cinjenice.append(x)
+
     def g(self, x): self.greske.append(x)
     def u(self, x): self.upozorenja.append(x)
     def o(self, x): self.ogranicenja.append(x)
@@ -334,7 +340,22 @@ def provjeri_format(P, docx_put, d, profil):
         if pravila and pravila != "None" \
                 and "AUTO" not in pravila.upper() and "POINT" not in pravila.upper() \
                 and "MULTIPLE" not in pravila.upper():
-            P.g(f"prored je fiksan ({pravila}) — inline slike se obrežu na visinu retka")
+            # Kvar 101 (audit Znahor, A6): pravilo je čitano iz PREVLADAVAJUĆEG
+            # odlomka (praktički stila Normal), a posljedica koju opisuje pogađa
+            # samo odlomke koji NOSE inline sliku. Na radu bez ijedne inline
+            # slike u fiksno prorezanom odlomku nalaz se nije dao ugasiti.
+            from docx.oxml.ns import qn as _qn
+            sa_slikom = [p for p in odlomci
+                         if p._p.findall(".//" + _qn("w:drawing"))]
+            pogodeni = [p for p in sa_slikom
+                        if p.paragraph_format.line_spacing_rule is not None
+                        and "EXACT" in str(p.paragraph_format.line_spacing_rule).upper()]
+            if pogodeni:
+                P.g(f"prored je fiksan ({pravila}) u {len(pogodeni)} odlomaka sa "
+                    f"slikom — te se slike obrežu na visinu retka")
+            elif sa_slikom:
+                P.u(f"prored je fiksan ({pravila}), ali nijedan od {len(sa_slikom)} "
+                    f"odlomaka sa slikom nije zahvaćen")
 
     # ── font i veličina: prvo runovi tijela, pa stil, pa docDefaults ──
     fontovi = fmt.get("font") or []
@@ -388,6 +409,33 @@ def provjeri_polja(P, docx_put, dxml):
 
 
 # ── E. numeracija ────────────────────────────────────────────────────────────
+def provjeri_tezinu(P, put):
+    """B2 i B3 iz audita Znahor: težina paketa, udio medija i mrtvi dijelovi.
+
+    Predaja nije samo „je li rad ispravan" nego i „može li fizički otići":
+    rad od 1,5 MB ne prolazi kroz alat za e-poštu jer se privitak predaje kao
+    base64 unutar poziva. Mrtvi medijski dijelovi uz to nose STARU verziju
+    grafikona, dostupnu svakome tko raspakira .docx.
+    """
+    try:
+        from inventar_paketa import mrtvi_mediji, tezina
+    except ImportError:
+        P.o("inventar_paketa nije dostupan — težina paketa nije izmjerena")
+        return
+    t = tezina(put)
+    mrtvi = mrtvi_mediji(put)
+    mb = lambda b: f"{b / 1048576:.2f} MB".replace(".", ",")  # noqa: E731
+    P.redak(f"težina: {mb(t['paket_bajtova'])} "
+            f"(medij {mb(t['medij_bajtova'])}, od toga mrtvo {mb(t['mrtvo_bajtova'])})")
+    if mrtvi:
+        P.g(f"{len(mrtvi)} mrtvih medijskih dijelova ({mb(t['mrtvo_bajtova'])}) — "
+            f"stare slike koje dokument više ne prikazuje, ali ih paket i dalje nosi "
+            f"i svatko ih može izvaditi. Očisti: priprema_slanja.py")
+    if t["paket_bajtova"] > 1_048_576:
+        P.u(f"paket je {mb(t['paket_bajtova'])} — kroz alate za e-poštu obično ne "
+            f"prolazi. Verzija za slanje: priprema_slanja.py rad.docx --izlaz …")
+
+
 def provjeri_numeraciju(P, dxml, profil):
     sekcije = re.findall(r"<w:sectPr.*?</w:sectPr>", dxml, re.S)
     trazeno = ((profil or {}).get("format", {}).get("numeracija") or {})
@@ -398,13 +446,33 @@ def provjeri_numeraciju(P, dxml, profil):
         else:
             P.o("dokument ima jednu sekciju — numeracija po sekcijama nije provjerena")
         return
-    prednji, tijelo = sekcije[0], sekcije[-1]
+    # Kvar 100 (audit Znahor, A6): tijelo se uzimalo kao sekcije[-1], dakle
+    # POSLJEDNJA sekcija dokumenta. U radu s 12 sekcija posljednja je prilog ili
+    # životopis, a ne ono u čemu numeracija kreće, pa su „numeracija tijela ne
+    # počinje od 1" i „tijelo nema podnožje" bili neugasivi lažni nalazi: koliko
+    # god autor ispravljao, provjera je gledala krivu sekciju.
+    # Numeracija tijela je ondje gdje se RESTARTA, u bilo kojoj sekciji.
+    prednji = sekcije[0]
     if trazeno.get("prednji_dio") == "bez" and "footerReference" in prednji:
         P.g("prednji dio ima podnožje, a profil traži da nije numeriran")
-    if pocetak and f'w:pgNumType w:start="{pocetak}"' not in tijelo:
-        P.g(f"numeracija tijela ne počinje od {pocetak}")
+
+    if pocetak:
+        gdje = [i for i, sek in enumerate(sekcije)
+                if f'w:pgNumType w:start="{pocetak}"' in sek]
+        if not gdje:
+            P.g(f"nijedna sekcija ne započinje numeraciju od {pocetak} "
+                f"(dokument ima {len(sekcije)} sekcija)")
+            tijelo = sekcije[-1]
+        else:
+            tijelo = sekcije[gdje[0]]
+            if len(gdje) > 1:
+                P.u(f"numeracija se restarta na {pocetak} u {len(gdje)} sekcija — "
+                    f"provjeri je li to namjerno")
+    else:
+        tijelo = sekcije[-1]
+
     if "footerReference" not in tijelo:
-        P.g("tijelo rada nema podnožje s brojem stranice")
+        P.g("sekcija u kojoj kreće numeracija nema podnožje s brojem stranice")
 
 
 # ── F. prikazi ───────────────────────────────────────────────────────────────
@@ -440,6 +508,40 @@ def provjeri_prikaze(P, d, prelomi_put):
         if not any(not isinstance(x, Table) and x.text.strip().lower().startswith("izvor")
                    for x in rep):
             P.g(f"prikaz bez retka „Izvor:" f"” ispod sebe: {el.text.strip()[:50]}")
+
+    # Kvar 86: nitko nije uspoređivao broj natpisa u TIJELU s brojem redaka u
+    # POPISU prikaza, ni provjeravao je li numeracija po vrsti neprekinuta.
+    # Rad je išao u predaju s osam tablica i šest redaka u popisu, ili s
+    # „Tablica 1, 2, 2, 4", jer SEQ polje razliku maskira dok se ne osvježi.
+    po_vrsti, u_popisu = {}, {}
+    u_popisnom_dijelu = False
+    for el in elementi:
+        if isinstance(el, Table):
+            continue
+        t = el.text.strip()
+        if re.match(r"(?i)^popis\s+(tablica|grafikona|slika|prikaza)", t):
+            u_popisnom_dijelu = True
+            continue
+        if re.match(r"(?i)^(literatura|prilo(g|zi)|sa[žz]etak|summary)\b", t):
+            u_popisnom_dijelu = False
+        m = NATPIS.match(t)
+        if not m:
+            continue
+        vrsta, broj = m.group(1), int(m.group(2))
+        (u_popisu if u_popisnom_dijelu else po_vrsti).setdefault(vrsta, []).append(broj)
+
+    for vrsta, brojevi in sorted(po_vrsti.items()):
+        ocekivano = list(range(1, len(brojevi) + 1))
+        if sorted(brojevi) != ocekivano:
+            P.g(f"numeracija „{vrsta}” nije neprekinuta: {brojevi} "
+                f"(očekivano {ocekivano}) — rupa ili ponovljen broj")
+        n_popis = len(u_popisu.get(vrsta, []))
+        if n_popis and n_popis != len(brojevi):
+            P.g(f"popis prikaza ne odgovara tijelu: „{vrsta}” u tijelu "
+                f"{len(brojevi)}, u popisu {n_popis}")
+        elif not n_popis and brojevi:
+            P.o(f"„{vrsta}”: {len(brojevi)} u tijelu, popis prikaza nije nađen "
+                f"ili je prazan — provjeri Update Field")
 
     if os.path.exists(prelomi_put or ""):
         try:
@@ -505,6 +607,7 @@ def main():
     provjeri_format(P, a.docx, d, profil)
     n_zab, n_ref = provjeri_polja(P, a.docx, dxml)
     provjeri_numeraciju(P, dxml, profil)
+    provjeri_tezinu(P, a.docx)
     natpisa = provjeri_prikaze(P, d, a.prelomi)
     provjeri_slike(P, dxml, grafikoni)
     provjeri_placeholdere(P, sve)
@@ -512,6 +615,8 @@ def main():
     print("=" * 74)
     print("PROVJERA PRED PREDAJU —", os.path.basename(a.docx))
     print("=" * 74)
+    for redak in P.cinjenice:
+        print(redak)
     print(f"odlomaka: {len(d.paragraphs)} · tablica: {len(d.tables)} · "
           f"slika: {len(d.inline_shapes)} · prikaza s natpisom: {natpisa}")
     print(f"zabilješki: {n_zab} · unakrsnih referenci: {n_ref}")

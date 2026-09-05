@@ -225,6 +225,9 @@ def main():
     ap.add_argument("--igla-sadrzaja", default=",".join(NAVIGACIJA),
                     help="zarezom odvojene igle navigacijskih stranica (ne razlikuje "
                          "velika i mala slova)")
+    ap.add_argument("--dopusti-nenadene", action="store_true",
+                    help="prikaz bez para natpis/izvor u PDF-u ne obara mjerenje; "
+                         "svjestan izuzetak, upisuje se u projekt")
     ap.add_argument("--dopusti-rasap", action="store_true",
                     help="ne padaj kad su naslovi stisnuti na mali dio dokumenta "
                          "(samo za rad koji to stvarno jest)")
@@ -281,6 +284,20 @@ def main():
                           "nenadeni": nenadeni, "nenadeni_naslovi": nenadeni_naslovi,
                           "natpisi": natpisi, "rasap": rasap},
                          ensure_ascii=False, indent=1))
+        # Kvar 81: nenađen BLOK (prikaz kojemu natpis ili „Izvor:" nije nađen u
+        # PDF-u) ispisivao se u JSON i to je bilo sve. Takav prikaz ispada i iz
+        # prelomi.json (pa se lomi preko dvije stranice) i iz natpisi.json (pa
+        # nema retka u popisu prikaza), a gradi.py javi „✅ stabilno".
+        # Fiksna točka izračunata nad nepotpunim skupom nije fiksna točka.
+        if nenadeni and not a.dopusti_nenadene:
+            print(f"❌ blokova bez para natpis/izvor u PDF-u: {len(nenadeni)}",
+                  file=sys.stderr)
+            for t in nenadeni:
+                print(f"   · {t}", file=sys.stderr)
+            print("   Takav prikaz nema prisilni prijelom ni redak u popisu prikaza.",
+                  file=sys.stderr)
+            print("   Ako je to namjerno: --dopusti-nenadene", file=sys.stderr)
+            sys.exit(1)
         if nenadeni_naslovi:
             print(f"❌ naslova koje ne nalazim u PDF-u: {len(nenadeni_naslovi)}",
                   file=sys.stderr)
@@ -311,8 +328,9 @@ def main():
     elif a.blokovi:
         print("\n✅ nijedan prikaz se ne lomi preko stranica")
     if nenadeni:
-        print(f"\n⚠️  bez para natpis/izvor u PDF-u: {', '.join(nenadeni)}")
-    if nenadeni_naslovi:
+        print(f"\n❌ bez para natpis/izvor u PDF-u: {', '.join(nenadeni)}")
+        print("   Takav prikaz se ne lomi kontrolirano i nema retka u popisu prikaza.")
+    if nenadeni_naslovi or (nenadeni and not a.dopusti_nenadene):
         sys.exit(1)
 
 
