@@ -1849,7 +1849,66 @@ if __name__ == "__main__":
         check(f"R36: placeholder {tekst} \u2192 {treba}",
               bool(_re.search(uz, tekst)) == treba, tekst)
 
-## 106. `kvar.py` je poznavao samo jedan broj po unosu, pa je grupirani unos bio ili nevidljiv ili lažni preskok
+## 106–107. zatvaranje popisa iz prve dijagnoze
+U prvoj dijagnozi ovoga ciklusa (nalaz 6) stajalo je da `parafraza.py`,
+`propagacija.py` i `brojke_iz_rasprave.py` postoje i rade, ali nisu ožičeni ni u
+jedan agregat. To je ostalo otvoreno kroz cijeli ciklus, unatoč tome što je bilo
+zapisano. Zatvoreno je tek kad je postavljeno pitanje „jesmo li pokrili sve".
+
+* `brojke_iz_rasprave` → faza **C2** u `generate_report` i `audit_all`.
+* `propagacija` i `parafraza` **ostaju izvan audita namjerno**: prva traži
+  rukopis i generator, druga dvije verzije istoga teksta. To nisu ulazi koje
+  audit gotova .docx-a ima, pa bi ožičenje značilo lažnu fazu koja uvijek
+  preskače. Zovu se iz moda 3 (poboljšanje), gdje ti ulazi postoje.
+
+**106 — nova provjera F2, `check_uputnice.py`.** Lanac je provjeravao da svaki
+prikaz ima natpis, da je numeracija neprekinuta i da popis prikaza odgovara
+tijelu. Obrnuti smjer nije provjeravao nitko: da rečenica „prikazano je u
+Tablici 3" pogađa tablicu koja postoji, i da svaki prikaz bude bar jednom uveden
+rečenicom.
+
+Na dva stvarna rada odmah je našla nespomenute prikaze (Grafikon 1 i Tablica 3 u
+radu iz političke ekonomije).
+
+Prva izvedba je pritom **sama proizvela lažni nalaz**: uzorak `Slik\w*` ne hvata
+lokativ `Slici`, jer hrvatska sibilarizacija mijenja k u c. Rad je uredno pisao
+„prikazana je na Slici 3", a alat je prijavio da se Slika 3 nigdje ne spominje.
+Ispravljeno u `Sli[kc]\w*`.
+
+**107 — kod 3 je granica, kod 2 je pad.** `brojke_iz_rasprave` vraćao je 2 kad
+rad nema poglavlje „Rasprava". Po pravilu iz kvara 61 `generate_report` svaki kod
+≥ 2 svrstava u KRITIČNO „faza nije izvedena", pa su **četiri od šest stvarnih
+radova** dobila lažni kritični nalaz čim je faza C2 ožičena. Teorijski, pravni i
+pregledni rad nemaju zasebnu Raspravu i to nije kvar nego njihova struktura.
+Sada: kod 3 = deklarirana granica (srednje), kod 2 i više = pad alata (kritično).
+
+**Ograda:** R37, šest tvrdnji, uključujući palatalizaciju i razliku koda 3 od 2.
+
+---
+
+## Što lanac i dalje NE provjerava
+
+Popis je kratak namjerno: sve u njemu je provjereno da doista nedostaje, i ništa
+se ne tvrdi da je pokriveno „otprilike".
+
+1. **Argument i logika.** Slijedi li zaključak iz rezultata; odgovara li rad na
+   postavljene hipoteze; proturječi li Rasprava Rezultatima. `check_argument.py`
+   je savjetodavan i plitak. Ovo je jedina preostala kategorija koju mentor
+   stvarno ocjenjuje, i jedina za koju alat vjerojatno nije pravi oblik.
+2. **Hrvatska gramatika iznad razine pravopisa.** Slaganje roda i broja preko
+   rečenice, zamjenica bez imenice, prazna vezna sredstva. Audit Znahor je našao
+   četiri takva kvara koje je proizveo sam stilski zahvat, i nijedan alat ih ne
+   vidi (v. `stil_pipeline.md`).
+3. **Aritmetika unutar tablice.** Zbroj stupca, N po podskupinama naspram
+   ukupnoga, postoci koji daju 100 unutar jedne tablice.
+4. **Statističko izvještavanje.** Naziv testa, stupnjevi slobode, veličina
+   učinka, i slaže li se opis („značajno") s prijavljenim p.
+5. **Registry admission** za `mefri-sanitarno` (blokiran zastarjelim hashom,
+   namjerno se ne zaobilazi).
+6. **Mršavljenje routera** (SKILL.md 550+ redaka), jedina promjena bez ograde
+   koja bi je uhvatila.
+
+## 108. `kvar.py` je poznavao samo jedan broj po unosu, pa je grupirani unos bio ili nevidljiv ili lažni preskok
 
 Zakrpa v1.9.5 upisala je četiri unosa koji svaki pokrivaju tri do četiri kvara, jer su to
 klase s istim popravkom i jednim mjerenjem (`61–63` exit-code disciplina, `64–66` nove
@@ -1886,7 +1945,7 @@ Ograda: raspon koji ide unatrag (`## 66–64.`) daje tvrdi nalaz, provjereno mut
 
 ---
 
-## 107. Katalozi kvarova nisu bili u jedinom ulazu za testove, pa je suite bio zelen nad pokvarenim registrom
+## 109. Katalozi kvarova nisu bili u jedinom ulazu za testove, pa je suite bio zelen nad pokvarenim registrom
 
 `bin/testovi.sh` postoji da bi „jedan ulaz" dao „jedan izlazni kod", i pokretao je devet
 skupina: tri test suitea i šest provjera tvrdnji. `kvar.py` nije bio među njima. Mjereno na

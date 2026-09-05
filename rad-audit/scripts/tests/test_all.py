@@ -416,6 +416,64 @@ def test_stvarni_rad():
         check(f"R36: placeholder {tekst} \u2192 {treba}",
               bool(_re.search(uz, tekst)) == treba, tekst)
 
+    # 106 — uputnice na prikaze, oba smjera + palatalizacija
+    import check_uputnice as CUP
+    import tempfile as _tf2
+    import os as _os2
+    from docx import Document as _D2
+    with _tf2.TemporaryDirectory() as dd2:
+        def _rad(put, redci):
+            d = _D2()
+            d.add_heading("1. UVOD", level=1)
+            for x in redci:
+                d.add_paragraph(x)
+            d.save(put)
+            return put
+
+        r = _rad(_os2.path.join(dd2, "u1.docx"), [
+            "Raspodjela je prikazana na Slici 1.",
+            "Slika 1. Raspodjela odgovora",
+            "Izvor: autor."])
+        a = CUP.analiziraj(r)
+        check("R37: palatalizacija (na Slici 1) je uputnica na Sliku 1",
+              1 in a["uputnice"].get("Slika", []), a["uputnice"])
+        check("R37: spomenut prikaz nije nalaz", not a["nespomenuti"], a["nespomenuti"])
+
+        r = _rad(_os2.path.join(dd2, "u2.docx"), [
+            "Tekst bez ijedne uputnice.",
+            "Tablica 1. Naslov", "Izvor: autor."])
+        a = CUP.analiziraj(r)
+        check("R37: nespomenut prikaz JEST nalaz",
+              a["nespomenuti"] and a["nespomenuti"][0][0] == "Tablica", a["nespomenuti"])
+
+        r = _rad(_os2.path.join(dd2, "u3.docx"), [
+            "Podaci su u Tablici 5.",
+            "Tablica 1. Naslov", "Izvor: autor."])
+        a = CUP.analiziraj(r)
+        check("R37: uputnica na nepostoje\u0107u tablicu JEST nalaz",
+              bool(a["u_prazno"]), a["u_prazno"])
+
+        r = _rad(_os2.path.join(dd2, "u4.docx"), [
+            "Vidi Tablicu 1 i 2 za usporedbu.",
+            "Tablica 1. Prva", "Izvor: autor.",
+            "Tablica 2. Druga", "Izvor: autor."])
+        a = CUP.analiziraj(r)
+        check("R37: raspon 'Tablicu 1 i 2' hvata oba broja",
+              a["uputnice"].get("Tablica") == [1, 2], a["uputnice"])
+
+    # 107 — kod 3 je granica, ne pad
+    import brojke_iz_rasprave as BR
+    with _tf2.TemporaryDirectory() as dd3:
+        d = _D2(); d.add_heading("1. UVOD", level=1)
+        d.add_paragraph("Rad bez zasebne Rasprave.")
+        put = _os2.path.join(dd3, "bez.docx"); d.save(put)
+        import io as _io2, contextlib as _cx2
+        buf = _io2.StringIO()
+        with _cx2.redirect_stdout(buf):
+            kod = BR.main(put)
+        check("R37: rad bez Rasprave daje kod 3 (granica), ne 2 (pad)",
+              kod == 3, (kod, buf.getvalue()[-120:]))
+
     # 78 — DOI nije množenje
     n = _tipografija_nalazi(TY, "DOI: 10.1177/1023263X251338198. Dostupno na mre\u017ei.")
     check("R26: DOI s X me\u0111u znamenkama NIJE mno\u017eenje",
