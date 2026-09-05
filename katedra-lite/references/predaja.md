@@ -410,3 +410,37 @@ python3 <RAD_DOCX>/scripts/priprema_slanja.py rad.docx --izlaz rad-za-slanje.doc
 Arhivska verzija ostaje netaknuta. Poslije pripreme se **provjeri broj stranica**:
 mora biti isti kao u izvorniku.
 
+---
+
+## Metapodaci putuju s radom, a u Wordu se ne vide
+
+Do v1.9.7 nijedan alat u lancu nije pogledao `docProps/`. Izmjereno na šest
+stvarnih radova, i **nijedan nije bio čist**:
+
+| Rad | Što je nosio |
+|---|---|
+| MEDRI diplomski | `lastModifiedBy` = „Provenance Test Generator", `TotalTime` = 21 474 min (358 h), `Pages` = 1 u radu od 67 stranica |
+| PFZG seminarski | `dc:creator` = „Student", `lastModifiedBy` = „PC", `app.Company` = „HT" |
+| HKS diplomski | `[upisati vrijednost]` u gotovu tekstu, `TotalTime` = 0 |
+| TVZ završni | `dc:title` = „Uvod i teorija završnog rada – poglavlja 1–3" u gotovu radu |
+
+To su podaci koji idu u repozitorij, na provjeru podudarnosti i u mentorov inbox.
+Naziv poslodavca u studentskom seminarskom radu nema što tražiti; `dc:creator`
+koji imenuje nekoga drugoga od naslovnice je proturječje u samom dokumentu.
+
+```bash
+python3 <RAD_AUDIT>/scripts/provjeri_metapodatke.py rad.docx
+python3 <RAD_AUDIT>/scripts/provjeri_metapodatke.py rad.docx \
+    --autor "Ime Prezime" --naslov "Naslov rada" --postavi --ocisti-curenje \
+    --izlaz rad-final.docx
+```
+
+**Granica koju alat drži.** `--postavi` upisuje polja koja mu se izrijekom zadaju
+i uklanja ono što curi (naziv tvrtke, upravitelj, tuđi predložak, lokalne
+putanje). **Ne dira `w:rsid` oznake, povijest praćenih izmjena ni autore
+komentara.** Te se stavke prijavljuju da autor zna da postoje, a uklanjaju se
+prihvaćanjem izmjena (`revizije.py prihvati`), ne brisanjem tragova: alat koji bi
+ih brisao služio bi jednoj svrsi, onemogućavanju provjere podrijetla dokumenta.
+Vrijednost koja se upisuje u `dc:creator` je ona koju rad **sam navodi na
+naslovnici**, i alat prijavlja kad se to dvoje razilazi.
+

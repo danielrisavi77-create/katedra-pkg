@@ -22,6 +22,7 @@ import check_citations
 import check_citations_authoryear
 import check_fields
 import check_placeholders
+import provjeri_metapodatke
 import check_typography
 import check_repetition
 import numbers_inventory
@@ -58,6 +59,7 @@ def main(argv):
 
     run("A/F — POLJA I FORMATIRANJE", check_fields.main, path)
     run("A2 — RADNE OZNAKE U TEKSTU", check_placeholders.main, path)
+    run("A4 — METAPODACI", provjeri_metapodatke.main, [path])
 
     body, cells, _ = load_docx_text(path, include_tables=True)
     style, style_counts = detect_citation_style(body + "\n" + "\n".join(cells))

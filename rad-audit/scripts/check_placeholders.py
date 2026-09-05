@@ -28,6 +28,14 @@ UZORCI = [
     (r"\bLorem ipsum\b", "tekst ispune"),
     (r"\[NAPOMENA[^\]]*\]", "interna napomena"),
     (r"\[\s*\]", "prazna uglata zagrada"),
+    # Nađeno na stvarnom pravnom seminaru: naslovnica je i dalje nosila
+    # „[Ime i prezime]". Prva izvedba uzorka bila je preširoka („svaka uglata
+    # zagrada s riječima") i na Vancouver radu prijavila 12 lažnih nalaza, jer je
+    # „[Internet]" standardna oznaka vrste izvora u tom stilu. Zato se traži
+    # RIJEČ IZ PREDLOŠKA, ne oblik zagrade.
+    (r"\[[^\]]{0,30}\b(?i:ime|prezime|naslov rada|datum|mentor|komentor|ustanova|"
+     r"kolegij|broj indeksa|upi[šs]i|upisati|unesi|unijeti|vaše|tvoje|ovdje)"
+     r"[^\]]{0,30}\]", "nepopunjeno polje predloška"),
 ]
 
 

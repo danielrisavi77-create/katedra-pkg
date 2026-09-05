@@ -25,6 +25,7 @@ sys.path.insert(0, HERE)
 
 import check_fields
 import check_placeholders
+import provjeri_metapodatke
 import check_citations
 import check_citations_authoryear
 import check_typography
@@ -41,6 +42,11 @@ CRITICAL_HINTS = [
     "tvrdnja bez izvora", "nedovršen tekst", "radna bilješka",
     "nepotvrđen podatak", "rezervirano mjesto", "tekst ispune",
     "interna napomena", "otvoreno pitanje",
+    # metapodaci koji putuju s radom
+    "odaje alat ili radnu okolinu", "ostavljen predložak, ne ime",
+    "nema što raditi u studentskom radu", "polje iz poslovnog predloška",
+    "metapodatak i rad ne govore isto", "odaju mapu s računala",
+    "praćene izmjene ili komentari nose imena", "nepopunjeno polje predloška",
     "NEURAVNOTEŽENO", "NEPRIHVAĆENE IZMJENE", "SIROČAD", "CITAT BEZ REFERENCE",
     "NEMA U IZVORIMA", "nije nađeno u izvorima", "BEZ vidljive oznake citata",
     "documentProtection: ⚠ DA", "permStart", "rupe u numeraciji",
@@ -96,6 +102,11 @@ def main(argv):
     # prolazio je do predane verzije.
     txt, code = run_captured(check_placeholders.main, path)
     phases.append(("A2 — Radne oznake u tekstu", txt, code))
+
+    # Faza A4: metapodaci putuju s dokumentom u repozitorij i na provjeru
+    # podudarnosti, a nitko ih u Wordu ne vidi dok ne otvori Datoteka → Podaci.
+    txt, code = run_captured(provjeri_metapodatke.main, [path])
+    phases.append(("A4 — Metapodaci", txt, code))
 
     body, cells, _ = load_docx_text(path, include_tables=True)
     style, style_counts = detect_citation_style(body + "\n" + "\n".join(cells))
