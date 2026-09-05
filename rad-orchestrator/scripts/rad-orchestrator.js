@@ -1,4 +1,4 @@
-// rad-orchestrator v1.2.1 — 2026-09-02 (paket se ne mijenja iz workflowa → .katedra/nalazi_paketa.md; lens budget: leće se ponavljaju samo kad se gate promijenio ili su prošli put imale nalaze; args.lens_budget=false isključuje; katedra-pkg <SLUG>_HOME; tolerantan na katedra-lite < v1.9; rad_docx mod)
+// rad-orchestrator v1.3.0 — 2026-09-05 (tvrdi gate: faza se zatvara po gate.py izlaznom kodu i gate.json-u, ne po samoprijavi agenta) (paket se ne mijenja iz workflowa → .katedra/nalazi_paketa.md; lens budget: leće se ponavljaju samo kad se gate promijenio ili su prošli put imale nalaze; args.lens_budget=false isključuje; katedra-pkg <SLUG>_HOME; tolerantan na katedra-lite < v1.9; rad_docx mod)
 export const meta = {
   name: 'rad-orchestrator',
   description: 'Vođa kroz faze rada koji zove STVARNE katedra-lite skripte (stanje_init → plan_state → rukopis → build_docx → gate → napredak); paralelni audit, bidirekcionalni flow, ceka_autora umjesto ping-ponga',
@@ -357,6 +357,55 @@ async function izvrsiAudit(kontekst) {
 // 4. STATE MACHINE — bidirekcionalno, s guardovima i ceka_autora
 // ─────────────────────────────────────────────────────────
 const MAX_POSJETA_PO_FAZI = 3
+
+// ─────────────────────────────────────────────────────────
+// TVRDI GATE — skripta, ne samoprijava agenta
+// ─────────────────────────────────────────────────────────
+// Do v1.2.1 je orkestrator napredovao isključivo po poljima koja agent sam
+// vrati (`problem_pronaden`). Dovoljno je bilo da agent vrati false i faza
+// „predaja" je kretala iako je `gate.py --faza audit` vratio 1, a run je
+// završavao statusom `zavrseno`. `gate.json` se spominjao samo unutar teksta
+// prompta i nikad se nije čitao.
+//
+// Workflow sandbox nema fs, pa gate provjerava agent kojemu je to JEDINI
+// zadatak: pokreni jednu naredbu, prepiši njezin izlaz, ne popravljaj ništa.
+// Odluku donosi skripta ispod, ne on.
+const GATE_SCHEMA = {
+  type: 'object',
+  properties: {
+    izlazni_kod: { type: 'integer', description: 'echo $? nakon gate.py — doslovno, ne procijenjeno' },
+    blokira: { type: 'array', items: { type: 'string' }, description: 'sazetak.blokira iz gate.json' },
+    nepokrenuto: { type: 'array', items: { type: 'string' }, description: 'sazetak.nepokrenuto iz gate.json (blokirajući koraci koji se NISU pokrenuli)' },
+    zadnji_redak: { type: 'string', description: 'zadnji redak ispisa gate.py, doslovno' },
+    gate_json_procitan: { type: 'boolean', description: 'je li .katedra/gate.json stvarno postojao i pročitan' },
+  },
+  required: ['izlazni_kod', 'blokira', 'nepokrenuto', 'zadnji_redak', 'gate_json_procitan'],
+}
+
+async function provjeriGate(faza, naziv) {
+  const r = await agent(
+    `${OKVIR}
+
+ZADATAK — samo izmjeri gate. NE popravljaj ništa, NE pokreći druge skripte, NE mijenjaj nijednu datoteku.
+
+1. cd ${PROJECT_ROOT}
+2. python3 ${S}/gate.py --faza ${faza} --rad ./rad.docx --kat ${K} --json ${K}/gate.json ; echo "IZLAZNI_KOD=$?"
+3. cat ${K}/gate.json
+
+Vrati DOSLOVNO:
+- izlazni_kod: broj iza IZLAZNI_KOD=
+- blokira: polje sazetak.blokira iz gate.json
+- nepokrenuto: polje sazetak.nepokrenuto iz gate.json (ako ga starija verzija nema, vrati prazno polje)
+- zadnji_redak: zadnji redak ispisa gate.py
+- gate_json_procitan: true samo ako si datoteku stvarno pročitao
+
+Ako naredba padne jer skripta ne postoji, vrati izlazni_kod 127 i gate_json_procitan false.
+Ne tumači nalaze, ne predlažaj popravke, ne sažimaj. Ovo je mjerenje, ne audit.`,
+    { label: `gate:${faza}`, phase: naziv, schema: GATE_SCHEMA, agentType: 'general-purpose', effort: 'low' }
+  )
+  return r
+}
+
 const MAX_UKUPNO_ITERACIJA = 12
 const MAX_UZASTOPNO_BEZ_NAPRETKA = 3
 
@@ -418,8 +467,37 @@ while (idx < FAZA_REDOSLIJED.length && iteracija < MAX_UKUPNO_ITERACIJA) {
     kontekstPovratka = r.kontekst_problema
     idx = cilj
   } else {
+    // Faza se NE zatvara na agentovu riječ. Gate je jedini svjedok.
+    const g = await provjeriGate(faza, naziv)
+    if (!g) {
+      log(`⚠️ ${naziv}: provjera gatea nije vratila rezultat — prekid (ne napredujem naslijepo).`)
+      return zavrsi('gate_neizmjeren', { faza })
+    }
+    const pao = g.izlazni_kod !== 0 || (g.blokira || []).length > 0 || (g.nepokrenuto || []).length > 0
+    povijest.push({ faza, posjet: posjeceno[faza], gate: { izlazni_kod: g.izlazni_kod, blokira: g.blokira, nepokrenuto: g.nepokrenuto } })
+    if (pao) {
+      uzastopnoBezNapretka++
+      log(`⛔ gate ${faza}: kod ${g.izlazni_kod} | blokira: ${(g.blokira || []).join(', ') || '—'} | NIJE POKRENUTO: ${(g.nepokrenuto || []).join(', ') || '—'}`)
+      if (uzastopnoBezNapretka >= MAX_UZASTOPNO_BEZ_NAPRETKA || posjeceno[faza] >= MAX_POSJETA_PO_FAZI) {
+        log(`🛑 gate faze '${faza}' i dalje blokira nakon ${posjeceno[faza]} prolaza — vraćam kontrolu glavnoj sesiji.`)
+        return zavrsi('gate_blokira', {
+          zaustavljeno_u_fazi: faza,
+          blokira: g.blokira, nepokrenuto: g.nepokrenuto, izlazni_kod: g.izlazni_kod,
+          napomena: (g.nepokrenuto || []).length
+            ? 'Koraci pod "nepokrenuto" nemaju ulaz. Provjera koja se nije pokrenula nije provjera koja je prošla: ili joj daj ulaz, ili je izuzmi imenom kroz gate.py --dopusti-preskok korak=razlog.'
+            : 'Riješi nalaze pod "blokira" pa ponovno pozovi workflow s args.faza=' + faza,
+        })
+      }
+      log(`🔁 ${naziv}: ponavljam fazu jer gate blokira (pokušaj ${posjeceno[faza] + 1})`)
+      kontekstPovratka = `gate ${faza} blokira: ${[...(g.blokira || []), ...(g.nepokrenuto || []).map((x) => x + ' (nije pokrenuto)')].join('; ')}`
+      continue
+    }
+    if (!g.gate_json_procitan) {
+      log(`⚠️ ${naziv}: gate javlja prolaz, ali gate.json nije pročitan — to nije dokaz. Prekid.`)
+      return zavrsi('gate_bez_dokaza', { faza, zadnji_redak: g.zadnji_redak })
+    }
     uzastopnoBezNapretka = 0
-    log(`✅ ${naziv} dovršena`)
+    log(`✅ ${naziv} dovršena — gate čist (kod 0, ništa nepokrenuto)`)
     idx++
   }
 }

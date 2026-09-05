@@ -80,6 +80,22 @@ def _ucitavanje(faza, kat):
                  zasto="popis je izveden iz stanja, ne fiksan (pravilo 25)")
 
 
+
+def _revizije(rad, kat):
+    """Prvi korak nad .docx-om: ima li praćenih izmjena.
+
+    Željezno pravilo 30. Ekstrakcija nad dokumentom s Track Changes čita krivi
+    tekst — obrisani odlomci se broje, umetnuti ne — pa je svaki idući nalaz
+    izmjeren nad tekstom koji ne postoji. Do v1.9.4 je to pravilo živjelo samo
+    u prozi i nije imalo izvršitelja.
+    """
+    return Korak("revizije", "praćene izmjene (Track Changes) prihvaćene",
+                 _k("revizije.py", "provjeri", rad,
+                    "--json", os.path.join(kat, "revizije.json")),
+                 treba=[rad],
+                 zasto="ekstrakcija nad praćenim izmjenama mjeri tekst koji ne postoji")
+
+
 def koraci(faza: str, c: dict) -> list[Korak]:
     """Popis koraka za fazu. Redoslijed je ugovor, ne preporuka."""
     rad, pdf, profil, tip, kat = c["rad"], c["pdf"], c["profil"], c["tip"], c["kat"]
@@ -113,6 +129,7 @@ def koraci(faza: str, c: dict) -> list[Korak]:
     if faza == "pisanje":
         return [
             _ucitavanje(faza, kat),
+            _revizije(rad, kat),
             Korak("evidence", "strict evidence gate",
                   _k("evidence_gate.py", "--claims", claims, "--evidence", evidence,
                      "--sources", izvori, "--policy", "strict",
@@ -147,13 +164,25 @@ def koraci(faza: str, c: dict) -> list[Korak]:
     if faza == "audit":
         return [
             _ucitavanje(faza, kat),
+            _revizije(rad, kat),
             Korak("motor", "razrješavanje motora rad-audit",
                   _k("engine.py", "--provjeri"), blokira=False,
                   zasto="izlaz 3/4 = smanjeni opseg, deklarira se, ne prešućuje"),
+            # Kvar 59: do v1.9.4 je faza audit razrješavala motor, ali ga nikad
+            # nije POKRENULA — pravi audit (faze A–G: citati, brojke, tipografija,
+            # Word polja) stajao je samo u prozi references/audit.md. Mod čija je
+            # jedina svrha naći pogreške nije imao korak koji ih traži.
+            Korak("motor_audit", "rad-audit faze A–G (citati, brojke, tipografija, polja)",
+                  _k("engine.py", "--audit", rad, "--profil", profil,
+                     "--json", os.path.join(kat, "nalazi.json")),
+                  treba=[rad, profil],
+                  zasto="bez ovoga faza audit ne pokreće nijednu provjeru citata ni brojki"),
             Korak("pravila", "usklađenost s profilom fakulteta",
                   _k("check_rules.py", rad, "--profil", profil, "--tip", tip or "zavrsni",
+                     "--strogo",
                      "--json", os.path.join(kat, "pravila.json")),
-                  treba=[rad, profil]),
+                  treba=[rad, profil],
+                  zasto="--strogo: „nije-admitiran” mijenja tekst nalaza, ne izlazni kod"),
             Korak("argument", "teza, zaključak, razina argumenta",
                   _k("check_argument.py", rad, "--profil", profil,
                      "--json", os.path.join(kat, "arg.json")),
@@ -163,7 +192,8 @@ def koraci(faza: str, c: dict) -> list[Korak]:
             Korak("jezik", "hrvatski pravopis i gramatika",
                   _k("provjeri_jezik.py", rad,
                      "--json", os.path.join(kat, "jezik.json")),
-                  treba=[rad], blokira=False),
+                  treba=[rad],
+                  zasto="ono što mentor zaokruži crvenim; do v1.9.4 savjet, sada blokira"),
             Korak("odlomci", "geometrija odlomaka u stvarnom prijelomu",
                   _k("check_paragraphs.py", rad, "--profil", profil),
                   treba=[rad, profil], blokira=False),
@@ -176,12 +206,13 @@ def koraci(faza: str, c: dict) -> list[Korak]:
             Korak("fusnote", "disciplina fusnota: ibid., skraćeni oblik, numeracija",
                   _k("provjeri_fusnote.py", rad,
                      "--json", os.path.join(kat, "fusnote.json")),
-                  treba=[rad], blokira=False,
-                  zasto="za legal-footnote profile središnje; bez fusnota alat kaže da nema što"),
+                  treba=[rad],
+                  zasto="za legal-footnote profile središnja provjera; bez fusnota alat vrati 0"),
             Korak("dosljednost", "cross-chapter proturječja",
                   _k("consistency_check.py", "--claims", claims,
                      "--out", os.path.join(kat, "consistency.json")),
-                  treba=[claims], blokira=False),
+                  treba=[claims],
+                  zasto="proturječje između poglavlja mentor nađe za minutu, alat za sekundu"),
             # Kvar 48: korak iznad gleda samo tvrdnje iz lanca, pa brojka koju
             # rad izvodi iz vlastitog prikaza („šest od sedam koraka") nikad
             # nije uspoređena sa sobom.
@@ -198,8 +229,8 @@ def koraci(faza: str, c: dict) -> list[Korak]:
             Korak("literatura", "popis literature protiv kućnog stila",
                   _k("provjeri_literaturu.py", rad, "--profil", profil,
                      "--json", os.path.join(kat, "literatura.json")),
-                  treba=[rad, profil], blokira=False,
-                  zasto="oblik jedinice, uvlaka, razmak i abecedni red — do v1.4 nitko"),
+                  treba=[rad, profil],
+                  zasto="oblik jedinice, uvlaka, razmak i abecedni red; u modu 4 blokira"),
             Korak("prikazi", "slike i grafikoni: dpi, širina, omjer, pismo",
                   _k("provjeri_prikaze.py", rad,
                      "--json", os.path.join(kat, "prikazi.json")),
@@ -215,13 +246,16 @@ def koraci(faza: str, c: dict) -> list[Korak]:
     # predaja
     return [
         _ucitavanje(faza, kat),
+        _revizije(rad, kat),
         Korak("dijelovi", "svi obavezni dijelovi rada napravljeni",
               _k("dijelovi.py", "--kat", kat, "--provjeri", "--faza", "predaja"),
               zasto="rad kojemu fali dio pada formalno, prije nego ga itko pročita"),
         Korak("pravila", "usklađenost s profilom fakulteta",
               _k("check_rules.py", rad, "--profil", profil, "--tip", tip or "zavrsni",
+                 "--strogo",
                  "--json", os.path.join(kat, "pravila.json")),
-              treba=[rad, profil]),
+              treba=[rad, profil],
+              zasto="--strogo: advisory profil mijenja tekst nalaza, ne izlazni kod"),
         Korak("placeholderi", "[TREBA IZVOR] / [PROVJERI STR.] u tekstu, ćelijama i fusnotama",
               _k("check_placeholders.py", rad, "--json",
                  os.path.join(kat, "placeholders.json")),
@@ -276,6 +310,23 @@ def koraci(faza: str, c: dict) -> list[Korak]:
               ["<RAD_DOCX>/scripts/provjeri_reference.py", pdf or "rad.pdf"],
               treba=[pdf] if pdf else ["rad.pdf"], satelit="rad-docx",
               zasto="dokument dosljedan sam sa sobom i dalje može imati sve brojeve krive"),
+        # Kvar 60: provjeri_predaju.py je postojao od v1.4 i hvatao zastarjele
+        # brojke, neosvježena polja, TOC bez updateFields, REF bez zabilješke i
+        # numeraciju sekcija — ali nije bio korak nijednog gatea, nego naredba u
+        # references/predaja.md koje se agent morao sjetiti. Zato je i rubrika
+        # rutinski čitala .katedra/predaja.json koji nitko nije napisao.
+        Korak("predaja_docx", "polja, TOC, numeracija sekcija i zastarjele brojke",
+              ["<RAD_DOCX>/scripts/provjeri_predaju.py", rad,
+               "--profil", profil,
+               "--model", os.path.join(kat, "model.json"),
+               "--json", os.path.join(kat, "predaja.json")],
+              treba=[rad, profil], satelit="rad-docx",
+              zasto="dokument može biti sadržajno čist, a polja i brojevi stranica krivi"),
+        Korak("izmjene", "što se promijenilo od zadnje snimke prije audita",
+              _k("diff_versions.py", "--kat", kat, "--za-mentora",
+                 "--json", os.path.join(kat, "izmjene.json")),
+              treba=[rad], blokira=False,
+              zasto="izgubljen citat ili preokrenuta brojka nastaju IZMEĐU audita i predaje"),
         Korak("rubrika", "gdje rad stoji prema kriterijima i što ga drži",
               _k("rubrika.py", "--kat", kat, "--opsirno",
                  "--json", os.path.join(kat, "rubrika.json")),
@@ -379,16 +430,39 @@ def _tablica(rezultati: list[dict], faza: str, suho: bool) -> None:
                 print(f"     {redak}")
 
 
-def zakljucak(rezultati: list[dict]) -> tuple[int, dict]:
+def zakljucak(rezultati: list[dict],
+              dopusteni: dict[str, str] | None = None) -> tuple[int, dict]:
+    """Ishod faze.
+
+    Kvar 58 (5.9.2026.): do v1.9.4 su ovdje blokirali samo NALAZ i PUKAO, pa je
+    blokirajuća provjera kojoj fali ulaz izlazila kao ``preskočeno`` i gate je
+    ispisivao „✅ nijedna blokirajuća provjera nije pala" uz izlazni kod 0.
+    Dovoljno je bilo da se rad zove drukčije od ``rad.docx``: faza predaja tada
+    prijavi zeleno, a šest blokirajućih provjera nikad se nije pokrenulo.
+
+    Provjera koja se NIJE pokrenula nije provjera koja je prošla. Blokirajući
+    korak u stanju ``preskočeno`` zato blokira jednako kao pad, osim kad je
+    izuzet imenom kroz ``--dopusti-preskok korak=razlog``. Razlog se upisuje u
+    izvještaj, pa preskok ostaje vidljiv i poslije sesije.
+    """
+    dop = dopusteni or {}
     br = lambda s: sum(1 for r in rezultati if r["stanje"] == s)  # noqa: E731
     blokirajuci = [r for r in rezultati
                    if r["blokira"] and r["stanje"] in (NALAZ, PUKAO)]
+    nepokrenuti = [r for r in rezultati
+                   if r["blokira"] and r["stanje"] == PRESKOCENO
+                   and r["korak"] not in dop]
+    izuzeti = [r["korak"] for r in rezultati
+               if r["blokira"] and r["stanje"] == PRESKOCENO
+               and r["korak"] in dop]
     sazetak = {
         "ok": br(OK), "nalaz": br(NALAZ), "preskoceno": br(PRESKOCENO),
         "pukao": br(PUKAO),
         "blokira": [r["korak"] for r in blokirajuci],
+        "nepokrenuto": [r["korak"] for r in nepokrenuti],
+        "preskok_dopusten": {k: dop[k] for k in izuzeti},
     }
-    return (1 if blokirajuci else 0), sazetak
+    return (1 if (blokirajuci or nepokrenuti) else 0), sazetak
 
 
 def main(argv=None) -> int:
@@ -405,6 +479,10 @@ def main(argv=None) -> int:
                     help="zapiši puni izvještaj")
     ap.add_argument("--suho", action="store_true",
                     help="ispiši što bi se pokrenulo, bez pokretanja")
+    ap.add_argument("--dopusti-preskok", dest="dopusti_preskok", action="append",
+                    default=[], metavar="KORAK=RAZLOG",
+                    help="blokirajući korak smije ostati nepokrenut, uz upisan razlog; "
+                         "može se ponoviti")
     args = ap.parse_args(argv)
 
     korijen = context.resolve_project_root(args.project_root)
@@ -426,19 +504,43 @@ def main(argv=None) -> int:
     if args.suho:
         return 0
 
-    kod, s = zakljucak(rezultati)
+    dopusteni: dict[str, str] = {}
+    for stavka in args.dopusti_preskok:
+        korak_id, _, razlog = stavka.partition("=")
+        korak_id = korak_id.strip()
+        razlog = razlog.strip()
+        if not korak_id or not razlog:
+            print(f"❌ --dopusti-preskok traži oblik KORAK=RAZLOG, dobio: {stavka!r}",
+                  file=sys.stderr)
+            return 2
+        dopusteni[korak_id] = razlog
+
+    poznati = {r["korak"] for r in rezultati}
+    nepoznati = sorted(set(dopusteni) - poznati)
+    if nepoznati:
+        print(f"❌ --dopusti-preskok imenuje korake kojih u fazi nema: "
+              f"{', '.join(nepoznati)}", file=sys.stderr)
+        return 2
+
+    kod, s = zakljucak(rezultati, dopusteni)
     print(f"\n{s['ok']} prošlo · {s['nalaz']} nalaza · "
           f"{s['preskoceno']} preskočeno · {s['pukao']} alat pukao")
     if s["pukao"]:
         print("💥 alat koji je pukao NIJE provjera koja je prošla — "
               "riješi to prije nego zaključiš da je faza čista.")
-    if s["preskoceno"]:
-        print("➖ preskočeno je ograničenje projekta: upiši ga u stanje, ne prešuti "
-              "(željezno pravilo 8).")
-    if kod:
+    if s["preskok_dopusten"]:
+        print("➖ preskok dopušten izrijekom (upisano u izvještaj):")
+        for korak_id, razlog in s["preskok_dopusten"].items():
+            print(f"     {korak_id}: {razlog}")
+    if s["nepokrenuto"]:
+        print(f"⛔ NIJE POKRENUTO, a blokira: {', '.join(s['nepokrenuto'])}")
+        print("   Provjera koja se nije pokrenula nije provjera koja je prošla.")
+        print("   Ili joj daj ulaz, ili je izuzmi imenom: "
+              "--dopusti-preskok korak=razlog")
+    if s["blokira"]:
         print(f"❌ blokira: {', '.join(s['blokira'])}")
-    else:
-        print("✅ nijedna blokirajuća provjera nije pala.")
+    if not kod:
+        print("✅ nijedna blokirajuća provjera nije pala i nijedna nije izostala.")
 
     if args.kao_json:
         context.atomic_write_json(

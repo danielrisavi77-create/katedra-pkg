@@ -171,9 +171,16 @@ python3 generate_report.py rad.docx --sources izvori_folder/   # ISTO + spremlje
 python3 check_citations.py rad.docx      # B: IEEE [N] — definirano/citirano, siročad, rupe, redoslijed;
                                           #    broji i citate u TABLICAMA i FUSNOTAMA; [2020] (godina u
                                           #    zagradi) se prijavi posebno, ne broji kao citat
-python3 check_citations.py rad.docx vancouver   # B: Vancouver (N) — isto + razmak iza zareza, en-crtica u
-                                          #    rasponu, citat prije interpunkcije, „i sur." nakon 6 autora;
+python3 check_citations.py rad.docx vancouver   # B: Vancouver (N) — brojanje, rupe u numeraciji, siročad,
+                                          #    citat bez reference, rastući redoslijed;
                                           #    decimale „158 (77,8)" i svezak(broj) „53(3-4)" nisu citati
+                                          #    NE provjerava FORMAT navoda (razmak iza zareza, en-crtica u
+                                          #    rasponu, položaj prema interpunkciji, „i sur." nakon 6 autora)
+                                          #    — v. „Poznati opseg”; do v1.9.4 je SKILL.md to tvrdio, kod nije radio
+python3 check_placeholders.py rad.docx     # A2: [TREBA IZVOR], [DOPUNITI], [PROVJERI STR.] u tijelu,
+                                          #     ćelijama, FUSNOTAMA, endnotama, zaglavljima i podnožjima
+python3 osvjezi_contract.py [--upisi]     # uskladi engine_contract.json s otiskom koda (zove ga test_all)
+python3 tests/test_bolesni.py             # rad S POGREŠKAMA mora pasti + negativna kontrola
 python3 check_citations_authoryear.py rad.docx  # B: autor-godina (Prezime, 2020) — HEURISTIKA, čitaj docstring;
                                                  #    fusnote/endnote uključene u "citirano"
 python3 check_fields.py    rad.docx      # A/F: fldChar balans, TOC/REF/SEQ, pageBreak, autofit, zaštita,
@@ -340,7 +347,7 @@ stvarna citata neprovjerena**, a stvarna pogreška (sedam citata izvan rastućeg
 redoslijeda) nije prijavljena jer ta grana nikad nije došla do izvršavanja.
 
 ⚠️ **Prva verzija ovog unosa tvrdila je „`common.detect_citation_style` sada zna
-`vancouver`" i „Mjereno: kritično 1 → 0, popis 75/75, 76/76 testova".** Ništa od toga
+`vancouver`" i „Mjereno: kritično 1 → 0, popis 75/75, 101/101 testova".** Ništa od toga
 nije postojalo: `grep -c -i vancouver common.py check_citations.py` → `0` i `0`,
 `check_citations.py` primao je samo `sys.argv[1]`, suite je imao 63 testa (ne 78), a
 manifest nije sadržavao `hr.citations.vancouver.v1`. Tri takva unosa zaredom (R14, R15,

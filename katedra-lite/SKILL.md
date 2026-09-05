@@ -1,6 +1,6 @@
 ---
 name: katedra-lite
-description: "Kopilot za akademske radove (novi rad, plan, pisanje, poboljšanje, audit, obrana, predaja, povratak iz Worda; stanje u .katedra/). v1.9: §0.0 dohvat paketa iz git repoa katedra-pkg, Vancouver dijalekt, opseg po dijelovima, Upute → profil, provjera zamki proze, pravilo 29 (napredak), pravilo 30 + §0.7a (praćene izmjene prije ekstrakcije), §0.0 push naspram pulla i drift SKILL.md-a."
+description: "Kopilot za akademske radove (novi rad, plan, pisanje, poboljšanje, audit, obrana, predaja, povratak iz Worda; stanje u .katedra/). v1.9.5: tvrdi gate (preskočena blokirajuća provjera blokira, --dopusti-preskok), engine.py --audit kao korak faze audit, revizije.py i provjeri_predaju.py u gateu, tests/test_gate.py; §0.0 dohvat paketa iz git repoa katedra-pkg, Vancouver dijalekt, opseg po dijelovima, Upute → profil, provjera zamki proze, pravilo 29 (napredak), pravilo 30 + §0.7a (praćene izmjene prije ekstrakcije), §0.0 push naspram pulla i drift SKILL.md-a."
 ---
 
 # KATEDRA-LITE — kopilot za akademske radove
@@ -360,11 +360,15 @@ korak.
     u modu 6. Dio koji nitko ne provjerava nosi razinu `nepokriveno` i **ide u RUČNO
     PROVJERI** — deklarirana granica, ne propust. Novi dio je jedan zapis u registru, ne
     novi odlomak proze: v. `references/dijelovi.md`.
-20. **Alat koji je pukao nije provjera koja je prošla.** Provjere faze pokreće
+20. **Alat koji je pukao nije provjera koja je prošla, a provjera koja se nije
+    pokrenula nije provjera koja je prošla.** Provjere faze pokreće
     `scripts/gate.py --faza plan|pisanje|audit|predaja`, koji svaki korak svrstava u `ok`,
-    `nalaz`, `preskočeno` ili `alat pukao`. Zadnja dva se **izgovaraju**: provjera koja se
-    nije pokrenula izgleda identično kao provjera koja je prošla, a to je jedini kvar u
-    paketu koji se ne vidi ni na jednom izlaznom kodu.
+    `nalaz`, `preskočeno` ili `alat pukao`. Od v1.9.5 to više nije samo izgovoreno nego
+    **izvršeno**: blokirajući korak u stanju `preskočeno` blokira jednako kao pad
+    (kvar 58 — do tada je gate uz sedam nepokrenutih blokirajućih provjera ispisivao
+    „✅ nijedna blokirajuća provjera nije pala" i izlazni kod 0). Jedini izlaz je
+    izuzeće imenom: `--dopusti-preskok korak=razlog`, koje razlog upisuje u `gate.json`.
+    Ograda: `scripts/tests/test_gate.py` (25 testova, G1–G12).
 
 21. **Ciljana ocjena se mjeri, ne obećava.** `scripts/rubrika.py` agregira postojeće
     artefakte u pojas — gornju granicu koju rad u ovom stanju može dosegnuti — i imenuje što
@@ -443,8 +447,10 @@ korak.
     postojećeg rada", ne 🔴. Ako `napredak.py` u paketu ne postoji (verzija < v1.9), to se
     kaže i sažetak stanja ide iz `plan.json` + zadnjeg `gate.json` — bez izmišljenog broja.
 
-30. **Rad s neprihvaćenim izmjenama nije rad koji čitaš.** Prije prve ekstrakcije teksta
-    provjeri `w:ins`/`w:del` (faza A/F) i prihvati ih na kopiji — v. § 0.7a. Vrijedi u svim
+30. **Rad s neprihvaćenim izmjenama nije rad koji čitaš.** Od v1.9.5 ovo pravilo ima
+    izvršitelja: `revizije.py provjeri rad.docx` je prvi korak faza pisanje, audit i
+    predaja u `gate.py` i **blokira** (do tada je pravilo živjelo samo u prozi).
+    Prihvat ide na kopiji: `revizije.py prihvati rad.docx rad-prihvaceno.docx` — v. § 0.7a. Vrijedi u svim
     modovima nad gotovim `.docx`-om, ne samo u modu 3. Dva su smjera kvara i oba su
     stvarna: dio rada koji postoji prijavi se kao da ga nema, a opseg se izmjeri prekratak.
 
@@ -513,8 +519,21 @@ python3 <KATEDRA_SKILL>/scripts/gate.py --faza plan|pisanje|audit|predaja \
     --json ./.katedra/gate.json
 ```
 
-Izlazni kod 1 = blokirajuća provjera je pala. Koraci `preskočeno` i `alat pukao` **se
-izgovaraju korisniku**, ne prešućuju (pravila 8 i 20).
+Izlazni kod 1 = blokirajuća provjera je pala **ili se nije pokrenula**. Sažetak
+razdvaja `blokira` (provjera je našla problem) od `nepokrenuto` (provjera nije imala
+ulaz). Koraci `preskočeno` i `alat pukao` se izgovaraju korisniku, ne prešućuju
+(pravila 8 i 20).
+
+Preskok blokirajućeg koraka koji je stvarno opravdan (tuđi rad bez profila fakulteta,
+satelit koji nije instaliran) izuzima se **imenom i uz razlog**, nikad prešutno:
+
+```bash
+python3 <KATEDRA_SKILL>/scripts/gate.py --faza predaja \
+    --dopusti-preskok reference="rad nema PDF; brojevi stranica provjereni u Wordu"
+```
+
+Razlog završava u `gate.json` pod `sazetak.preskok_dopusten` i u završnom retku ispisa,
+pa preskok ostaje vidljiv i poslije sesije. Nepoznato ime koraka vraća izlazni kod 2.
 
 Poslije svakog gatea osvježi sliku napretka, da trend postoji kad ga student zatraži:
 

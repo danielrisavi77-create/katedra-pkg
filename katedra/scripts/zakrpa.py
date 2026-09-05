@@ -120,6 +120,29 @@ SPOSOBNOST_RE = re.compile(r"`([a-z][\w.\-]*\.v\d+)`")
 TESTOVI_RE = re.compile(r"(\d+)\s*/\s*(\d+)\s+testova")
 KVAR_RE = re.compile(r"\*\*(R\d+)\s*[—-]")
 
+# Kvar 72: provjera tvrdnji nad katedra-liteom vraćala je „✓ SKILL.md i kod se
+# slažu" i izlazni kod 0, iako je SKILL.md imenovao dvije skripte kojih na disku
+# nema (model.py, citati.py). Sve tri postojeće provjere oslanjale su se na
+# `scripts/engine_contract.json` i `scripts/tests/test_all.py`, kojih katedra-lite
+# nema, pa su pucale u prazno. Alat koji lovi tvrdnje bez pokrića bio je i sam
+# tvrdnja bez pokrića.
+# Hvata samo pozive koji ciljaju SAM PAKET. Poziv s apsolutnom putanjom u tuđi
+# skill (`/root/.claude/skills/docx/scripts/validate.py`) nije tvrdnja o ovom
+# paketu i ne smije se prijaviti — inače provjera postane šum, a šum se ignorira.
+SKRIPTA_RE = re.compile(
+    r"python3\s+(?!/root/|/usr/|/opt/|~/)"
+    r"(?:\$\{?[A-Z_]+\}?/|\./|[A-Za-z0-9_.\-]+/)*"
+    r"([A-Za-z_][A-Za-z0-9_]*\.py)\b")
+
+# Imena koja se u dokumentaciji pojavljuju kao PRIMJER, ne kao poziv alata paketa.
+IZUZETE_SKRIPTE = {"skripta.py", "tvoja_skripta.py", "primjer.py", "ime.py",
+                   "soffice.py"}
+
+# Skripte koje autor piše U SVOM PROJEKTU rada, a ne isporučuje ih paket.
+# `model.py` je po željeznom pravilu 13 jedini izvor brojki tog rada: paket
+# propisuje njegov OBLIK (rad-docx/references/brojke.md), ne njegov sadržaj.
+PROJEKTNE_SKRIPTE = {"model.py"}
+
 
 def provjeri_tvrdnje(korijen):
     """Vraća popis nalaza (str). Prazan popis = SKILL.md i kod se slažu."""
@@ -169,6 +192,32 @@ def provjeri_tvrdnje(korijen):
         for oznaka in sorted(set(KVAR_RE.findall(md))):
             if f'"{oznaka}:' not in t and f"'{oznaka}:" not in t:
                 nalazi.append(f"❌ SKILL.md opisuje {oznaka}, a testova s oznakom {oznaka}: nema")
+
+    # 4) svaka skripta imenovana u SKILL.md-u i referencama mora postojati
+    #    (naredba koju model pokuša pozvati, a ne postoji, tiho se preskoči i
+    #    korak se prijavi gotovim)
+    # rekurzivno: tests/, domains/ i druge podmape su i dalje dio paketa
+    dostupne = {q.name for q in korijen.glob("scripts/**/*.py")}
+    for satelit in ("rad-audit", "rad-docx", "fpzg-diplomski", "replikacija-pspp",
+                    "katedra-lite", "katedra", "rad-orchestrator"):
+        dostupne |= {q.name for q in (korijen.parent / satelit).glob("scripts/**/*.py")}
+    tekstovi = [("SKILL.md", md)]
+    for ref in sorted(korijen.glob("references/*.md")):
+        tekstovi.append((f"references/{ref.name}", ref.read_text(encoding="utf-8")))
+    imenovane = {}
+    for gdje, tekst in tekstovi:
+        for ime in SKRIPTA_RE.findall(tekst):
+            if ime not in IZUZETE_SKRIPTE and ime not in PROJEKTNE_SKRIPTE:
+                imenovane.setdefault(ime, gdje)
+    for ime, gdje in sorted(imenovane.items()):
+        if ime not in dostupne:
+            nalazi.append(f"❌ {gdje} zove `{ime}`, a te skripte nema ni u paketu "
+                          f"ni kod satelita")
+
+    # 5) skill koji propisuje testove mora ih i imati
+    if not testovi.exists() and "test_all.py" in md:
+        nalazi.append("❌ SKILL.md spominje test_all.py, a scripts/tests/test_all.py "
+                      "ne postoji — tvrdnje o testovima nisu provjerive")
 
     return nalazi
 
@@ -287,4 +336,6 @@ nijedna datoteka se ne briše, samo dodaje ili zamjenjuje.
 
 
 if __name__ == "__main__":
-    main()
+    # Kvar 73: main() je vraćao 1 na tvrdnju bez pokrića, a ulaz ga je zvao bez
+    # sys.exit — pa je alat koji lovi lažni prolaz i sam uvijek izlazio s 0.
+    sys.exit(main() or 0)

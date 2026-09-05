@@ -153,7 +153,15 @@ def uskladi_kljuceve(citirani, definirani):
         a, b = c[0], d[0]
         if a == b:
             return True
-        if len(a) >= 4 and len(b) >= 4 and (a.startswith(b) or b.startswith(a)):
+        # Kvar 67: „bilo koja 4 znaka zajedničkog prefiksa" spajalo je Markov i
+        # Marković iste godine u isti ključ, pa je stvarni citat bez reference
+        # nestajao. Prefiks vrijedi samo ako je razlika hrvatski padežni
+        # nastavak, a ne bilo koji nastavak.
+        NASTAVCI = ("a", "e", "i", "u", "om", "om", "ju", "ima", "ove", "ovi",
+                    "ova", "ovima", "y", "j")
+        if a.startswith(b) and len(a) > len(b) >= 4 and a[len(b):] in NASTAVCI:
+            return True
+        if b.startswith(a) and len(b) > len(a) >= 4 and b[len(a):] in NASTAVCI:
             return True
         return any(o == b for o in _osnova(a)) or any(o == a for o in _osnova(b))
 

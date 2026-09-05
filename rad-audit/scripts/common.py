@@ -268,10 +268,36 @@ CITE_AY_NARRATIVE_RE = re.compile(
 CESTICE = {"van", "von", "de", "del", "della", "di", "da", "dos", "der", "den",
            "la", "le", "el", "al", "ten", "ter", "af", "av", "bin", "ibn", "mac"}
 
+# Kvar 70: hrvatska rečenica koja uvodi narativni citat počinje velikim slovom
+# na funkcijskoj riječi („Prema Kovačević (2019)"), pa je ključ autora ispadao
+# „prema", a ne „kovačević". Citat je tada bio i lažno „bez reference" i
+# istovremeno je pravi autor ostajao neuparen. Ove riječi nikad nisu prezime.
+UVODNE_RIJECI = {
+    "prema", "sukladno", "kako", "kao", "poput", "usporedi", "vidi", "npr",
+    "primjerice", "slično", "slicno", "za", "uz", "kod", "po", "u", "na", "o",
+    "iz", "sa", "s", "i", "te", "no", "dok", "ako", "jer", "iako", "budući",
+    "buduci", "istraživanje", "istrazivanje", "studija", "analiza", "autor",
+    "autori", "autorica", "rad", "radovi", "podaci", "rezultati", "tablica",
+    "grafikon", "slika", "prilog", "poglavlje", "dio", "uvod", "zaključak",
+    "zakljucak", "metodologija", "rasprava", "sažetak", "sazetak",
+}
 
-def kljuc_prezimena(ime):
-    """Ključ autora iz imena: prva riječ koja nije čestica, mala slova."""
+
+def kljuc_prezimena(ime, *, preskoci_uvodne=False):
+    """Ključ autora iz imena: prva riječ koja nije čestica, mala slova.
+
+    ``preskoci_uvodne`` dodatno preskače hrvatske uvodne riječi rečenice
+    („Prema Kovačević" → „kovačević"). Koristi ga SAMO parser narativnih citata
+    iz teksta; popis literature nikad ne počinje uvodnom riječju, pa se tamo ta
+    grana ne uključuje da se ne izgubi institucionalni autor.
+    """
     rijeci = [r for r in re.split(r"[\s,]+", (ime or "").strip()) if r]
+    preskoci = CESTICE | UVODNE_RIJECI if preskoci_uvodne else CESTICE
+    for r in rijeci:
+        cista = r.strip(".").lower()
+        if cista and cista not in preskoci:
+            return cista
+    # sve su riječi preskočive: vrati prvu koja nije čestica, pa makar bila uvodna
     for r in rijeci:
         cista = r.strip(".").lower()
         if cista and cista not in CESTICE:
@@ -282,9 +308,33 @@ def kljuc_prezimena(ime):
 def parse_ay_narrative(text):
     """Skup (prvo_prezime, godina) iz narativnih citata."""
     out = set()
-    for imena, god, sufiks in CITE_AY_NARRATIVE_RE.findall(text):
-        out.add((kljuc_prezimena(imena), (god + sufiks).lower()))
+    # Kvar 68: uzorak je radio nad tekstom spojenim s "\n", a \s u njemu hvata
+    # prijelom retka — pa je naslov „1. UVOD" iza kojega slijedi „Prema Beckeru
+    # (2007: 45)" davao ključ ('uvod', '2007') i izvještaj ga je svrstavao u
+    # KRITIČNO „citat bez reference". Narativni citat ne prelazi odlomak.
+    for odlomak in text.split("\n"):
+        for imena, god, sufiks in CITE_AY_NARRATIVE_RE.findall(odlomak):
+            if _je_naslovni_redak(odlomak, imena):
+                continue
+            kljuc = kljuc_prezimena(imena, preskoci_uvodne=True)
+            if not kljuc or kljuc in UVODNE_RIJECI:
+                continue
+            out.add((kljuc, (god + sufiks).lower()))
     return out
+
+
+
+def _je_naslovni_redak(odlomak: str, imena: str) -> bool:
+    """Je li „ime" zapravo naslov poglavlja koji stoji neposredno prije citata.
+
+    Naslovi su kratki, bez glagola i često verzalom. Prezime uhvaćeno iz takvog
+    retka nije autor nego naslov, i svaki takav ključ je lažni nalaz.
+    """
+    redak = odlomak.strip()
+    if len(redak) > 120 and imena.upper() != imena:
+        return False
+    prvi = imena.strip()
+    return prvi.isupper() and len(prvi.split()) <= 4
 
 
 def parse_ay_segment(seg):

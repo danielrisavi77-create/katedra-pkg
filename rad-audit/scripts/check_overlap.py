@@ -37,10 +37,10 @@ def ngrams(words, n):
     return set(tuple(words[i:i + n]) for i in range(len(words) - n + 1))
 
 
-LIT_HEADING_RE = re.compile(
-    r"^\s*(?:\d+\.?\s*)?(LITERATURA|POPIS LITERATURE|REFERENCE|BIBLIOGRAFIJA|POPIS IZVORA|IZVORI)\s*$",
-    re.I,
-)
+# Kvar 69: vlastita kopija ovog uzorka nije znala za „IZVORI I LITERATURA" ni
+# „POPIS CITIRANE LITERATURE", pa je na FPZG i HKS radovima popis literature
+# ulazio u analizu preklapanja i davao lažne verbatim pogotke.
+from common import LIT_HEADING_RE
 CITATION_MARK_RE = re.compile(r"\[\d+[\d,\s–\-]*\]|\([A-ZČĆŠŽĐ][\wčćžšđ\-]+.{0,60}?\d{4}[a-z]?\)")
 
 

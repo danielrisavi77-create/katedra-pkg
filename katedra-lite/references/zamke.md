@@ -838,3 +838,125 @@ Popravak: `VERSION` se ne piše rukom nego ga podiže isti korak koji radi commi
 `bin/env.sh` uz broj ispisuje i kratki hash i datum HEAD-a, da se „1.9.2" ne može pomiješati
 s dvjema različitim sadržajima. Ograda dok toga nema: uz verziju ispiši i
 `git -C "$KATEDRA_PKG" log --oneline -1`.
+
+---
+
+## 58. gate je zeleno javljao fazu u kojoj se ništa nije pokrenulo
+
+**Kad:** 5. 9. 2026. **Gdje:** `katedra-lite/scripts/gate.py:384` (`zakljucak`).
+
+`blokirajuci` je uzimao samo `NALAZ` i `PUKAO`. Blokirajući korak kojemu fali ulaz
+izlazi kao `PRESKOCENO` (`gate.py:307`, „nema ulaza"), pa je gate ispisivao
+**„✅ nijedna blokirajuća provjera nije pala" uz izlazni kod 0** dok se sedam
+blokirajućih provjera nikad nije pokrenulo. Dovoljno je da se rad zove drukčije
+od `rad.docx`.
+
+Izmjereno prije i poslije, isti prazan projekt, faza audit:
+
+```
+prije:   3 prošlo · 0 nalaza · 12 preskočeno   →  ✅ ... , izlazni kod 0
+poslije: 3 prošlo · 0 nalaza · 14 preskočeno   →  ⛔ NIJE POKRENUTO, a blokira:
+         revizije, motor_audit, pravila, jezik, fusnote, dosljednost, literatura
+         izlazni kod 1
+```
+
+**Ograda:** `katedra-lite/scripts/tests/test_gate.py`, skupine G1–G12 (25 testova),
+uključujući end-to-end tvrdnju da prazan projekt NE prolazi fazu audit i da ispis
+ne smije sadržavati „nijedna blokirajuća provjera nije pala".
+
+**Izlaz iz blokade:** `gate.py --dopusti-preskok korak=razlog`. Razlog se upisuje
+u `gate.json` pod `sazetak.preskok_dopusten` i ispisuje u završnom retku.
+
+---
+
+## 59. faza audit nije pokretala audit
+
+**Gdje:** `gate.py::koraci("audit")`. Korak `motor` je zvao `engine.py --provjeri`
+(samo razrješavanje motora, `blokira=False`), a pravi audit (`engine.py --audit`,
+faze A–G: citati, brojke, tipografija, Word polja) stajao je samo u prozi
+`references/audit.md:174`. Mod čija je jedina svrha naći pogreške nije imao korak
+koji ih traži; blokirala je točno jedna provjera od petnaest.
+
+**Ograda:** `test_gate.py` G7 traži da faza audit blokira na `motor_audit`, `jezik`,
+`fusnote`, `dosljednost`, `literatura`, `revizije` i `pravila`, i da blokirajućih
+koraka bude najmanje šest.
+
+---
+
+## 60. `provjeri_predaju.py` nije bio korak nijednog gatea
+
+Alat postoji od v1.4 i hvata zastarjele brojke iz modela, `updateFields`, TOC,
+neuravnotežena polja, `REF` bez zabilješke i numeraciju sekcija. Bio je naredba u
+`references/predaja.md` koje se agent morao sjetiti. Posljedica: `rubrika.py` je
+rutinski čitala `.katedra/predaja.json` koji nitko nije napisao.
+
+**Ograda:** `test_gate.py` G8.
+
+---
+
+## 61. audit koji se smije ignorirati (kvarovi 61–63 u jednom unosu)
+
+* `generate_report.py`: iznimka u modulu upisivala se bez znaka ⚠, pa je ispadala
+  iz sažetka i brojača — srušena faza izgledala je kao faza bez nalaza.
+* `audit_all.py:83`: bezuvjetni `return 0`.
+* `numbers_inventory`, `check_repetition`: `return 0` i kad ima nalaza.
+
+Sada: iznimka je KRITIČNO, faza s izlaznim kodom ≥ 2 ulazi u nalaze kao
+„faza nije izvedena", a `audit_all` vraća `max(KODOVI.values())`.
+
+---
+
+## 64. klase pogrešaka koje nijedan alat nije gledao (kvarovi 64–66 u jednom unosu)
+
+| Kvar | Što je prolazilo | Alat |
+|---|---|---|
+| 64 | „147 ispitanika" u Metodologiji i „152 ispitanika" u Rezultatima | `numbers_inventory.uzorak_nalazi` |
+| 65 | `zbroj_kategorija` i `uzorak_nalazi` bile su definirane ISPOD `if __name__ == "__main__"` — mrtav kod koji `pipeline.md` opisuje kao aktivnu fazu | pozvane iz `main()` |
+| 66 | duga crtica, nedosljedan postotak, `20°C`, `...`, polunavodnici | `check_typography` |
+
+Prije: tekst s dugom crticom i miješanim „45%" / „62 %" dobivao je `✓ tipografija čista`.
+
+**Ograda:** `rad-audit/scripts/tests/test_all.py`, skupine R19 i R20.
+
+---
+
+## 67. lažni nalazi koji su gate činili neupotrebljivim (kvarovi 67–70 u jednom unosu)
+
+* **67** `uskladi_kljuceve.slaze`: prefiks od 4 znaka spajao je `Markov` i
+  `Marković` iste godine u isti ključ, pa je pravi citat bez reference nestajao.
+  Sada prefiks vrijedi samo ako je razlika hrvatski padežni nastavak.
+* **68** `parse_ay_narrative` radio je nad tekstom spojenim s `\n`, a `\s` hvata
+  prijelom retka: naslov „1. UVOD" iznad „Prema Beckeru (2007)" davao je ključ
+  `('uvod', '2007')` i izvještaj ga je svrstavao u KRITIČNO.
+* **69** tri kopije `LIT_HEADING_RE` (`common`, `check_overlap`, `check_repetition`),
+  dvije bez „IZVORI I LITERATURA" i „POPIS CITIRANE LITERATURE".
+* **70** hrvatska rečenica koja uvodi citat počinje velikim slovom na funkcijskoj
+  riječi: „Prema Kovačević (2019)" davalo je ključ `prema`.
+
+Redoslijed je bio namjeran: **prvo su počišćeni lažni nalazi, pa tek onda podignute
+blokade.** Gate koji pada iz krivih razloga zaobiđe se za tjedan dana.
+
+**Ograda:** R17, R18, R21.
+
+---
+
+## 71. faza A bez izvršitelja
+
+`SKILL.md` je fazu A opisivao kao provjeru placeholdera, a alat je bio u drugom
+skillu i nijedan runner ga odavde nije zvao. `[TREBA IZVOR]` u fusnoti prolazio je
+do predaje. Sada: `rad-audit/scripts/check_placeholders.py` (tijelo, ćelije,
+fusnote, endnote, zaglavlja, podnožja), faza A2 u obama runnerima.
+
+---
+
+## 72. alat za provjeru tvrdnji bio je i sam tvrdnja bez pokrića (kvarovi 72–73 u jednom unosu)
+
+`zakrpa.py --provjeri-tvrdnje` nad `katedra-lite` vraćao je „✓ SKILL.md i kod se
+slažu" i izlazni kod 0, jer su sve tri provjere ovisile o `scripts/engine_contract.json`
+i `scripts/tests/test_all.py`, kojih katedra-lite nema. Uz to je `main()` vraćao 1,
+a ulazna točka ga je zvala bez `sys.exit`, pa je alat uvijek izlazio s 0.
+
+Dodano: svaka skripta imenovana u `SKILL.md` i `references/*.md` mora postojati u
+paketu ili kod satelita. Odmah je našla dvije rupe: `provjeri_povratak.py` (motor
+cijelog moda 7, opisan u `povratak.md`, nije postojao) i `soffice.py`.
+
