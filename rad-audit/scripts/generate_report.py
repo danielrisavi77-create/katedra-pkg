@@ -26,6 +26,9 @@ sys.path.insert(0, HERE)
 import check_fields
 import check_placeholders
 import check_uputnice
+import check_tablice
+import check_statistika
+import check_hipoteze
 import brojke_iz_rasprave
 import provjeri_metapodatke
 import check_citations
@@ -50,6 +53,12 @@ CRITICAL_HINTS = [
     "metapodatak i rad ne govore isto", "odaju mapu s računala",
     "praćene izmjene ili komentari nose imena", "nepopunjeno polje predloška",
     "uputnica u prazno", "tekst upućuje na",
+    "opisano kao", "nula nije vjerojatnost", "izvan raspona",
+    "redak ukupno kaže", "postoci daju", "natpis kaže n =",
+    "nijedan statistički test nije imenovan",
+    # hipoteza koja se postavi pa nikad ne presudi je strukturna rupa, ne stil:
+    # to je prvo pitanje na obrani
+    "hipoteza bez izričite presude", "rupa u numeraciji hipoteza",
     "NEURAVNOTEŽENO", "NEPRIHVAĆENE IZMJENE", "SIROČAD", "CITAT BEZ REFERENCE",
     "NEMA U IZVORIMA", "nije nađeno u izvorima", "BEZ vidljive oznake citata",
     "documentProtection: ⚠ DA", "permStart", "rupe u numeraciji",
@@ -165,6 +174,15 @@ def main(argv):
     # prikaz mora biti bar jednom uveden rečenicom.
     txt, code = run_captured(check_uputnice.main, path)
     phases.append(("F2 — Uputnice na prikaze", txt, code))
+
+    txt, code = run_captured(check_tablice.main, path)
+    phases.append(("C4 — Aritmetika u tablicama", txt, code))
+
+    txt, code = run_captured(check_statistika.main, path)
+    phases.append(("C3 — Statističko izvještavanje", txt, code))
+
+    txt, code = run_captured(check_hipoteze.main, path)
+    phases.append(("G1 — Hipoteze i ciljevi", txt, code))
 
     txt, code = run_captured(check_typography.main, path)
     phases.append(("E — Tipografija", txt, code))

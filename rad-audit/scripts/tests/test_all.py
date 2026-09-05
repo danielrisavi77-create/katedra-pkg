@@ -474,6 +474,75 @@ def test_stvarni_rad():
         check("R37: rad bez Rasprave daje kod 3 (granica), ne 2 (pad)",
               kod == 3, (kod, buf.getvalue()[-120:]))
 
+    # 108–110 — statistika, tablice, hipoteze
+    import check_statistika as ST
+    import check_tablice as TB
+    import check_hipoteze as HI
+    import tempfile as _t3, os as _o3
+    from docx import Document as _D3
+
+    with _t3.TemporaryDirectory() as d3:
+        d = _D3(); d.add_heading("5. REZULTATI", level=1)
+        d.add_paragraph("Značajnost je utvrđivana na razini p < 0,05. Korišten je t-test.")
+        d.add_paragraph("Razlika je statistički značajna (p = 0,322).")
+        d.add_paragraph("Razlika nije bila statistički značajna (p = 0,004).")
+        d.add_paragraph("Vrijednost je iznosila p = 0,000.")
+        d.add_paragraph("Prema spolu razlika nije se statistički značajno "
+                        "razlikovala (p = 0,780).")
+        d.add_paragraph("Žene su značajno češće birale opciju (p = 0,001).")
+        put = _o3.path.join(d3, "s.docx"); d.save(put)
+        n = ST.analiziraj(put)
+        pv = {x["p"] for x in n["proturjecje"]}
+        check("R38: p = 0,322 opisan kao značajan JEST nalaz", "p = 0,322" in pv, pv)
+        check("R38: p = 0,004 opisan kao neznačajan JEST nalaz", "p = 0,004" in pv, pv)
+        check("R38: p = 0,780 uz negaciju NIJE nalaz", "p = 0,780" not in pv, pv)
+        check("R38: p = 0,001 uz tvrdnju NIJE nalaz", "p = 0,001" not in pv, pv)
+        check("R38: p = 0,000 je nemoguća vrijednost",
+              any("0,000" in x["p"] for x in n["nemoguc_p"]), n["nemoguc_p"])
+        check("R38: deklarirani prag se čita iz teksta",
+              n["deklarirana_alfa"] == 0.05, n["deklarirana_alfa"])
+
+        d = _D3(); d.add_heading("5. REZULTATI", level=1)
+        d.add_paragraph("Tablica 1. Raspodjela ispitanika (n = 100)")
+        t = d.add_table(rows=5, cols=3)
+        for i, red in enumerate([["Skupina", "n", "Udio (%)"], ["A", "30", "30,0"],
+                                 ["B", "25", "25,0"], ["C", "40", "35,0"],
+                                 ["Ukupno", "95", "90,0"]]):
+            for j, v in enumerate(red):
+                t.rows[i].cells[j].text = v
+        put = _o3.path.join(d3, "t.docx"); d.save(put)
+        r = TB.analiziraj(put)
+        vrste = {x["vrsta"] for x in r["nalazi"]}
+        check("R39: n iz natpisa naspram zbroja stupca", "n_ne_odgovara" in vrste, r["nalazi"])
+        check("R39: postoci koji ne daju 100", "postoci_ne_daju_sto" in vrste, r["nalazi"])
+
+        # „Ukupno" kao NAZIV retka, ne redak zbroja
+        d = _D3(); d.add_heading("5. REZULTATI", level=1)
+        d.add_paragraph("Tablica 1. Pokazatelji")
+        t = d.add_table(rows=4, cols=2)
+        for i, red in enumerate([["Pokazatelj", "Iznos"], ["Neto primitak", "4,4"],
+                                 ["Ukupno suspendirana sredstva", "32"],
+                                 ["Trajno izgubljeno", "2"]]):
+            for j, v in enumerate(red):
+                t.rows[i].cells[j].text = v
+        put = _o3.path.join(d3, "t2.docx"); d.save(put)
+        check("R39: 'Ukupno' u nazivu retka NIJE redak zbroja",
+              not TB.analiziraj(put)["nalazi"], TB.analiziraj(put)["nalazi"])
+
+        d = _D3(); d.add_heading("3. HIPOTEZE", level=1)
+        for x in ("H1. Prva hipoteza.", "H2. Druga hipoteza.", "H3. Treća hipoteza."):
+            d.add_paragraph(x)
+        d.add_heading("6. RASPRAVA", level=1)
+        d.add_paragraph("Hipoteza H1 je prihvaćena na temelju rezultata.")
+        d.add_paragraph("H2 se odbacuje jer razlika nije utvrđena.")
+        d.add_paragraph("Podaci o H3 prikazani su u Tablici 4.")
+        put = _o3.path.join(d3, "h.docx"); d.save(put)
+        r = HI.analiziraj(put)
+        check("R40: sve tri hipoteze prepoznate (odlomak, ne rečenica)",
+              r["postavljene"] == [1, 2, 3], r["postavljene"])
+        check("R40: H3 bez presude JEST nalaz", r["bez_presude"] == [3], r["bez_presude"])
+        check("R40: H1 i H2 su presuđene", r["presudene"] == [1, 2], r["presudene"])
+
     # 78 — DOI nije množenje
     n = _tipografija_nalazi(TY, "DOI: 10.1177/1023263X251338198. Dostupno na mre\u017ei.")
     check("R26: DOI s X me\u0111u znamenkama NIJE mno\u017eenje",

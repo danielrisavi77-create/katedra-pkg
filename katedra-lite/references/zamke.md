@@ -1908,7 +1908,89 @@ se ne tvrdi da je pokriveno „otprilike".
 6. **Mršavljenje routera** (SKILL.md 550+ redaka), jedina promjena bez ograde
    koja bi je uhvatila.
 
-## 108. `kvar.py` je poznavao samo jedan broj po unosu, pa je grupirani unos bio ili nevidljiv ili lažni preskok
+## 108–111. zatvaranje popisa „što lanac NE provjerava"
+Popis od šest stavki iz v1.9.8 obrađen je redom. Četiri su zatvorene, dvije su
+ostale i za obje postoji razlog koji nije „nismo stigli".
+
+### C3 — statističko izvještavanje (`check_statistika.py`)
+
+Lanac je provjeravao postoje li brojke i imaju li pokriće. Nije provjeravao
+**govori li tekst o njima istinu**. „Razlika je statistički značajna (p = 0,322)"
+ima brojku koja postoji, dolazi iz rada, i potpuno je pogrešno opisana.
+
+Prva izvedba je na stvarnom radu proglasila **devet urednih rečenica
+proturječnima**, jer hrvatska negacija ne stoji uz pridjev: „nije **se
+statistički** značajno razlikovala", „nije **bila** statistički značajna". Uzorak
+je tražio „nije značaj…" bez umetnutih riječi, vidio riječ „značajno" i previdio
+negaciju. Sada se dopušta do četiri umetnute riječi.
+
+Druga izvedba je prijavljivala rečenicu koja **deklarira prag** („značajnost je
+utvrđivana na razini p < 0,05") — ondje je p jednak pragu po definiciji.
+
+Treća je tražila naziv testa uz svaku p-vrijednost i ispisala 23 „nalaza" koji su
+svi bili uredni: test se imenuje jednom, u Metodologiji, i to je ispravno. Sada
+se prijavljuje samo slučaj kad testa nema **nigdje** u radu.
+
+### C4 — aritmetika u tablicama (`check_tablice.py`)
+
+Brojke su se provjeravale u tekstu i naspram izvora, unutar tablice nikad, a
+ondje su najlakše provjerive.
+
+Tri lažna nalaza na stvarnim radovima, sva tri ista klasa: **„Ukupno" u nazivu
+retka nije redak zbroja.** „Ukupno suspendirana sredstva" stajalo je kao drugi od
+četiri retka. Sada: redak zbroja je zadnji redak, i zbroj ne može biti manji od
+najvećeg pribrojnika (time otpada „Ukupno (0–25 bodova) = 54,1 %" uz pojedinačne
+udjele do 73,6 %). Za `n` iz natpisa dopušten je višekratnik: tablica koja slaže
+dvije podjele istoga uzorka zbraja na 2N, i to je oblik tablice, ne nesklad.
+
+### G1 — hipoteze i ciljevi (`check_hipoteze.py`)
+
+„Slijedi li zaključak iz rezultata" alat ne može presuditi. Ali jedan dio te
+kategorije je posve mehanički i mentori ga traže prvo: **svaka postavljena
+hipoteza mora dobiti izričitu presudu.**
+
+Dvije izvedbe pale su na izdvajanju poglavlja: prva je stala iza prve hipoteze
+(svaki redak „H2. Druga…" izgleda kao novi naslov), druga je izrezala pola
+dokumenta. Treća ne izdvaja poglavlje uopće: skupi sve oznake H<n> izvan sadržaja
+i za svaku pita postoji li odlomak koji o njoj donosi presudu. Jedinica je
+**odlomak, ne rečenica**, jer rastavljač rečenica u „H1. Studenti…" vidi kraj
+rečenice i oznaka ostaje sama.
+
+**Nalaz na stvarnom radu:** MEDRI diplomski postavlja H1–H5 i **nijednu ne
+presuđuje**. To je prvo pitanje na obrani.
+
+### Prazna vezna sredstva (`verify_rewrite.py`)
+
+Audit Znahor, C3: metrika kohezije mjeri **prisutnost** veznih sredstava, pa je
+zahvat koji umeće „Naime," i „Dakle," prazno formalno poboljšanje — alat potvrdi
+ono što je sam pokvario. Dodan je smjerni guard: skok gustoće veznih sredstava
+uz nepromijenjen broj rečenica je nalaz zahvata, ne poboljšanje.
+
+**Ograde:** R38 (6 tvrdnji), R39 (3), R40 (3), sve s oba smjera.
+
+---
+
+## Što OSTAJE nepokriveno, i zašto
+
+**1. Registry admission za `mefri-sanitarno`.** Nije „zastario hash" kako je
+ranije zapisano. `faculty_scale_gate.py` traži
+`katedra-lite/evals/benchmark/v1_vs_v2_contract.json`, datoteku s dokazima
+evaluacije koja u paketu ne postoji. Ponovno pokretanje gatea to ne rješava, a
+izmišljanje te datoteke bilo bi upravo ono protiv čega gate stoji. Profil ostaje
+datoteka sa statusom `nepotvrdeno`, kao i `hks-fzs`.
+
+**2. Mršavljenje routera.** SKILL.md je i dalje 550+ redaka i plaća se u svakoj
+poruci. Ovo je jedina preostala promjena **bez ograde koja bi je uhvatila**:
+mjeri se ponašanjem modela, a za to nema testa. Radi se sa zasebnim evalom ili se
+ne radi.
+
+**3. Ono što alat ne može.** Slijedi li zaključak iz rezultata, proturječi li
+Rasprava Rezultatima, drži li argument. G1 pokriva mehanički dio (je li na
+pitanje odgovoreno), ne sadržajni (je li odgovor točan). Za to postoji željezno
+pravilo 31 i obavezan korak `citanje_tijela`, i to je pošten odgovor, ne rupa
+koju treba zatvoriti skriptom.
+
+## 112. `kvar.py` je poznavao samo jedan broj po unosu, pa je grupirani unos bio ili nevidljiv ili lažni preskok
 
 Zakrpa v1.9.5 upisala je četiri unosa koji svaki pokrivaju tri do četiri kvara, jer su to
 klase s istim popravkom i jednim mjerenjem (`61–63` exit-code disciplina, `64–66` nove
@@ -1945,7 +2027,7 @@ Ograda: raspon koji ide unatrag (`## 66–64.`) daje tvrdi nalaz, provjereno mut
 
 ---
 
-## 109. Katalozi kvarova nisu bili u jedinom ulazu za testove, pa je suite bio zelen nad pokvarenim registrom
+## 113. Katalozi kvarova nisu bili u jedinom ulazu za testove, pa je suite bio zelen nad pokvarenim registrom
 
 `bin/testovi.sh` postoji da bi „jedan ulaz" dao „jedan izlazni kod", i pokretao je devet
 skupina: tri test suitea i šest provjera tvrdnji. `kvar.py` nije bio među njima. Mjereno na

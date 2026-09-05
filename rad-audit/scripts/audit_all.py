@@ -23,6 +23,9 @@ import check_citations_authoryear
 import check_fields
 import check_placeholders
 import check_uputnice
+import check_tablice
+import check_statistika
+import check_hipoteze
 import brojke_iz_rasprave
 import provjeri_metapodatke
 import check_typography
@@ -64,6 +67,9 @@ def main(argv):
     run("A4 — METAPODACI", provjeri_metapodatke.main, [path])
     run("C2 — BROJKE IZ RASPRAVE", brojke_iz_rasprave.main, path)
     run("F2 — UPUTNICE NA PRIKAZE", check_uputnice.main, path)
+    run("C4 — ARITMETIKA U TABLICAMA", check_tablice.main, path)
+    run("C3 — STATISTIČKO IZVJEŠTAVANJE", check_statistika.main, path)
+    run("G1 — HIPOTEZE I CILJEVI", check_hipoteze.main, path)
 
     body, cells, _ = load_docx_text(path, include_tables=True)
     style, style_counts = detect_citation_style(body + "\n" + "\n".join(cells))

@@ -319,6 +319,28 @@ def usporedi(prije_p, poslije_p, zahvat='geometrija', citatni_stil='autor-godina
     else:
         nalazi.append(("ok", f"markeri: {len(m_a)} doslovno identičnih", []))
 
+    # --- vezna sredstva: metrika kohezije mjeri njihovu PRISUTNOST, pa je zahvat
+    # koji ih umeće prazno formalno poboljšanje (audit Znahor, C3). Ovdje se mjeri
+    # smjer: ako je gustoća veznih sredstava skočila, a broj rečenica nije bitno
+    # porastao, umetnute su riječi bez sadržaja.
+    VEZNA = re.compile(r"(?i)(?<![\w])(naime|dakle|stoga|prema tome|osim toga|"
+                       r"nadalje|štoviše|stovise|uostalom|zapravo|ukratko|"
+                       r"drugim riječima|drugim rijecima|s druge strane)(?=[\s,])")
+
+    def _gustoca(t):
+        rijeci = max(1, len(re.findall(r"\w+", t)))
+        return len(VEZNA.findall(t)) / rijeci * 1000
+
+    g_a, g_b = _gustoca(t_a), _gustoca(t_b)
+    if g_b > g_a + 1.5 and g_b > 4.0:
+        nalazi.append(("x", f"gustoća veznih sredstava skočila je s {g_a:.1f} na "
+                            f"{g_b:.1f} na 1000 riječi — provjeri jesu li „Naime,” i "
+                            f"„Dakle,” umetnuti radi metrike, a ne radi smisla",
+                       [f"metrika kohezije mjeri PRISUTNOST veznih sredstava, pa ih "
+                        f"zahvat može umetati prazno i formalno poboljšati tekst"]))
+    else:
+        nalazi.append(("ok", f"vezna sredstva: {g_a:.1f} → {g_b:.1f} na 1000 riječi", []))
+
     # --- brojke
     ba, bb = brojke(t_a), brojke(t_b)
     izg, dod = ba - bb, bb - ba
