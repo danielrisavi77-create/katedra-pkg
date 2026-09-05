@@ -118,7 +118,7 @@ def parse_citation_group(inner):
     nums = set()
     for part in re.split(r",", inner):
         part = part.strip()
-        rng = re.split(r"[–—\-]", part)
+        rng = re.split(r"[–\-]", part)
         if len(rng) == 2 and rng[0].strip().isdigit() and rng[1].strip().isdigit():
             nums.update(range(int(rng[0]), int(rng[1]) + 1))
         elif part.isdigit():
@@ -133,64 +133,53 @@ def parse_citation_group(inner):
 IEEE_CITE_RE = re.compile(r"\[\d{1,3}(?:[\s,–\-]+\d{1,3})*\]")
 
 # ---------------------------------------------------------------------------
-# Vancouver (n) — numerički stil zdravstvenih fakulteta (HKS-FZS, MEF, ZVU…):
-# „(1)", „(2, 5)", „(3–7)", „(12,13)" u OVALNIM zagradama, popis numeriran
-# „1. Autor A, Autor B. Naslov. Časopis. 2020;12(3):45–50." po redoslijedu
-# prvog pojavljivanja. Prije v1.9 rad u tom stilu detektirao se kao „unknown,
-# 0 citata", IEEE checker javljao „popis nije prepoznat", a autor-godina checker
-# izmišljao citat iz „Recommendation Rec(2003)24" — jedan lažni kritični nalaz i
-# 96 stvarnih citata neprovjereno.
+# Vancouver (N) — numerički citat u OVALNIM zagradama (biomedicina, ICMJE).
+# Kvar koji ga je iznudio: HKS-FZS diplomski sa 132 navoda u obliku "(1)", "(12,40)"
+# detektiran je kao unknown/0 citata, IEEE checker je javio "popis nije prepoznat",
+# a autor-godina checker izmislio citat iz "Recommendation Rec(2003)24".
+# Lažni kritični nalaz + svi stvarni citati neprovjereni.
+#
+# Zamke koje uzorak MORA izbjeći (sve nađene na stvarnom radu):
+#   svezak(broj)   "53(3-4)", "106(12)"   → ispred zagrade je znamenka
+#   decimala u tablici "158 (77,8)"       → ispred zagrade je znamenka + razmak
+#   godina         "(2003)", "(2020)"     → broj > 999, nijedan rad nema 1000 referenci
+#   raspon stranica u referenci "(1-56)"  → hvata se tek unutar popisa, ne u tijelu
 # ---------------------------------------------------------------------------
-
-VANCOUVER_CITE_RE = re.compile(
-    r"\(\s*(\d{1,3}(?:\s*[,;]\s*\d{1,3}|\s*[–—-]\s*\d{1,3})*)\s*\)"
-)
-_VANC_DEC1 = re.compile(r"\d{1,3},\d")        # (77,8) — jedna znamenka iza zareza
-_VANC_DEC2 = re.compile(r"\d{1,3},\d{2}")     # (12,35) — decimala samo iza brojke: „158 (12,35)"
+VANCOUVER_CITE_RE = re.compile(r"(?<![\d])\((\d{1,3}(?:\s*[,;–\-]\s*\d{1,3})*)\)")
 
 
-def vancouver_is_decimal(inner, prefix):
-    """Je li „(inner)" decimala/postotak ili svezak(broj), a ne citat.
+def find_vancouver_citations(text, u_tablici=False):
+    """Vraća [(pozicija, [brojevi])] za Vancouver citate, redom pojavljivanja.
 
-    Pravila prenesena iz katedra-lite provjeri_vancouver.py (potvrđena na tablici
-    „n (%)" sa 75 ćelija): jedna znamenka iza zareza → decimala; dvije znamenke
-    iza zareza → decimala samo ako neposredno ispred zagrade stoji brojka; zagrada
-    zalijepljena za brojku („2013;53(3-4)") → svezak(broj) iz popisa literature.
-    """
-    if _VANC_DEC1.fullmatch(inner):
-        return True
-    if _VANC_DEC2.fullmatch(inner) and re.search(r"\d\s*$", prefix):
-        return True
-    if re.search(r"\d$", prefix):
-        return True
-    return False
-
-
-def parse_vancouver_citations(text):
-    """Popis (pozicija, sadržaj_zagrade, skup_brojeva) za svaki Vancouver citat u tekstu.
-
-    Rasponi se ekspandiraju („3–7" → 3,4,5,6,7); decimale i svezak(broj) se preskaču.
+    `u_tablici=True` uključuje strožu zaštitu: u ćelijama tablica oblik
+    "158 (77,8)" je n (%), ne citat. U prozi ista zaštita ubija STVARAN citat
+    iza broja — "korelacija iznosi 0,53 (21)" — pa se ondje odbacuje samo
+    zagrada zalijepljena uz znamenku ("53(3-4)" = svezak(broj)).
     """
     out = []
-    for m in VANCOUVER_CITE_RE.finditer(text or ""):
-        inner = m.group(1)
-        if vancouver_is_decimal(inner, text[:m.start()]):
+    for m in VANCOUVER_CITE_RE.finditer(text):
+        prije = text[max(0, m.start() - 12):m.start()]
+        if re.search(r"\d$", prije):                       # 53(3-4), 106(12)
             continue
-        nums = parse_citation_group(inner.replace(";", ","))
-        if nums:
-            out.append((m.start(), inner, nums))
+        if u_tablici and re.search(r"\d\s+$", prije):      # 158 (77,8)
+            continue
+        nums = parse_citation_group(m.group(1))
+        if not nums or any(n > 999 for n in nums):
+            continue
+        out.append((m.start(), sorted(nums)))
     return out
 
 
-# Naslov popisa literature — isti popis oblika kao u check_citations*.py.
+# Naslov popisa literature. Rječnik je bio preuzak: "POPIS CITIRANE LITERATURE"
+# (HKS-FZS) i "Izvori i literatura" (FPZG, kvar R14) nisu prolazili, a kad naslov
+# ne prođe, popis ostaje prazan i SVAKI citat ispada "citat bez reference".
 LIT_HEADING_RE = re.compile(
-    r"(?im)^\s*(?:\d+\.?\s*)?("
-    r"(?:POPIS\s+)?(?:CITIRAN[AE]\s+|KORI[SŠ]TEN[AE]\s+)?LITERATUR[AE](?:\s+I\s+IZVOR[AI])?"
-    r"|POPIS\s+REFERENC[AEI]|REFERENCES?|BIBLIOGRAFIJA|POPIS\s+IZVORA|IZVORI"
-    r")\s*$"
+    r"(?im)^\s*(?:\d+\.?\s*)?"
+    r"(?:POPIS\s+)?(?:CITIRANE\s+|KORI[ŠS]TENE\s+|KORI[ŠS]TENIH\s+)?"
+    r"(?:LITERATURA|LITERATURE|POPIS LITERATURE|REFERENCE|BIBLIOGRAFIJA"
+    r"|POPIS IZVORA|IZVORI|IZVORI I LITERATURA|LITERATURA I IZVORI)\s*:?\s*$"
 )
-# Stavka numeriranog popisa: „1. Autor", „1) Autor", „[1] Autor".
-NUMBERED_ITEM_RE = re.compile(r"(?m)^\s*(?:(\d{1,3})\s*[.)]|\[\s*(\d{1,3})\s*\])\s+(\S.*)$")
+
 
 # Lokator stranice iza godine: "(Becker, 2007: 45)", "(Streeck, 2014: xiv)".
 # FPZG Upute propisuju BAŠ taj oblik s dvotočkom. Bez njega ispada svaki citat sa
@@ -281,24 +270,16 @@ def parse_ay_citation_group(inner):
 
 
 def detect_citation_style(text):
-    """Heuristička detekcija: 'ieee' (numerički [N]), 'vancouver' (numerički (N)),
-    'authoryear' (Prezime, GODINA), 'mixed' (dva stila u sličnoj mjeri) ili
-    'unknown' (nema dovoljno signala).
-    Vraća (stil, {'ieee': n, 'authoryear': n, 'vancouver': n}).
-
-    Vancouver se broji SAMO u tekstu prije popisa literature: u samom popisu
-    „2013;53(3-4)" i „(Suppl 2)" nisu citati, a autor-godina popis nosi „(2020.)"
-    koji vancouver uzorak ionako ne hvata (četiri znamenke)."""
+    """Heuristička detekcija: 'ieee' ([N]), 'vancouver' ((N)), 'authoryear'
+    (Prezime, GODINA), 'mixed' ili 'unknown'. Vraća (stil, brojači)."""
     ieee_n = len(IEEE_CITE_RE.findall(text))
+    van_n = len(find_vancouver_citations(text))
     ay_n = sum(len(parse_ay_citation_group(m)) for m in CITE_AY_RE.findall(text))
-    heads = list(LIT_HEADING_RE.finditer(text))
-    body_only = text[:heads[-1].start()] if heads else text
-    vanc_n = len(parse_vancouver_citations(body_only))
-    counts = {"ieee": ieee_n, "authoryear": ay_n, "vancouver": vanc_n}
-    if ieee_n == 0 and ay_n == 0 and vanc_n == 0:
+    counts = {"ieee": ieee_n, "vancouver": van_n, "authoryear": ay_n}
+    best = max(counts, key=lambda k: counts[k])
+    if counts[best] == 0:
         return "unknown", counts
-    ranked = sorted(counts.items(), key=lambda kv: -kv[1])
-    (best, n1), (_, n2) = ranked[0], ranked[1]
-    if n1 >= n2 * 1.5:
+    drugi = max(v for k, v in counts.items() if k != best)
+    if counts[best] >= drugi * 1.5:
         return best, counts
     return "mixed", counts

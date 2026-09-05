@@ -30,10 +30,11 @@ import common as C
 from common import (load_docx_text, load_supplementary_text, CITE_AY_RE,
                     parse_ay_citation_group, parse_ay_narrative)
 
-HEADING_RE = re.compile(
-    r"(?im)^\s*(?:\d+\.?\s*)?"
-    r"(LITERATURA|POPIS LITERATURE|REFERENCE|BIBLIOGRAFIJA|POPIS IZVORA|IZVORI)\s*$"
-)
+# R14/R16: rječnik naslova bio je preuzak. „Izvori i literatura" (FPZG) i
+# „POPIS CITIRANE LITERATURE" (HKS-FZS) nisu prolazili, a kad naslov ne prođe,
+# popis ostaje prazan i SVAKI citat ispada „citat bez reference". Dijeli se s
+# common.LIT_HEADING_RE da dva alata ne rade po dva rječnika.
+from common import LIT_HEADING_RE as HEADING_RE
 
 # Redak reference: "Prezime, I. (2020). Naslov..." / "Prezime I. (2020) Naslov..."
 # Pravni oblik tvrtke piše se malim slovom i stoji IZA imena („easyJet plc",
@@ -96,7 +97,13 @@ def _osnova(prezime):
     """Skini hrvatske padežne nastavke: Albersa→Albers, Faulkneru→Faulkner."""
     for n in ("ovima", "ima", "ova", "ove", "ovi", "om", "ju", "u", "a", "e", "i"):
         if prezime.endswith(n) and len(prezime) - len(n) >= 4:
-            yield prezime[: -len(n)]
+            korijen = prezime[: -len(n)]
+            yield korijen
+            # R14: hrvatski padež guta završno -y stranog prezimena
+            # (Lipsky → Lipskom → korijen "lipsk"), a popis nosi "lipsky".
+            # Uz goli korijen vraćaju se i oblici sa završnim y/i/j/e.
+            for zavrsetak in ("y", "i", "j", "e"):
+                yield korijen + zavrsetak
     yield prezime
 
 
