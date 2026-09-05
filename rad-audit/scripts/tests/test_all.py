@@ -161,6 +161,55 @@ def test_v195():
           CO.LIT_HEADING_RE is C.LIT_HEADING_RE)
 
 
+
+def test_stvarni_rad():
+    """Kvarovi 75–78 — lažni nalazi nađeni na stvarnom radu (FPZG, 5 172 riječi).
+
+    Prvi puni prolaz novoga gatea kroz stvarni rad dao je 2 kritična i 2
+    kozmetička nalaza, a nijedan nije bio greška u radu. Gate koji tako puca
+    prestaje se čitati, pa je svaki od njih zaslužio test.
+    """
+    import common as C
+    import check_citations_authoryear as AY
+    import check_typography as TY
+
+    # 75 — posvojni pridjev od prezimena
+    for oblik, prezime in [("putnamovo", "putnam"), ("putnamovim", "putnam"),
+                           ("closina", "closa"), ("thinusinu", "thinus")]:
+        siroces, bez_ref = AY.uskladi_kljuceve({(oblik, "2021")}, {(prezime, "2021")})
+        check(f"R23: posvojni pridjev {oblik} ~ {prezime}",
+              not siroces and not bez_ref, (oblik, prezime, siroces, bez_ref))
+
+    # ne smije spojiti dva različita autora
+    siroces, bez_ref = AY.uskladi_kljuceve({("putnamovo", "2021")}, {("kovac", "2021")})
+    check("R23: posvojni pridjev NE spaja različita prezimena",
+          bool(siroces and bez_ref), (siroces, bez_ref))
+
+    # 76 — institucionalni autor s malom riječi u sredini
+    aliasi = AY.biblio_aliasi("Notes from Poland (2026) President vetoes bill.")
+    check("R24: 'Notes from Poland' daje alias poland → notes",
+          aliasi.get(("poland", "2026")) == ("notes", "2026"), aliasi)
+    kljucevi, _ = AY.extract_biblio_keys("Notes from Poland (2026) President vetoes bill.")
+    check("R24: alias NE stvara drugi unos u popisu",
+          len(kljucevi) == 1, kljucevi)
+
+    # 77 — apostrof u engleskom naslovu nije polunavodnik
+    n = _tipografija_nalazi(TY, "Alcidi (2026) Orb\u00e1n\u2019s defeat opens the door to EU funds.")
+    check("R25: apostrof (U+2019 među slovima) NIJE nalaz",
+          not any("polunavodnic" in x for x in n), n)
+    n = _tipografija_nalazi(TY, "Sanctions in the \u2018Rule of Law\u2019 Conflict.")
+    check("R25: pravi polunavodnici JESU nalaz",
+          any("polunavodnic" in x for x in n), n)
+
+    # 78 — DOI nije množenje
+    n = _tipografija_nalazi(TY, "DOI: 10.1177/1023263X251338198. Dostupno na mre\u017ei.")
+    check("R26: DOI s X me\u0111u znamenkama NIJE mno\u017eenje",
+          not any("mno\u017eenje" in x for x in n), n)
+    n = _tipografija_nalazi(TY, "Uzorak je bio 80 x 80 mm.")
+    check("R26: pravo 'x' kao mno\u017eenje JEST nalaz",
+          any("mno\u017eenje" in x for x in n), n)
+
+
 def _tipografija_nalazi(TY, tekst):
     """Pokreni tipografske provjere nad golim tekstom, bez .docx-a."""
     import io
@@ -486,6 +535,7 @@ def main():
     test_r16_vancouver()
     test_r14_r15()
     test_v195()
+    test_stvarni_rad()
     test_manifest()
 
     # --- report ---

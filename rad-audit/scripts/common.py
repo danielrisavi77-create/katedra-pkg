@@ -320,6 +320,14 @@ def parse_ay_narrative(text):
             if not kljuc or kljuc in UVODNE_RIJECI:
                 continue
             out.add((kljuc, (god + sufiks).lower()))
+            # Kvar 76: institucionalni autor od više riječi („Notes from Poland")
+            # u popisu daje ključ prve riječi (`notes`), a u tekstu je uvodna
+            # riječ preskočena pa je ključ bio `poland`. Ista jedinica, dva
+            # ključa, pa i lažno siroče i lažni citat bez reference. Za višečlano
+            # ime dodaje se i ključ PRVE riječi, bez preskakanja.
+            sirovi = kljuc_prezimena(imena)
+            if sirovi and sirovi != kljuc:
+                out.add((sirovi, (god + sufiks).lower()))
     return out
 
 

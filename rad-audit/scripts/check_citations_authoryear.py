@@ -77,6 +77,20 @@ def _aliasi_iz_autora(autor, glavni):
         k = C.kljuc_prezimena(unutra)
         if k and k != glavni:
             out.add(k)
+
+    # Kvar 76: institucionalni autor s malom riječi u sredini („Notes from Poland",
+    # „Institute for Public Affairs") — narativni uzorak prekida se na toj riječi
+    # i hvata tek ono iza nje, pa je ključ iz teksta bio `poland`, a iz popisa
+    # `notes`. Ista jedinica, dva ključa: i lažno siroče i lažni citat bez
+    # reference. Svaka VELIKIM slovom pisana riječ imena postaje alias glavnog
+    # ključa; alias ne stvara novi unos u popisu (v. test R13).
+    rijeci = [r.strip(" \t,.;:()") for r in (autor or "").split()]
+    for r in rijeci:
+        if len(r) < 3 or not r[:1].isupper():
+            continue
+        k = C.kljuc_prezimena(r)
+        if k and k != glavni:
+            out.add(k)
     return out
 
 
@@ -127,8 +141,26 @@ def extract_biblio_keys(lit_text):
 
 
 
+# Kvar 75 (nađen na stvarnom radu, 5.9.2026.): hrvatski akademski tekst prezime
+# redovito pretvara u POSVOJNI PRIDJEV — „Putnamovo (1988) shvaćanje", „Closina
+# (2021) situacija", „u Thinusinu (2025) tvrdnju". Sklonidba iz _osnova te oblike
+# ne dohvaća, pa je svaki takav citat izlazio kao CITAT BEZ REFERENCE, a jedinica
+# u popisu kao SIROČE. Na radu od 5 172 riječi to je bilo 5 od 6 kritičnih nalaza:
+# gate koji tako puca prestaje se čitati.
+_POSVOJNI = re.compile(
+    r"(ov|ev|in)(a|o|u|e|i|om|im|oj|og|oga|omu|ih|ima|ome)?$")
+
+
 def _osnova(prezime):
-    """Skini hrvatske padežne nastavke: Albersa→Albers, Faulkneru→Faulkner."""
+    """Skini hrvatske padežne nastavke: Albersa→Albers, Faulkneru→Faulkner,
+    i posvojne pridjeve: Putnamovim→Putnam, Closina→Closa, Thinusinu→Thinus."""
+    m = _POSVOJNI.search(prezime)
+    if m and len(prezime) - len(m.group(0)) >= 4:
+        korijen = prezime[: -len(m.group(0))]
+        yield korijen
+        # Closa → Closin-: korijen gubi završno -a koje prezime ima
+        yield korijen + "a"
+        yield korijen + "e"
     for n in ("ovima", "ima", "ova", "ove", "ovi", "om", "ju", "u", "a", "e", "i"):
         if prezime.endswith(n) and len(prezime) - len(n) >= 4:
             korijen = prezime[: -len(n)]

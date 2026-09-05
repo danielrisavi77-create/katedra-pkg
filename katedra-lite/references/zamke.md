@@ -960,3 +960,33 @@ Dodano: svaka skripta imenovana u `SKILL.md` i `references/*.md` mora postojati 
 paketu ili kod satelita. Odmah je našla dvije rupe: `provjeri_povratak.py` (motor
 cijelog moda 7, opisan u `povratak.md`, nije postojao) i `soffice.py`.
 
+---
+
+## Kvarovi 75–78 — prvi prolaz kroz STVARNI rad
+
+**Kad:** 5. 9. 2026., odmah nakon podizanja blokada. **Rad:** FPZG, preddiplomski,
+politička ekonomija uvjetovanosti, 5 172 riječi, 117 odlomaka, 3 tablice, 2 sekcije.
+
+Prvi puni prolaz dao je **2 kritična i 2 kozmetička nalaza, a nijedan nije bio
+greška u radu**. To je opasniji ishod od propuštene greške: gate koji puca iz
+krivih razloga zaobiđe se za tjedan dana i onda više ne hvata ni prave greške.
+
+| Kvar | Lažni nalaz | Uzrok | Zakrpa |
+|---|---|---|---|
+| 75 | „Putnamovo (1988)", „Closina (2021)", „Thinusinu (2025)" kao CITAT BEZ REFERENCE, a jedinice kao SIROČAD | `_osnova` je znala padeže, ali ne **posvojne pridjeve**, koje hrvatski akademski tekst tvori redovito | `_POSVOJNI` uzorak `(ov\|ev\|in)(a\|o\|u\|e\|i\|om\|im\|oj\|og\|…)?$` |
+| 76 | „Notes from Poland (2026)" citiran, a u popisu stoji | narativni uzorak prekida se na maloj riječi u sredini imena, pa je ključ iz teksta `poland`, a iz popisa `notes` | svaka velikim slovom pisana riječ institucionalnog imena postaje alias |
+| 77 | 9 „engleskih polunavodnika" | U+2019 između slova je **apostrof** („Orbán's", „the EU's"), a rad ima engleske naslove u popisu | broji se samo U+2018 i U+2019 koji nije među slovima; stvarno stanje: 2 |
+| 78 | „slovo 'x' kao množenje" | DOI `10.1177/1023263X251338198` | granice tokena: ni s jedne strane ne smije biti slovo, kosa crta ni točka |
+
+Poslije zakrpa: **kritično 0, kozmetičko 1**, izlazni kod 0. Preostala tri
+savjetodavna nalaza su stvarna pitanja (`updateFields: NE`, `pageBreakBefore: 5`).
+
+**Ograda:** `rad-audit/scripts/tests/test_all.py`, skupine R23–R26, svaka s
+**oba smjera**: posvojni pridjev spaja Putnamovo s Putnam, ali NE spaja Putnamovo
+s Kovač; apostrof nije nalaz, ali pravi polunavodnici jesu; DOI nije množenje,
+ali „80 x 80 mm" jest.
+
+**Pravilo koje iz ovoga slijedi:** provjera podignuta u blokadu mora prije toga
+proći kroz barem jedan stvarni rad. Sintetički fixture pokazuje da alat hvata;
+samo stvarni rad pokazuje koliko lažno hvata.
+

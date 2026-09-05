@@ -36,7 +36,11 @@ def main(path):
         findings.append(f"⚠ nesparen broj navodnika (otv {open_hr} vs zatv {close_hr + close_de})")
 
     # hex literale (0x41) NE broji kao "x umjesto ×" — alternacija ih pojede prve
-    ascii_x = sum(1 for m in re.finditer(r"(\b0[xX][0-9A-Fa-f]+\b)|\d\s*[xX]\s*\d", t)
+    # Kvar 78: uzorak je hvatao DOI („10.1177/1023263X251338198") i svaki drugi
+    # identifikator u kojem X stoji među znamenkama. Množenje ima granice tokena:
+    # ni s jedne strane ne smije biti slovo, kosa crta ni točka.
+    ascii_x = sum(1 for m in re.finditer(
+        r"(\b0[xX][0-9A-Fa-f]+\b)|(?<![\w/.])\d+\s*[xX]\s*\d+(?![\w/.])", t)
                   if not m.group(1))
     if ascii_x:
         findings.append(f"⚠ slovo 'x' kao množenje: {ascii_x} — koristi × (npr. 80 × 80 mm)")
@@ -90,10 +94,16 @@ def main(path):
     if trotocka:
         findings.append(f"⚠ tri točke umjesto trotočke …: {trotocka}× (U+2026)")
 
-    polunavodnici = t.count("\u2018") + t.count("\u2019")
+    # Kvar 77: U+2019 između dvaju slova je APOSTROF („Orbán's", „the EU's"), ne
+    # navodnik. Na stvarnom radu je 8 od 9 pogodaka bilo iz engleskih naslova u
+    # popisu literature, gdje je apostrof ispravan.
+    otvarajuci = t.count("\u2018")
+    zatvarajuci_ne_apostrof = len(re.findall(r"(?<![A-Za-zÀ-ɏ])\u2019|\u2019(?![A-Za-zÀ-ɏ])", t))
+    polunavodnici = otvarajuci + zatvarajuci_ne_apostrof
     if polunavodnici:
-        findings.append(f"⚠ engleski polunavodnici ' ' : {polunavodnici}× — "
-                        f"citat u citatu ide ‚…\u2018")
+        findings.append(f"⚠ engleski polunavodnici: {polunavodnici}× "
+                        f"(U+2018 {otvarajuci}, U+2019 kao navodnik {zatvarajuci_ne_apostrof}) — "
+                        f"citat u citatu ide ‚…\u2018; apostrof u engleskim naslovima nije nalaz")
 
     print("\nNALAZI:")
     if findings:
