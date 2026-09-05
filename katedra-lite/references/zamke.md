@@ -704,3 +704,137 @@ uz nju i `napredak.py` gasi cijelu procjenu tempa. Popravak je dvodijelan: overl
 `tempo.py` uz brojku ispisuje i **odakle je uzeta** („profil" ili „zadano u tempo.py"),
 jer rep bez izvora ne da se provjeriti. Ograda: rep za druge vrste radova i dalje dolazi s
 razine fakulteta; overlay ga nadjačava samo ondje gdje je izmjeren ili izjavljen.
+
+## 54. Kartica `katedra-lite` nosi samo `SKILL.md`, a router imenuje 44 datoteke koje ne nosi
+
+Mjereno 5. rujna 2026.:
+
+```
+kartica:  /root/.claude/skills/synced/<hash>/katedra-lite/
+          SKILL.md   (34.582 B)   scripts/ NEMA   references/ NEMA
+repo:     ~/.katedra-pkg/katedra-lite/
+          SKILL.md   (isti md5)   scripts/ 72     references/ 69
+
+$ grep -oE '(scripts|references)/[a-z_0-9]+\.(py|md|json)' kartica/SKILL.md | sort -u | wc -l
+44
+```
+
+Doktrina u kartici je **ista** kao u repou (isti md5). Nedostaje samo ono na što upućuje:
+`gate.py`, `rubrika.py`, `check_rules.py`, `dijelovi.py`, `references/pisanje.md` i još 39
+datoteka. Skill radi jedino ako `~/.katedra-pkg` već postoji ili ako git prođe.
+
+Druga polovica kvara je redoslijed u § 0.0. Usporedba s bratskim skillom:
+
+| skill | redoslijed izvora paketa |
+|---|---|
+| `rad-orchestrator` v1.2.1 | **prilog u chatu** → git → synced kartica |
+| `katedra-lite` v1.9.x | git → synced kartica |
+
+Skill kojemu je paket nužan imao je slabiji dohvat, a kartica koja mu je „rezerva" je
+prazna, pa rezerve nema.
+
+Popravak, dva dijela: (a) § 0.0 kreće od priloga; (b) kartica dobiva `scripts/` i
+`references/`, a fallback grana ispisuje ❗ umjesto da tiho nastavi:
+
+```
+$ (bez priloga, bez mreže, kartica bez scripts/)
+⚠️ paket nije dostupan — NAJBRŽE: priloži katedra-pkg-vX.zip u chat. Kartica: <put>
+❗ kartica nosi samo SKILL.md — nijedna skripta iz ovog routera nije dostupna; radi se
+   rukom, SVAKI strojni korak ide kao preskocen (pravilo 8), nista se ne prijavljuje
+   kao provjereno
+$ (ista mutacija, ali kartica IMA scripts/)
+⚠️ paket nije dostupan — NAJBRŽE: priloži katedra-pkg-vX.zip u chat. Kartica: <put>
+   (drugog retka nema)
+```
+
+**Dva kvara u samom popravku, nađena mutacijskim testom (pravilo 34), oba tiha:**
+
+1. `ls -d "$KATEDRA_PKG"/*/` ne vidi mape koje počinju točkom. Zip napravljen iz
+   `~/.katedra-pkg` nosi korijen `.katedra-pkg/`, pa se grana za spljoštavanje nije
+   okidala: paket je bio raspakiran, a poruka je i dalje glasila „paket nije dostupan".
+   Popravak traži mapu koja *sadrži* `bin/env.sh`, ne prvu mapu.
+2. Hrvatski zatvoreni navodnik u poruci bio je **ASCII `"`**, pa je zatvorio nisku u
+   ljusci: `bash -n` → `syntax error near unexpected token '('`. Cijeli § 0.0 ne bi se
+   izvršio ni u jednoj sesiji. Ograda: `bash -n` nad izvučenim blokom prije isporuke.
+
+Isti mutacijski test na `drift.py`:
+
+```
+A) stvarno stanje         ❗ KARTICA NEMA scripts/ … imenuje 18 skripti   izlaz 1
+B) kartica ima scripts/   ✅ kartica i repo su iste (72 datoteke)          izlaz 0
+C) fali gate.py           ❌ 1 samo u repou (gate.py)                      izlaz 1
+```
+
+## 55. `SKILL.md` spremljen kao dopuna gubi router; tri skilla su se tako okrnjila
+
+Kartica pri spremanju **zamjenjuje cijeli** `SKILL.md`. Prijedlog napisan kao „dopune A–D,
+postojeći sadržaj ostaje nepromijenjen" zato ne dopunjuje ništa — briše sve ostalo.
+
+```
+$ grep -rl "Napomena o ovoj datoteci" <kartice>/*/SKILL.md
+<kartice>/dokazna-stranica/SKILL.md
+<kartice>/rektorova/SKILL.md
+
+$ grep -h "^description:" ~/.katedra-pkg/rad-docx/SKILL.md <kartice>/rad-docx/SKILL.md | cut -c1-95
+description: "Ažurira broj kvarova u katalogu zamki s 23 na 31 i imenuje dvije nove skupine (p
+description: "Motor izrade predajnog .docx-a iz markdown rukopisa: petlja do fiksne točke pagi
+```
+
+Dvije pojave su sanirane i **same to pišu** u § 4 svojih SKILL.md-ova (`rektorova`, dopune
+A–D; `dokazna-stranica`, dopune 5a–5e): router je bio izgubljen, sekcije 0–2 rekonstruirane
+iz `references/`. Treća nije sanirana: `rad-docx/SKILL.md` **u repou** nosi opis *promjene*
+umjesto opisa skilla, i to je opis po kojem se skill bira. Kartica ima ispravan.
+
+Popravak: prijedlog skilla uvijek nosi **cijeli** `SKILL.md`, nikad diff ni „ostatak
+ostaje". Ograda: `drift.py --kratko` (kvar 49) i provjera da `description:` opisuje skill,
+a ne zadnju izmjenu.
+
+## 56. Doktrina o gateovima postojala je u dva skilla i nikad nije prešla u `katedra-lite`
+
+```
+$ grep -rlE "ne smije preslikati implementaciju|koji ne može pasti nije" <kartice>/*/SKILL.md
+<kartice>/audit-dokazne-stranice/SKILL.md
+<kartice>/rektorova/SKILL.md
+
+$ grep -c "mutacijski" <kartice>/katedra-lite/SKILL.md
+0
+```
+
+`rektorova` (dopuna A) i `audit-dokazne-stranice` (§ 5) nose, riječ po riječ: *„Gate računa
+neovisno iz zaključanog izvora, nikad ne kopira izraz iz generatora. Gate koji ne može pasti
+nije gate. Svaki novi gate mutacijski testiraj — pokvari kod, pokaži da pada, vrati."*
+Ondje je nastalo skupo: dvaput je gate ponavljao istu pogrešku generatora (medijan uz paran
+broj parova; brojnik i nazivnik iz različitih skupova) i time je **potvrđivao**.
+
+`katedra-lite` to nije imala. Kvarovi 44–48 svi su njezin oblik: `check_fields.py` ispisuje
+`updateFields: NE` i vraća ✓; `rubrika.py` za dvije komponente nema granu „ispunjeno";
+`provjeri_predaju.py` proglašava greškom komponentu koja nije strojno provjerljiva.
+
+Ovo je kvar u **prijenosu između skillova**, ne u kodu: nalaz plaćen u jednom skillu ostaje
+zaključan u njemu. Popravak: pravila 33 i 34 u `katedra-lite/SKILL.md`, i obveza da
+`katedra` § 1.3 pri svakom novom pravilu provjeri nose li ga bratski skillovi već pod drugim
+imenom (ladica doktrina, ne samo ladica kvarova).
+
+## 57. `VERSION` zaostaje za commitom, a § 0.0 taj broj ispisuje kao prvo što sesija kaže
+
+```
+$ git -C ~/.katedra-pkg log --oneline -1
+e57ac53 Merge PR #7: v1.9.3 (prenumerirano 50–53 / 9–11 / 25–26, pravilo 32, otisak fb8ae4bb)
+$ cat ~/.katedra-pkg/VERSION
+1.9.2
+```
+
+§ 0.0 pravilo (4) traži da se `KATEDRA_PKG_VERZIJA` ispiše u prvoj poruci sesije. Ta brojka
+dolazi iz `VERSION`, a `VERSION` se održava rukom i ne ulazi u nijednu provjeru. Sesija
+zato izgovori „katedra-pkg 1.9.2" nad paketom koji je v1.9.3 — a upravo se po toj brojci
+odlučuje treba li povlačiti novije, pa je pogrešna brojka gora od nikakve.
+
+Posljedica je izmjerena u ovoj sesiji: lokalna kopija bila je 1.9.2, remote v1.9.3, a
+razlika (kvarovi 50–53, pravilo 32, četiri nove skripte) otkrivena je slučajno, pri
+suhom pokretanju § 0.0, a ne pri dohvatu paketa. Zakrpa pisana nad zastarjelom kopijom
+bila je numerirana od 50 i sudarila bi se sa svime što je već u repou.
+
+Popravak: `VERSION` se ne piše rukom nego ga podiže isti korak koji radi commit, a
+`bin/env.sh` uz broj ispisuje i kratki hash i datum HEAD-a, da se „1.9.2" ne može pomiješati
+s dvjema različitim sadržajima. Ograda dok toga nema: uz verziju ispiši i
+`git -C "$KATEDRA_PKG" log --oneline -1`.

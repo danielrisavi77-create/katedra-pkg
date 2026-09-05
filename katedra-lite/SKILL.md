@@ -23,19 +23,31 @@ Jedan ulaz, sedam modova, jedan intake. Detaljni protokol je u `references/` i u
 
 ### 0.0 Paket — dohvati skripte prije nego ih pozoveš
 
-SKILL.md je router; skripte, reference, profili i sateliti žive u git repou
+SKILL.md je router; skripte, reference, profili i sateliti žive u paketu
 `katedra-pkg`. **Prvi bash poziv u sesiji** ga dohvati ili osvježi; **svaki idući**
 poziv koji zove skripte počinje s `. "$KATEDRA_PKG/bin/env.sh"` (Cowork kreće iz čiste
 ljuske pri svakom pozivu, pa se okolina ne pamti).
+
+**Redoslijed izvora je namjeran: prilog → git → synced kartica.** Priložen paket
+(`katedra-pkg*.zip` ili `*.bundle` u chatu) radi u svakoj sesiji i ne ovisi ni o GitHub
+konekciji ni o egress politici. Ranija inačica ovog koraka kretala je od gita, pa je
+sesija u kojoj git ne prođe ostajala bez ijedne skripte — a kartica, koja je „rezerva",
+skripte ne nosi (kvar 54).
 
 ```bash
 export KATEDRA_PKG="$HOME/.katedra-pkg"
 export KATEDRA_PKG_URL="https://github.com/danielrisavi77-create/katedra-pkg.git"            # bez tokena — cloud sesija s priključenim repoom
 export KATEDRA_PKG_URL_TOKEN="UPIŠI_URL_S_TOKENOM"   # https://<token>@github.com/danielrisavi77-create/katedra-pkg.git (rezerva: desktop VM / sesija bez priključenog repoa)
+# 1) PRILOG IMA PREDNOST: katedra-pkg*.zip ili *.bundle priložen u chatu radi bez GitHuba.
+#    Spljoštavanje traži mapu koja SADRŽI bin/env.sh — `ls -d */` ne vidi mape koje
+#    počinju točkom, a zip napravljen iz ~/.katedra-pkg nosi upravo takav korijen.
+P="$(find /root/.claude/uploads "$HOME/uploads" /mnt/user-data . -maxdepth 4 \( -iname 'katedra*pkg*.zip' -o -iname 'katedra*pkg*.bundle' \) -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)"
+if [ -n "$P" ]; then rm -rf "$KATEDRA_PKG"; case "$P" in *.bundle) git clone -q "$P" "$KATEDRA_PKG";; *) mkdir -p "$KATEDRA_PKG" && unzip -oq "$P" -d "$KATEDRA_PKG" && { [ -f "$KATEDRA_PKG/bin/env.sh" ] || { D="$(dirname "$(dirname "$(find "$KATEDRA_PKG" -maxdepth 3 -path '*/bin/env.sh' -print -quit)")")"; [ -n "$D" ] && [ "$D" != "$KATEDRA_PKG" ] && { mv "$D"/* "$KATEDRA_PKG"/ 2>/dev/null; mv "$D"/.[!.]* "$KATEDRA_PKG"/ 2>/dev/null; rmdir "$D" 2>/dev/null; }; }; };; esac; echo "📦 paket iz priloga: $P"; fi
+# 2) git: pull ako repo postoji, inače clone (prvo bez tokena, pa s tokenom)
 if [ -d "$KATEDRA_PKG/.git" ]; then find "$KATEDRA_PKG" -name __pycache__ -type d -prune -exec rm -rf {} + 2>/dev/null; git -C "$KATEDRA_PKG" pull -q --ff-only 2>/dev/null || echo "⚠️ pull nije prošao — lokalna kopija $(cat "$KATEDRA_PKG/VERSION" 2>/dev/null)";
-else for U in "$KATEDRA_PKG_URL" "$KATEDRA_PKG_URL_TOKEN"; do case "$U" in UPIŠI_*) continue;; esac; git clone -q --depth 1 "$U" "$KATEDRA_PKG" 2>/dev/null && break; done; fi
+elif [ ! -f "$KATEDRA_PKG/bin/env.sh" ]; then for U in "$KATEDRA_PKG_URL" "$KATEDRA_PKG_URL_TOKEN"; do case "$U" in UPIŠI_*) continue;; esac; git clone -q --depth 1 "$U" "$KATEDRA_PKG" 2>/dev/null && break; done; fi
 if [ -f "$KATEDRA_PKG/bin/env.sh" ]; then . "$KATEDRA_PKG/bin/env.sh"; echo "katedra-pkg $KATEDRA_PKG_VERZIJA";
-else KATEDRA_SKILL="$(ls -d /root/.claude/skills/synced/*/katedra-lite ~/.claude/skills/katedra-lite 2>/dev/null | head -1)"; echo "⚠️ paket nije dostupan (u cloud sesiji repo katedra-pkg mora biti PRIKLJUČEN sesiji — GitHub konekcija u claude.ai + Add repository; token sam ne pomaže) — synced kopija: $KATEDRA_SKILL (skripte mogu biti starije od ovog SKILL.md-a)"; fi
+else KATEDRA_SKILL="$(ls -d /root/.claude/skills/synced/*/katedra-lite ~/.claude/skills/katedra-lite 2>/dev/null | head -1)"; echo "⚠️ paket nije dostupan — NAJBRŽE: priloži katedra-pkg-vX.zip u chat. Kartica: ${KATEDRA_SKILL:-NEMA}"; ls "$KATEDRA_SKILL/scripts" >/dev/null 2>&1 || echo "❗ kartica nosi samo SKILL.md — nijedna skripta iz ovog routera nije dostupna; radi se rukom, SVAKI strojni korak ide kao preskocen (pravilo 8), nista se ne prijavljuje kao provjereno"; fi
 ```
 
 Pravila za taj korak: (1) `<KATEDRA_SKILL>` u svim naredbama ispod je ono što je ovaj
@@ -44,9 +56,11 @@ korak izvezao — ne pogađa se put; (2) ako paketa nema, radi se iz synced kopi
 korak se označi `preskočeno`; (3) sateliti se razrješavaju kroz `<SLUG>_HOME` koje
 `env.sh` izvozi, a `scripts/vjestine.py --provjeri` to potvrđuje; (4) verziju paketa
 (`KATEDRA_PKG_VERZIJA`) i redak `drift.py --kratko` (v. dolje) ispiši u prvoj poruci uz
-sažetak stanja; (5) cloud sandbox pušta git samo na
-repoe koji su **izvor sesije** — token u URL-u to ne zaobilazi, a koja površina taj izvor daje
-stoji u tablici ispod; token služi desktop VM-u i drugim okolinama koje nemaju taj proxy.
+sažetak stanja; (5) egress politika **nije ista za čitanje i pisanje** i mijenja se
+po sesiji: 5. 9. 2026. anonimni `git clone` javnog `katedra-pkg` prošao je u ovoj cloud
+sesiji, dok je `push` nad istim repoom bio odbijen s 403. Zato se stanje **mjeri**, ne
+pamti: ako clone padne, prilog je odgovor, a ne traženje tokena — token u URL-u proxy ne
+zaobilazi. Za privatan repo i dalje vrijedi da mora biti izvor sesije.
 
 **Čitanje i pisanje su odvojena dopuštenja.** `clone` i `pull` znaju proći nad repoom nad
 kojim je `push` odbijen:
@@ -459,6 +473,28 @@ korak.
     već dokazuje ne dokazuje se ponovno nego se na to **uputi**, a prostor ide onome čega u
     uzorku nema. Rad koji ponovi tezu susjednog rada ne pada na formi nego na doprinosu, a
     nijedan formalni gate to ne vidi.
+
+33. **Provjera koja ne može pasti nije provjera.** Alat koji vrijednost samo *ispiše*, a
+    ne uvrsti je u nalaz, ostavlja fazu zelenom nad dokumentom koji je kršio pravilo. Isto
+    vrijedi za kriterij bez grane „ispunjeno": rubrika koja za neku komponentu može doseći
+    najviše `djelomicno` trajno spušta pojas i mjeri vlastitu nepotpunost, ne rad. Zato:
+    (a) svaka ispisana vrijednost koja nosi sud mora ući u `problems`/`nalazi` i u izlazni
+    kod; (b) svaki čitač kriterija mora imati dohvatljivo stanje „ispunjeno" i put do njega
+    mora biti zapisan u `references/`. Mjereno 4. 9. 2026.: `check_fields.py` je ispisivao
+    `updateFields: NE` i vraćao ✓, pa je rad dvaput prošao audit s praznim sadržajem i
+    praznim popisima prikaza (rad-audit kvar 3); `rubrika.py` je za dvije komponente imao
+    samo `djelomicno`, pa je rad koji zadovoljava pojas 5 mjeren kao pojas 4 (kvarovi 44 i 46).
+
+34. **Provjera se prima tek kad je pokazano da pada.** Prije nego nova provjera uđe u
+    `gate.py`, pokvari ulaz koji bi trebala uhvatiti, pokaži izlazni kod ≠ 0, pa vrati ulaz
+    i pokaži 0. Oba ispisa idu u `references/zamke.md` uz kvar. Drugi dio istog pravila:
+    **gate ne smije preslikati izraz iz alata koji provjerava** — računa neovisno iz izvora,
+    inače potvrđuje istu pogrešku umjesto da je uhvati. Doktrina je preuzeta iz skilla
+    `rektorova` (dopuna A) i `audit-dokazne-stranice` (§ 5), gdje je nastala nakon dva
+    izgubljena prolaza: medijan uz paran broj parova bio je isto krivo izračunat i u
+    generatoru i u gateu. U katedra-lite je nedostajala do 5. 9. 2026., a kvarovi 44–48 su
+    svi njezin oblik (v. kvar 56). Pravilo je platilo odmah: mutacijski test zakrpe uz kvar
+    54 našao je dva kvara u vlastitom kodu te zakrpe prije nego je isporučena.
 
 *Zašto je koje pravilo nastalo — stvarni radovi, brojke i kvarovi iza pravila 11–20:*
 **`references/zasto.md`**. Router se učitava u svakoj poruci; obrazloženja se čitaju jednom.

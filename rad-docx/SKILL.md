@@ -1,6 +1,6 @@
 ---
 name: rad-docx
-description: "Ažurira broj kvarova u katalogu zamki s 23 na 31 i imenuje dvije nove skupine (provenijencija stranica, autor-godina uparivanje)."
+description: "Motor izrade predajnog .docx-a iz markdown rukopisa: petlja do fiksne točke paginacije, živa polja (TOC/SEQ/REF), nedjeljivi prikazi, sekcije i numeracija, provjera prije predaje. Aktiviraj na 'izgradi docx iz rukopisa', 'gradi.py', 'provjeri_predaju', 'sadržaj nema brojeve stranica'. Kućni stil daje satelit (fpzg-diplomski); plan, pisanje i audit vodi katedra-lite. (Zadnje: katalog zamki 23→31.)"
 ---
 
 # RAD-DOCX — od rukopisa do predajnog dokumenta
@@ -18,7 +18,7 @@ Katedra piše rad i vodi profil fakulteta. Ovaj skill ga **proizvodi**.
 
 ## Kada NE koristiti
 
-- Rad treba isplanirati ili napisati → `katedra`, modovi 1 i 2
+- Rad treba isplanirati ili napisati → `katedra-lite`, modovi 1 i 2 (`katedra` je meta-skill za učenje, ne kopilot)
 - Provjera tuđeg gotovog rada → `rad-audit`
 - Provjera brojki u trećem programu → `replikacija-pspp`
 - Kućni stil fakulteta nije poznat → **prvo** riješi profil u Katedri; motor bez profila

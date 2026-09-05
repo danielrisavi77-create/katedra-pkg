@@ -1,6 +1,6 @@
 ---
 name: rad-orchestrator
-description: "Orkestrator faza rada (plan → pisanje → audit → predaja) za katedra-lite; v1.2: lens budget (leće se ponavljaju samo kad se gate promijenio), paket iz katedra-pkg repoa, skripta kao Dodatak A. Orkestrator faza rada (plan → pisanje → audit → predaja) koji kroz Workflow tool pokreće STVARNE katedra-lite skripte i satelite (rad-audit, rad-docx, fpzg-diplomski, replikacija-pspp), s paralelnim multi-lens auditom, bidirekcionalnim povratkom na raniju fazu i zaustavljanjem s pitanjima za autora umjesto beskonačne petlje. Aktiviraj kad korisnik kaže 'pokreni orkestrator', 'provuci rad kroz sve faze', 'audit + predaja u jednom', 'rad-orchestrator', ili kad želi da se više Katedrinih skillova pokrene po fazi umjesto jednog. Ne aktiviraj za jedan izolirani zadatak (npr. samo tipografija) — za to je katedra-lite izravno."
+description: "Orkestrator faza rada (plan → pisanje → audit → predaja) koji kroz Workflow tool pokreće STVARNE katedra-lite skripte i satelite (rad-audit, rad-docx, fpzg-diplomski, replikacija-pspp): paralelni multi-lens audit s lens budgetom, bidirekcionalni povratak na raniju fazu, zaustavljanje s pitanjima za autora umjesto beskonačne petlje, mod rad_docx za gotov tuđi rad. Aktiviraj na 'pokreni orkestrator', 'provuci rad kroz sve faze', 'audit + predaja u jednom', 'rad-orchestrator', ili kad korisnik želi više Katedrinih skillova po fazi. Ne aktiviraj za jedan izolirani zadatak (samo tipografija) — za to je katedra-lite izravno. (v1.2.1: paket iz priloženog zipa ili katedra-pkg repoa, skripta kao Dodatak A, testirano na 3 fixture-a.)"
 ---
 
 # RAD-ORCHESTRATOR — više skillova po fazi, kroz stvarne skripte
@@ -14,11 +14,18 @@ sljedeći alat. Slobodan markdown bez `.katedra/` stanja je kvar, ne rezultat.
 
 1. **Dohvati paket** (isti korak kao katedra-lite §0.0 — repo `katedra-pkg`; synced kopija je rezerva):
    ```bash
-   export KATEDRA_PKG="$HOME/.katedra-pkg"; export KATEDRA_PKG_URL="UPIŠI_REMOTE_URL"
-   if [ -d "$KATEDRA_PKG/.git" ]; then git -C "$KATEDRA_PKG" pull -q --ff-only 2>/dev/null || echo "⚠️ pull nije prošao — lokalna kopija";
-   elif [ "$KATEDRA_PKG_URL" != "UPIŠI_REMOTE_URL" ]; then git clone -q --depth 1 "$KATEDRA_PKG_URL" "$KATEDRA_PKG" 2>/dev/null || echo "⚠️ clone nije prošao"; fi
-   if [ -f "$KATEDRA_PKG/bin/env.sh" ]; then KATEDRA_ENV_GLASNO=1 . "$KATEDRA_PKG/bin/env.sh";
-   else KATEDRA_SKILL="$(ls -d /root/.claude/skills/synced/*/katedra-lite ~/.claude/skills/katedra-lite 2>/dev/null | head -1)"; echo "⚠️ paket nije dostupan — synced kopija: $KATEDRA_SKILL"; fi
+   export KATEDRA_PKG="$HOME/.katedra-pkg"
+   export KATEDRA_PKG_URL="https://github.com/danielrisavi77-create/katedra-pkg.git"            # cloud sesija s priključenim repoom, ako to sučelje nudi
+   export KATEDRA_PKG_URL_TOKEN="UPIŠI_URL_S_TOKENOM"   # https://<token>@github.com/danielrisavi77-create/katedra-pkg.git (desktop VM / okolina bez GitHub proxyja)
+   # 1) priložen paket u chatu (katedra-pkg*.zip ili *.bundle) uvijek ima prednost — radi u SVAKOJ sesiji, bez GitHuba
+   P="$(find /root/.claude/uploads "$HOME/uploads" /mnt/user-data . -maxdepth 4 \( -iname 'katedra*pkg*.zip' -o -iname 'katedra*pkg*.bundle' \) -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)"
+   if [ -n "$P" ]; then rm -rf "$KATEDRA_PKG"; case "$P" in *.bundle) git clone -q "$P" "$KATEDRA_PKG";; *) mkdir -p "$KATEDRA_PKG" && unzip -oq "$P" -d "$KATEDRA_PKG" && { [ -f "$KATEDRA_PKG/bin/env.sh" ] || { D="$(ls -d "$KATEDRA_PKG"/*/ | head -1)"; [ -f "$D/bin/env.sh" ] && mv "$D"/* "$D"/.[!.]* "$KATEDRA_PKG"/ 2>/dev/null; }; };; esac; echo "📦 paket iz priloga: $P"; fi
+   # 2) git: pull ako postoji, inače clone (prvo bez tokena, pa s tokenom)
+   if [ -d "$KATEDRA_PKG/.git" ]; then find "$KATEDRA_PKG" -name __pycache__ -type d -prune -exec rm -rf {} + 2>/dev/null; git -C "$KATEDRA_PKG" pull -q --ff-only 2>/dev/null || true;
+   elif [ ! -f "$KATEDRA_PKG/bin/env.sh" ]; then for U in "$KATEDRA_PKG_URL" "$KATEDRA_PKG_URL_TOKEN"; do case "$U" in UPIŠI_*) continue;; esac; git clone -q --depth 1 "$U" "$KATEDRA_PKG" 2>/dev/null && break; done; fi
+   # 3) što imamo
+   if [ -f "$KATEDRA_PKG/bin/env.sh" ]; then . "$KATEDRA_PKG/bin/env.sh"; echo "katedra-pkg $KATEDRA_PKG_VERZIJA";
+   else KATEDRA_SKILL="$(ls -d /root/.claude/skills/synced/*/katedra-lite ~/.claude/skills/katedra-lite 2>/dev/null | head -1)"; echo "⚠️ paket nije dostupan — priloži katedra-pkg-vX.zip u chat (najjednostavnije) ili priključi repo sesiji; do tada synced kopija: $KATEDRA_SKILL (skripte mogu biti starije od ovog SKILL.md-a)"; fi
    ```
    `KATEDRA_SKILL` i `<SLUG>_HOME` koje ovaj korak izveze idu u `args` (`katedra_skill`, `sateliti_dir`
    = `$KATEDRA_PKG`). Svaki idući bash poziv počinje s `. "$KATEDRA_PKG/bin/env.sh"` (Cowork ne pamti
@@ -59,7 +66,7 @@ Workflow tool, `scriptPath: ./rad-orchestrator.js`, `args` kao JSON objekt (ne s
 
 ```json
 {"tip":"diplomski","tema":"…","fakultet":"hks-fzs","faza":"audit","empirijski":true,
- "rad_docx":"/…/rad.docx","katedra_skill":"/root/.claude/skills/synced/<hash>/katedra-lite",
+ "rad_docx":"/…/rad.docx","katedra_skill":"$KATEDRA_PKG/katedra-lite","sateliti_dir":"$KATEDRA_PKG",
  "project_root":"/home/claude/rad-<slug>","profil_datoteka":"…/hks-fzs.json"}
 ```
 
@@ -88,16 +95,21 @@ prešućuje. `score`/`pokrivenost` dolaze iz `napredak.py`; score ispod pokriven
    kopiji, `verify_rewrite` odlučuje, `redline` pokazuje.
 4. **Putanje su apsolutne i dolaze iz args**, nikad iz pretpostavke o sandboxu.
 5. **Alat koji je pukao nije provjera koja je prošla** — `naredbe_pale` se čitaju prije zaključka.
-6. Vancouver `(n)` citati: paket ih (još) ne prepoznaje — za zdravstvene fakultete pokreni
-   `katedra-lite/scripts/provjeri_vancouver.py` i tretiraj „citatna gustoća 0" iz `check_argument` kao artefakt.
-- **Paket se ne mijenja iz workflowa.** Agent koji nađe kvar u katedra-lite/satelitu piše `.katedra/nalazi_paketa.md` (simptom, uzrok, predloženi diff, dokaz prije–poslije) i nastavlja u smanjenom opsegu; zakrpa ide kroz `katedra` (učenje) uz reviziju. U testnom runu 2. 9. 2026. sinteza je popravila `build_docx.py` izravno u paketu — popravak je bio dobar (SEQ natpisi, popis tablica, docDefaults), ali je prošao bez pregleda i bez dokaza u katalogu; zato ovo pravilo.
+6. Vancouver `(n)` citati: od katedra-lite v1.9 dijalekt `vancouver` je u `citation_dialects.py` i
+   rad-auditu (R16); profil zdravstvenog fakulteta mora imati `citiranje.stil: vancouver`, inače
+   `check_argument` i faza B rad čitaju kao rad bez citata. `provjeri_vancouver.py` ostaje kao
+   samostalna kontrola.
+7. **Paket se ne mijenja iz workflowa.** Agent koji nađe kvar u katedra-lite/satelitu piše `.katedra/nalazi_paketa.md` (simptom, uzrok, predloženi diff, dokaz prije–poslije) i nastavlja u smanjenom opsegu; zakrpa ide kroz `katedra` (učenje) uz reviziju. U testnom runu 2. 9. 2026. sinteza je popravila `build_docx.py` izravno u paketu — popravak je bio dobar (SEQ natpisi, popis tablica, docDefaults), ali je prošao bez pregleda i bez dokaza u katalogu; zato ovo pravilo.
 
 ## 4. Što je gdje
 
 - `scripts/rad-orchestrator.js` — Workflow skripta (faze, guardovi, sheme rezultata, promptovi po fazi); ista je u Dodatku A
 - Ovisi o: `katedra-lite` ≥ v1.9 (s `napredak.py`, `provjeri_vancouver.py`, `provjeri_hks_fzs.py`,
   `sigurni_popravci_hr.py`), satelitima `rad-audit`, `rad-docx`, `fpzg-diplomski`, `replikacija-pspp`
-- Povijest nastanka i mjereni nalazi: `katedra-lite/docs/PROMJENE.md` (v1.9) i `patches/README_patch.md`
+- `tests/run_fixtures.py` + `tests/fixtures/*.json` — tri fixture-a (fpzg-seminarski, efzg-zavrsni,
+  hks-fzs-diplomski rad_docx), smoke bez Workflowa i provjera rezultata; zadnji stvarni prolaz i što
+  je otkrio: `tests/README.md`
+- Povijest nastanka i mjereni nalazi: `katedra-lite/docs/PROMJENE.md` (v1.9, v1.9.1)
 
 ---
 
@@ -269,7 +281,7 @@ function promptPisanje() {
 Korisnik piše ${tip} rad na temu "${config.tema}". FAZA: PISANJE (katedra-lite mod 2). Markdown u ${K}/poglavlja/ je IZVOR ISTINE, .docx se iz njega sastavlja.
 
 1. cd ${PROJECT_ROOT}; python3 ${S}/stanje_init.py --set mod=pisanje ; python3 ${S}/ucitavanje.py --mod 2
-2. Pozovi Skill tool sa skill='fpzg-skill-pisanje' (akademski stil, citiranje) — pročitaj i references/pisanje.md i references/razina.md iz katedra-lite.
+2. Pročitaj ${KATEDRA_SKILL}/references/pisanje.md i references/razina.md${fakultetSlug === 'fpzg' ? ' i references/glas_fpzg.md (kućni glas FPZG-a; bivši skill fpzg-skill-pisanje je alias)' : ''}. Citatni dijalekt dolazi iz ${K}/resolved_profile.json (citiranje.stil), ne iz izgleda teksta.
 3. python3 ${S}/plan_state.py status ; python3 ${S}/plan_state.py next
    Ako ${K}/poglavlja/ ne postoji: python3 ${S}/rukopis.py init  (kostur NN-slug.md iz plana). python3 ${S}/rukopis.py status
 4. Ako su sva potpoglavlja već "napisano" a postoje ODLUKE AUTORA ili kontekst povratka: ovo je REVIZIJA — uredi postojeće .md (Edit) prema odlukama (teza/okvir/definicije/imena/stranice), ne piši ispočetka, i ponovno pokreni check_ai_style nad izmijenjenim datotekama.

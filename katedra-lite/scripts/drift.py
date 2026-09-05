@@ -168,6 +168,16 @@ def usporedi_skripte(kartica_skill_md, repo_skill_md):
         d = os.path.join(os.path.dirname(put or ""), "scripts")
         mape.append(d if put and os.path.isdir(d) else None)
     if not all(mape):
+        # Kvar 54: „jedna strana nema scripts/" nije neutralno stanje kad je ta strana
+        # KARTICA, a njezin SKILL.md imenuje scripts/*.py. To je najgori mogući ishod
+        # (agent učitava router bez ijedne skripte), a alat ga je dosad prijavljivao
+        # blaže od obične razlike. Mjeri se koliko datoteka router imenuje, a nema ih.
+        if mape[1] and not mape[0] and kartica_skill_md:
+            tekst = procitaj(kartica_skill_md) or ""
+            imenovane = sorted(set(re.findall(r"scripts/([A-Za-z_0-9]+\.py)", tekst)))
+            if imenovane:
+                out["kartica_bez_scripts"] = True
+                out["imenovane_a_nedostupne"] = imenovane
         return out
     popisi = []
     for d in mape:
@@ -185,6 +195,12 @@ def usporedi_skripte(kartica_skill_md, repo_skill_md):
 
 def _redak_skripti(s):
     if not s.get("izmjereno"):
+        if s.get("kartica_bez_scripts"):
+            im = s["imenovane_a_nedostupne"]
+            return ("❗ skripte: KARTICA NEMA `scripts/` — njezin SKILL.md imenuje %d skripti "
+                    "(%s…) kojih u kartici nema. U sesiji bez paketa nijedna nije dostupna; "
+                    "svaki strojni korak ide kao „preskočeno“ (pravilo 8)."
+                    % (len(im), ", ".join(im[:3])))
         return "⚠️  skripte: NIJE izmjereno — jedna strana nema mapu `scripts/`"
     if s["iste"]:
         return "✅ skripte: kartica i repo su iste (%d datoteka)" % s["broj_kartica"]
@@ -335,7 +351,8 @@ def main():
         print(_redak_skripti(s))
         if biljeska:
             print("   ↳ %s" % biljeska)
-        return 0 if (n["iste"] and s.get("iste", True)) else 1
+        return 0 if (n["iste"] and s.get("iste", True)
+                     and not s.get("kartica_bez_scripts")) else 1
 
     print("=" * 72)
     print("DRIFT SKILL.md — kartica naspram repoa")
