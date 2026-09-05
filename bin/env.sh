@@ -32,7 +32,10 @@ export RAD_ORCHESTRATOR_HOME="$KATEDRA_PKG/rad-orchestrator"
 # otkad se VERSION nije mijenjao. Zaostajanje se tako vidi bez pitanja.
 export KATEDRA_PKG_VERZIJA_DATOTEKA="$(cat "$KATEDRA_PKG/VERSION" 2>/dev/null || echo nepoznato)"
 export KATEDRA_PKG_COMMIT="$(git -C "$KATEDRA_PKG" rev-parse --short HEAD 2>/dev/null || true)"
-KATEDRA_PKG_ZAOSTAJE="$(git -C "$KATEDRA_PKG" rev-list --count \
+# `--no-merges`: merge commit ne mijenja sadržaj, samo spaja. Bez toga svaki
+# mergean PR odmah dodaje +1 i upozorenje je upaljeno stalno, pa prestaje značiti
+# išta — mjereno nad ovim repoom: 4 commita „zaostatka", od toga 2 merge commita.
+KATEDRA_PKG_ZAOSTAJE="$(git -C "$KATEDRA_PKG" rev-list --count --no-merges \
   "$(git -C "$KATEDRA_PKG" log -1 --format=%H -- VERSION 2>/dev/null)"..HEAD 2>/dev/null || true)"
 export KATEDRA_PKG_ZAOSTAJE
 if [ -z "$KATEDRA_PKG_COMMIT" ]; then
