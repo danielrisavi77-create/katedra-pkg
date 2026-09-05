@@ -259,6 +259,34 @@ def test_stvarni_rad():
           not C.detect_footnote_citing(
               "Autorica zahvaljuje mentoru na strpljenju tijekom izrade rada.", tijelo))
 
+    # 92 — raspodjela postotaka nije sukob
+    import io as _io, contextlib as _cx
+    from unittest import mock as _mock
+    import numbers_inventory as NI3
+
+    def _inv(tekst):
+        buf = _io.StringIO()
+        with _mock.patch.object(NI3, "load_docx_text",
+                                lambda p, include_tables=True: (tekst, [], None)):
+            with _cx.redirect_stdout(buf):
+                NI3.main("(test)")
+        return buf.getvalue()
+
+    raspodjela = " ".join(
+        f"Samo {v} % ispitanika dalo je taj odgovor." for v in
+        ["12,6", "13,8", "15,9", "20,1", "23,5", "28,1", "29,1", "32,0"])
+    izlaz = _inv(raspodjela)
+    check("R33: osam postotaka uz 'samo' NIJE sukob",
+          "'samo' + %" not in izlaz, izlaz[-400:])
+    check("R33: raspodjela se izrijekom broji, ne prešućuje",
+          "raspodjela, ne sukob" in izlaz or "nema" in izlaz, izlaz[-300:])
+
+    sukob = ("Udio zaposlenih iznosio je 12,5 %. "
+             "U drugom poglavlju udio zaposlenih iznosi 17,5 %.")
+    izlaz = _inv(sukob)
+    check("R33: dvije vrijednosti uz sadr\u017eajni pojam JESU sukob",
+          "zaposlenih" in izlaz and "⚠" in izlaz, izlaz[-400:])
+
     # 78 — DOI nije množenje
     n = _tipografija_nalazi(TY, "DOI: 10.1177/1023263X251338198. Dostupno na mre\u017ei.")
     check("R26: DOI s X me\u0111u znamenkama NIJE mno\u017eenje",

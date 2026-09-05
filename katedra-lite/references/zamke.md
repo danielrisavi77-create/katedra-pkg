@@ -1155,3 +1155,63 @@ nije; fusnota bez citatnog aparata nije).
 | pravni (fusnotni aparat) | 0 | 0 | 0 |
 | tehnički (formule, jedinice) | 0 | 0 | 1 |
 
+---
+
+## Kvar 92 — najveći izvor šuma u paketu, nađen tek na stvarnom empirijskom radu
+
+**Rad:** HKS, Fakultet zdravstvenih studija, diplomski o palijativnoj skrbi,
+11 438 riječi, 12 tablica, 173 Vancouver citata. Prvi rad iz korpusa koji je
+dohvaćen iz Drivea, a ne priložen u chatu.
+
+Fusnotno prepoznavanje (kvar 91) potvrđeno je na **stvarnom** pravnom radu:
+seminarski s Pravnog fakulteta, 105 fusnota (12 409 znakova: `Ibid.`, `Vidi:`,
+`Narodne novine, br. 71/2023`, `Zbornik PFZ, vol. 61, br. 1, 2011., str. 65.`),
+bez ijedne oznake citata u tijelu. Prepoznat kao fusnotni, autor-godina siročad
+se ne prijavljuje, `provjeri_fusnote.py` uredno pročitao svih 105 i dao dva
+smislena savjeta o lancu `ibid.`
+
+Ali medicinski rad je razotkrio nešto veće. Detektor „isti pojam, više
+vrijednosti iste jedinice" proizveo je **11 „sukoba", svaki s 12 do 30
+vrijednosti**, a ključevi su bili funkcijske riječi:
+
+```
+⚠ 'samo' + %: 12,6, 13,8, 15,9, 18, 23,5, 29,1, 31,0, 32,0, 32,2, 35, 37,4, …
+⚠ 'odnosno' + %: 3,63, 12,7, 13,8, 38,9, 41,5, 43,6, 50, 54,1, 65,7, 70,5, …
+⚠ 'naspram' + %: 6,2, 46,7, 48,1, 62,1, 80,0
+⚠ 'godina' + %: 28,1, 29, 30, 39, 42, 43,1, 45, 45,8, 46,7, 48,1, 50,7, 56, …
+```
+
+Nijedan nije bio nalaz. U empirijskom radu postoci se **po definiciji**
+razlikuju; skup od dvadeset vrijednosti nije proturječje nego raspodjela. Ovo je
+kod koji je u paketu stajao od početka, dakle nije nastao u ovom ciklusu, i
+upravo zato je opasan: šum koji je uvijek bio ondje uči autora da preskoči
+srednju kategoriju u cijelosti.
+
+Tri ograde, sve tri nužne: ključ ne smije biti funkcijska riječ (ona stoji uz
+svaki broj), skup od više od tri vrijednosti je raspodjela i ne prijavljuje se
+(ali se BROJI i izgovara), ključ mora biti dulji od tri znaka.
+
+**Izmjereno:** HKS s 16 srednjih nalaza na 5, i svih pet je stvarno
+(`updateFields: NE`; dva skupa kategorija bez uputnice; 7 postotaka bez razmaka
+naspram 193 s razmakom). Pravni rad zadržao je oba svoja nalaza, jer su ondje
+ključevi sadržajni pojmovi s po dvije vrijednosti.
+
+**Ograda:** R33, oba smjera (osam postotaka uz „samo" nije sukob; dvije
+vrijednosti uz sadržajni pojam jest).
+
+---
+
+## Korpus na kojem je lanac provjeren
+
+| Rad | Tip | Citiranje | Kritično | Srednje |
+|---|---|---|---|---|
+| politička ekonomija (FPZG) | teorijski | autor-godina | 0 | 3 |
+| Znahor (MEDRI) | empirijski, 11 tablica | Vancouver | 0 | 10 |
+| palijativna skrb (HKS) | empirijski, 12 tablica | Vancouver, 173 citata | 0 | 5 |
+| obiteljsko pravo (PFZG) | pravni | 105 fusnota | 0 | 6 |
+| tehnički fixture | formule, jedinice | autor-godina | 0 | 0 |
+| pravni fixture | 12 fusnota | fusnotni aparat | 0 | 0 |
+
+Četiri stvarna rada iz četiri različita fakulteta i tri različita stila
+citiranja. Svaki od njih otkrio je barem jedan kvar koji ostali nisu.
+

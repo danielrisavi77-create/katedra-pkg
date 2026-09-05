@@ -89,18 +89,48 @@ def main(path, domain_override=None):
             if k in sl:
                 for m in unit_re.finditer(s):
                     kw_vals[k][m.group(2)].add(m.group(1))
-    conflicts = []
+    # Kvar 92 (nađen na stvarnom empirijskom radu, HKS, 173 Vancouver citata):
+    # ovaj je detektor na radu s postocima proizvodio 11 „sukoba", svaki s 12 do
+    # 30 vrijednosti, a ključevi su bili funkcijske riječi: „samo + %: 12,6, 13,8,
+    # 15,9, 18, …", „odnosno + %", „naspram + %", „godina + %". Ni jedan nije bio
+    # nalaz. U empirijskom radu postoci se PO DEFINICIJI razlikuju; skup od
+    # dvadeset vrijednosti nije proturječje nego raspodjela.
+    #
+    # Tri ograde, sve tri nužne:
+    #   1. ključ ne smije biti funkcijska riječ (ona stoji uz svaki broj),
+    #   2. skup od više od tri vrijednosti je raspodjela, ne sukob,
+    #   3. ključ mora biti dovoljno dug da bude pojam, ne veznik.
+    NIJE_POJAM = {
+        "samo", "odnosno", "naspram", "dakle", "ukupno", "također", "takoder",
+        "godina", "godine", "godini", "cjelina", "cjelini", "dok", "već", "vec",
+        "više", "vise", "manje", "oko", "gotovo", "približno", "priblizno",
+        "prosječno", "prosjecno", "otprilike", "barem", "najmanje", "najviše",
+        "najvise", "svega", "tek", "čak", "cak", "iznad", "ispod", "između",
+        "izmedu", "prema", "unutar", "putem", "pomoću", "pomocu",
+    }
+    NAJVISE_VRIJEDNOSTI = 3
+
+    conflicts, raspodjele = [], 0
     for k, units in sorted(kw_vals.items()):
+        if k.lower() in NIJE_POJAM or len(k) < 4 or k.isdigit():
+            continue
         for u, vals in sorted(units.items()):
-            if len(vals) >= 2:
-                vv = sorted(vals, key=lambda x: float(x.replace(",", ".")))
-                conflicts.append((k, u, vv))
-    print("\nKandidati za sukob (isti pojam, više vrijednosti iste jedinice):")
+            if len(vals) < 2:
+                continue
+            vv = sorted(vals, key=lambda x: float(x.replace(",", ".")))
+            if len(vv) > NAJVISE_VRIJEDNOSTI:
+                raspodjele += 1
+                continue
+            conflicts.append((k, u, vv))
+    print("\nKandidati za sukob (isti pojam, dvije ili tri vrijednosti iste jedinice):")
     if conflicts:
         for k, u, vv in conflicts:
             print(f"  ⚠ '{k}' + {u}: {', '.join(vv)}  — provjeri je li razlika deklarirana u radu")
     else:
         print("  nema")
+    if raspodjele:
+        print(f"  ({raspodjele} pojmova ima više od {NAJVISE_VRIJEDNOSTI} vrijednosti — "
+              f"to je raspodjela, ne sukob, i ne prijavljuje se)")
 
     # Kvar 65: zbroj_kategorija() i uzorak_nalazi() bile su definirane ISPOD
     # bloka `if __name__ == "__main__"`, pa ih ni main() ni generate_report
