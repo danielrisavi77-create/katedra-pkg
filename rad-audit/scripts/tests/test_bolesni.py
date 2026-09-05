@@ -87,9 +87,9 @@ def main() -> int:
         tvrdi(any(t.lower() in spojeno for t in tragovi),
               f"nalaz sadrži klasu: {klasa}")
 
-    tvrdi(all(k < 2 for k in d["phase_exit_codes"].values()),
-          "nijedna faza se nije srušila na ovom fixtureu "
-          f"({[n for n, k in d['phase_exit_codes'].items() if k >= 2]})")
+    # Kod 3 je deklarirana granica (fixture nema poglavlje „Rasprava"), ne pad.
+    pali = [n for n, k in d["phase_exit_codes"].items() if k >= 2 and k != 3]
+    tvrdi(not pali, f"nijedna faza se nije srušila na ovom fixtureu ({pali})")
 
     # ── negativna kontrola ────────────────────────────────────────────────
     # Bez ovoga bi test prolazio i da svaka provjera prijavljuje sve, uvijek.

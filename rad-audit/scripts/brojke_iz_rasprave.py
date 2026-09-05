@@ -89,12 +89,18 @@ def main(path, rezultati_spec=None, tvrdnje_spec=None):
     print("=" * 62)
     print("BROJKE IZ RASPRAVE —", path)
     print("=" * 62)
+    # Rad bez poglavlja „Rasprava" (teorijski, pravni, pregledni) nije rad na
+    # kojem je ova provjera pukla, nego rad na kojem se ne može provesti. Kod 3
+    # je deklarirana granica; kod 2 bi značio da je alat pao, a generate_report
+    # ga po pravilu 20 tada svrstava u KRITIČNO. Na četiri od šest stvarnih
+    # radova to je davalo lažni kritični nalaz „faza nije izvedena".
     if not tvr.strip():
-        print(f"⚠ odsjecak '{tvr_spec}' nije nađen — zadaj --tvrdnje ručno")
-        return 2
+        print(f"➖ odsjecak '{tvr_spec}' nije nađen — rad vjerojatno nema zasebnu "
+              f"Raspravu; za drukčiju strukturu zadaj --tvrdnje ručno")
+        return 3
     if not rez.strip():
-        print(f"⚠ odsjecak '{rez_spec}' nije nađen — zadaj --rezultati ručno")
-        return 2
+        print(f"➖ odsjecak '{rez_spec}' nije nađen — zadaj --rezultati ručno")
+        return 3
 
     u_rezultatima = set(BROJ.findall(rez))
     u_radu = set(BROJ.findall(body + "\n" + "\n".join(cells)))

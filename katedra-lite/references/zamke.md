@@ -1849,7 +1849,195 @@ if __name__ == "__main__":
         check(f"R36: placeholder {tekst} \u2192 {treba}",
               bool(_re.search(uz, tekst)) == treba, tekst)
 
-## 106. `kvar.py` je poznavao samo jedan broj po unosu, pa je grupirani unos bio ili nevidljiv ili lažni preskok
+## 106–107. zatvaranje popisa iz prve dijagnoze
+U prvoj dijagnozi ovoga ciklusa (nalaz 6) stajalo je da `parafraza.py`,
+`propagacija.py` i `brojke_iz_rasprave.py` postoje i rade, ali nisu ožičeni ni u
+jedan agregat. To je ostalo otvoreno kroz cijeli ciklus, unatoč tome što je bilo
+zapisano. Zatvoreno je tek kad je postavljeno pitanje „jesmo li pokrili sve".
+
+* `brojke_iz_rasprave` → faza **C2** u `generate_report` i `audit_all`.
+* `propagacija` i `parafraza` **ostaju izvan audita namjerno**: prva traži
+  rukopis i generator, druga dvije verzije istoga teksta. To nisu ulazi koje
+  audit gotova .docx-a ima, pa bi ožičenje značilo lažnu fazu koja uvijek
+  preskače. Zovu se iz moda 3 (poboljšanje), gdje ti ulazi postoje.
+
+**106 — nova provjera F2, `check_uputnice.py`.** Lanac je provjeravao da svaki
+prikaz ima natpis, da je numeracija neprekinuta i da popis prikaza odgovara
+tijelu. Obrnuti smjer nije provjeravao nitko: da rečenica „prikazano je u
+Tablici 3" pogađa tablicu koja postoji, i da svaki prikaz bude bar jednom uveden
+rečenicom.
+
+Na dva stvarna rada odmah je našla nespomenute prikaze (Grafikon 1 i Tablica 3 u
+radu iz političke ekonomije).
+
+Prva izvedba je pritom **sama proizvela lažni nalaz**: uzorak `Slik\w*` ne hvata
+lokativ `Slici`, jer hrvatska sibilarizacija mijenja k u c. Rad je uredno pisao
+„prikazana je na Slici 3", a alat je prijavio da se Slika 3 nigdje ne spominje.
+Ispravljeno u `Sli[kc]\w*`.
+
+**107 — kod 3 je granica, kod 2 je pad.** `brojke_iz_rasprave` vraćao je 2 kad
+rad nema poglavlje „Rasprava". Po pravilu iz kvara 61 `generate_report` svaki kod
+≥ 2 svrstava u KRITIČNO „faza nije izvedena", pa su **četiri od šest stvarnih
+radova** dobila lažni kritični nalaz čim je faza C2 ožičena. Teorijski, pravni i
+pregledni rad nemaju zasebnu Raspravu i to nije kvar nego njihova struktura.
+Sada: kod 3 = deklarirana granica (srednje), kod 2 i više = pad alata (kritično).
+
+**Ograda:** R37, šest tvrdnji, uključujući palatalizaciju i razliku koda 3 od 2.
+
+---
+
+## Što lanac i dalje NE provjerava
+
+Popis je kratak namjerno: sve u njemu je provjereno da doista nedostaje, i ništa
+se ne tvrdi da je pokriveno „otprilike".
+
+1. **Argument i logika.** Slijedi li zaključak iz rezultata; odgovara li rad na
+   postavljene hipoteze; proturječi li Rasprava Rezultatima. `check_argument.py`
+   je savjetodavan i plitak. Ovo je jedina preostala kategorija koju mentor
+   stvarno ocjenjuje, i jedina za koju alat vjerojatno nije pravi oblik.
+2. **Hrvatska gramatika iznad razine pravopisa.** Slaganje roda i broja preko
+   rečenice, zamjenica bez imenice, prazna vezna sredstva. Audit Znahor je našao
+   četiri takva kvara koje je proizveo sam stilski zahvat, i nijedan alat ih ne
+   vidi (v. `stil_pipeline.md`).
+3. **Aritmetika unutar tablice.** Zbroj stupca, N po podskupinama naspram
+   ukupnoga, postoci koji daju 100 unutar jedne tablice.
+4. **Statističko izvještavanje.** Naziv testa, stupnjevi slobode, veličina
+   učinka, i slaže li se opis („značajno") s prijavljenim p.
+5. **Registry admission** za `mefri-sanitarno` (blokiran zastarjelim hashom,
+   namjerno se ne zaobilazi).
+6. **Mršavljenje routera** (SKILL.md 550+ redaka), jedina promjena bez ograde
+   koja bi je uhvatila.
+
+## 108–111. zatvaranje popisa „što lanac NE provjerava"
+Popis od šest stavki iz v1.9.8 obrađen je redom. Četiri su zatvorene, dvije su
+ostale i za obje postoji razlog koji nije „nismo stigli".
+
+### C3 — statističko izvještavanje (`check_statistika.py`)
+
+Lanac je provjeravao postoje li brojke i imaju li pokriće. Nije provjeravao
+**govori li tekst o njima istinu**. „Razlika je statistički značajna (p = 0,322)"
+ima brojku koja postoji, dolazi iz rada, i potpuno je pogrešno opisana.
+
+Prva izvedba je na stvarnom radu proglasila **devet urednih rečenica
+proturječnima**, jer hrvatska negacija ne stoji uz pridjev: „nije **se
+statistički** značajno razlikovala", „nije **bila** statistički značajna". Uzorak
+je tražio „nije značaj…" bez umetnutih riječi, vidio riječ „značajno" i previdio
+negaciju. Sada se dopušta do četiri umetnute riječi.
+
+Druga izvedba je prijavljivala rečenicu koja **deklarira prag** („značajnost je
+utvrđivana na razini p < 0,05") — ondje je p jednak pragu po definiciji.
+
+Treća je tražila naziv testa uz svaku p-vrijednost i ispisala 23 „nalaza" koji su
+svi bili uredni: test se imenuje jednom, u Metodologiji, i to je ispravno. Sada
+se prijavljuje samo slučaj kad testa nema **nigdje** u radu.
+
+### C4 — aritmetika u tablicama (`check_tablice.py`)
+
+Brojke su se provjeravale u tekstu i naspram izvora, unutar tablice nikad, a
+ondje su najlakše provjerive.
+
+Tri lažna nalaza na stvarnim radovima, sva tri ista klasa: **„Ukupno" u nazivu
+retka nije redak zbroja.** „Ukupno suspendirana sredstva" stajalo je kao drugi od
+četiri retka. Sada: redak zbroja je zadnji redak, i zbroj ne može biti manji od
+najvećeg pribrojnika (time otpada „Ukupno (0–25 bodova) = 54,1 %" uz pojedinačne
+udjele do 73,6 %). Za `n` iz natpisa dopušten je višekratnik: tablica koja slaže
+dvije podjele istoga uzorka zbraja na 2N, i to je oblik tablice, ne nesklad.
+
+### G1 — hipoteze i ciljevi (`check_hipoteze.py`)
+
+„Slijedi li zaključak iz rezultata" alat ne može presuditi. Ali jedan dio te
+kategorije je posve mehanički i mentori ga traže prvo: **svaka postavljena
+hipoteza mora dobiti izričitu presudu.**
+
+Dvije izvedbe pale su na izdvajanju poglavlja: prva je stala iza prve hipoteze
+(svaki redak „H2. Druga…" izgleda kao novi naslov), druga je izrezala pola
+dokumenta. Treća ne izdvaja poglavlje uopće: skupi sve oznake H<n> izvan sadržaja
+i za svaku pita postoji li odlomak koji o njoj donosi presudu. Jedinica je
+**odlomak, ne rečenica**, jer rastavljač rečenica u „H1. Studenti…" vidi kraj
+rečenice i oznaka ostaje sama.
+
+**Nalaz na stvarnom radu:** MEDRI diplomski postavlja H1–H5 i **nijednu ne
+presuđuje**. To je prvo pitanje na obrani.
+
+### Prazna vezna sredstva (`verify_rewrite.py`)
+
+Audit Znahor, C3: metrika kohezije mjeri **prisutnost** veznih sredstava, pa je
+zahvat koji umeće „Naime," i „Dakle," prazno formalno poboljšanje — alat potvrdi
+ono što je sam pokvario. Dodan je smjerni guard: skok gustoće veznih sredstava
+uz nepromijenjen broj rečenica je nalaz zahvata, ne poboljšanje.
+
+**Ograde:** R38 (6 tvrdnji), R39 (3), R40 (3), sve s oba smjera.
+
+---
+
+## Što OSTAJE nepokriveno, i zašto
+
+**1. Registry admission za `mefri-sanitarno`.** Nije „zastario hash" kako je
+ranije zapisano. `faculty_scale_gate.py` traži
+`katedra-lite/evals/benchmark/v1_vs_v2_contract.json`, datoteku s dokazima
+evaluacije koja u paketu ne postoji. Ponovno pokretanje gatea to ne rješava, a
+izmišljanje te datoteke bilo bi upravo ono protiv čega gate stoji. Profil ostaje
+datoteka sa statusom `nepotvrdeno`, kao i `hks-fzs`.
+
+**2. Mršavljenje routera.** SKILL.md je i dalje 550+ redaka i plaća se u svakoj
+poruci. Ovo je jedina preostala promjena **bez ograde koja bi je uhvatila**:
+mjeri se ponašanjem modela, a za to nema testa. Radi se sa zasebnim evalom ili se
+ne radi.
+
+**3. Ono što alat ne može.** Slijedi li zaključak iz rezultata, proturječi li
+Rasprava Rezultatima, drži li argument. G1 pokriva mehanički dio (je li na
+pitanje odgovoreno), ne sadržajni (je li odgovor točan). Za to postoji željezno
+pravilo 31 i obavezan korak `citanje_tijela`, i to je pošten odgovor, ne rupa
+koju treba zatvoriti skriptom.
+
+## 112. „nije se pokrenula" i „ne odnosi se na ovaj rad" bili su isto stanje
+**Kad:** 5. 9. 2026., nađen na pitanje „jesmo li gotovi", provjerom umjesto
+procjene. **Uzrok: moja vlastita zakrpa iz istoga dana.**
+
+Kvar 58 je uveo da preskočena blokirajuća provjera blokira, i to je bilo točno:
+provjera koja se nije pokrenula nije provjera koja je prošla. Ali faze C3, C4 i
+G1, dodane nekoliko sati poslije, vraćaju kod 3 kad se **izvedu i utvrde da se
+na taj rad ne odnose** (rad nema hipoteza, nema p-vrijednosti, nema brojčanih
+tablica). Gate je kod 3 mapirao u `preskočeno`, pa je **pravni seminarski rad
+padao na fazi audit** iako su sve tri provjere uredno odradile svoj posao.
+
+Izmjereno na stvarnom pravnom radu, prije i poslije:
+
+```
+prije:   ⛔ NIJE POKRENUTO, a blokira: dosljednost, hipoteze, statistika
+poslije: ◦ ne odnosi se na ovaj rad: odlomci, tvrdnja_izvor, hipoteze,
+           tablice, statistika
+         ⛔ NIJE POKRENUTO, a blokira: dosljednost      ← jedini stvaran
+```
+
+Pravilo 20 razlikuje pad od prolaza. Ovo je ista razlika jedan stupanj finije, i
+sada je stanje pet, ne četiri:
+
+| stanje | značenje | blokira |
+|---|---|---|
+| `ok` | provjera je prošla | ne |
+| `nalaz` | provjera je našla problem | **da** |
+| `neprimjenjivo` | provjera se IZVELA i utvrdila da se ne odnosi na ovaj rad | ne |
+| `preskočeno` | provjera se NIJE izvela, nema ulaza | **da** |
+| `pukao` | provjera se srušila | **da** |
+
+Razlika je cijela poanta: `neprimjenjivo` je **nalaz o radu** (teorijski rad nema
+hipoteze i to je uredu), `preskočeno` je **nalaz o projektu** (ulaz fali i to
+netko mora riješiti).
+
+Usput je istim mjerenjem nađeno da `check_tvrdnja_izvor.py` vraća 2 kad nema
+`izvori/mapa.json`, pa je gate na svakom radu bez priložene građe, dakle na
+većini, javljao „alat pukao".
+
+**Ograda:** G13, tri tvrdnje, uključujući onu da preskočeno i dalje blokira i kad
+u istoj fazi postoji neprimjenjiva provjera.
+
+**Pouka koja ide uz kvar 91:** svaka nova provjera koja se doda u gate mora se
+pokrenuti na radu **na koji se ne odnosi**, ne samo na onom na koji se odnosi.
+Fixture za to postoji: pravni rad nema ni hipoteza, ni p-vrijednosti, ni
+brojčanih tablica.
+
+## 113. `kvar.py` je poznavao samo jedan broj po unosu, pa je grupirani unos bio ili nevidljiv ili lažni preskok
 
 Zakrpa v1.9.5 upisala je četiri unosa koji svaki pokrivaju tri do četiri kvara, jer su to
 klase s istim popravkom i jednim mjerenjem (`61–63` exit-code disciplina, `64–66` nove
@@ -1886,7 +2074,7 @@ Ograda: raspon koji ide unatrag (`## 66–64.`) daje tvrdi nalaz, provjereno mut
 
 ---
 
-## 107. Katalozi kvarova nisu bili u jedinom ulazu za testove, pa je suite bio zelen nad pokvarenim registrom
+## 114. Katalozi kvarova nisu bili u jedinom ulazu za testove, pa je suite bio zelen nad pokvarenim registrom
 
 `bin/testovi.sh` postoji da bi „jedan ulaz" dao „jedan izlazni kod", i pokretao je devet
 skupina: tri test suitea i šest provjera tvrdnji. `kvar.py` nije bio među njima. Mjereno na

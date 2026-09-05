@@ -250,6 +250,25 @@ def provjeri(put):
                           "\u201eSažetak\u201d ili \u201eSažetak i ključne riječi\u201d"}
 
     s_tekst = " ".join(sazetak)
+
+    # C4 iz audita Znahor: alat je mjerio duljinu i ključne riječi, ali ne i
+    # VRSTU sažetka. Prvi sažetak toga rada bio je niz brojki (M = 4,64; 73,8 %;
+    # p = 0,322), a mentorica je tražila suprotno i imala pravo: sažetak
+    # diplomskog opisuje O ČEMU je rad, s rezultatima u jednoj rečenici na kraju.
+    # Mjeri se udio brojčanih tokena; na tom je radu bio ~9 %, poslije 0.
+    tokeni = re.findall(r"\S+", s_tekst)
+    brojcani = [t for t in tokeni
+                if re.search(r"\d", t) and not re.fullmatch(r"\(?\d{4}\.?\)?[,.;]?", t)]
+    udio_broj = round(len(brojcani) / len(tokeni), 3) if tokeni else 0.0
+    if udio_broj > 0.06:
+        nalazi.append(
+            f"sažetak je STRUKTURIRAN, ne deskriptivan: {udio_broj * 100:.0f} % tokena "
+            f"nosi brojku ({len(brojcani)} od {len(tokeni)}). Sažetak diplomskog opisuje "
+            f"o čemu je rad; rezultati idu u JEDNU rečenicu na kraju, ne kroz cijeli "
+            f"odlomak. Ako fakultet traži strukturirani sažetak (IMRAD), zanemari.")
+    elif udio_broj > 0.03:
+        obavijesti.append(f"udio brojčanih tokena u sažetku: {udio_broj * 100:.0f} % "
+                          f"— na granici deskriptivnog i strukturiranog")
     # Naslovi poglavlja ulaze u usporedbu pojmova: „dugotrajna sigurnosna
     # agenda" stoji u naslovu trećega poglavlja, pa bi bez njih sažetak koji je
     # tu sintagmu preuzeo ispao kao da govori o nečemu čega u radu nema.

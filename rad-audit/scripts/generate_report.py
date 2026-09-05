@@ -25,6 +25,11 @@ sys.path.insert(0, HERE)
 
 import check_fields
 import check_placeholders
+import check_uputnice
+import check_tablice
+import check_statistika
+import check_hipoteze
+import brojke_iz_rasprave
 import provjeri_metapodatke
 import check_citations
 import check_citations_authoryear
@@ -47,6 +52,13 @@ CRITICAL_HINTS = [
     "nema što raditi u studentskom radu", "polje iz poslovnog predloška",
     "metapodatak i rad ne govore isto", "odaju mapu s računala",
     "praćene izmjene ili komentari nose imena", "nepopunjeno polje predloška",
+    "uputnica u prazno", "tekst upućuje na",
+    "opisano kao", "nula nije vjerojatnost", "izvan raspona",
+    "redak ukupno kaže", "postoci daju", "natpis kaže n =",
+    "nijedan statistički test nije imenovan",
+    # hipoteza koja se postavi pa nikad ne presudi je strukturna rupa, ne stil:
+    # to je prvo pitanje na obrani
+    "hipoteza bez izričite presude", "rupa u numeraciji hipoteza",
     "NEURAVNOTEŽENO", "NEPRIHVAĆENE IZMJENE", "SIROČAD", "CITAT BEZ REFERENCE",
     "NEMA U IZVORIMA", "nije nađeno u izvorima", "BEZ vidljive oznake citata",
     "documentProtection: ⚠ DA", "permStart", "rupe u numeraciji",
@@ -154,6 +166,24 @@ def main(argv):
     txt, code = run_captured(numbers_inventory.main, path)
     phases.append(("C — Brojčani inventar", txt, code))
 
+    # C2: brojka koju rad izvodi u Raspravi mora imati pokriće u Rezultatima.
+    txt, code = run_captured(brojke_iz_rasprave.main, path)
+    phases.append(("C2 — Brojke iz Rasprave", txt, code))
+
+    # F2: uputnica „v. Tablica 3" mora pogađati prikaz koji postoji, i svaki
+    # prikaz mora biti bar jednom uveden rečenicom.
+    txt, code = run_captured(check_uputnice.main, path)
+    phases.append(("F2 — Uputnice na prikaze", txt, code))
+
+    txt, code = run_captured(check_tablice.main, path)
+    phases.append(("C4 — Aritmetika u tablicama", txt, code))
+
+    txt, code = run_captured(check_statistika.main, path)
+    phases.append(("C3 — Statističko izvještavanje", txt, code))
+
+    txt, code = run_captured(check_hipoteze.main, path)
+    phases.append(("G1 — Hipoteze i ciljevi", txt, code))
+
     txt, code = run_captured(check_typography.main, path)
     phases.append(("E — Tipografija", txt, code))
 
@@ -179,7 +209,15 @@ def main(argv):
         # izvela (pukla, odbila ulaz, nije našla građu). Do v1.9.4 se to vidjelo
         # samo u phase_exit_codes, koje nitko nije čitao, a ukupna ocjena je
         # ostajala nepromijenjena — najtiši način da audit „prođe".
-        if pcode >= 2:
+        # Kod 3 je DEKLARIRANA GRANICA (provjera se ne može provesti na ovom
+        # radu: nema Rasprave, nema izvora, profil ne propisuje pravilo), kod 2
+        # i više je pad alata. Prva izvedba nije razlikovala to dvoje, pa je rad
+        # bez zasebne Rasprave dobivao kritični nalaz „faza nije izvedena".
+        if pcode == 3:
+            buckets["srednje"].append(
+                (name, "➖ faza se ne može provesti na ovom radu (izlazni kod 3) — "
+                       "deklarirana granica, ne nalaz"))
+        elif pcode >= 2:
             buckets["kritično"].append(
                 (name, f"⚠ faza nije izvedena (izlazni kod {pcode}) — "
                        f"nalazi ove faze NE POSTOJE, nisu prazni"))
@@ -217,7 +255,7 @@ def main(argv):
             json.dump(payload, f, ensure_ascii=False, indent=2)
         print(f"✔ JSON spremljen: {out_json}")
 
-    pao_alat = [n for n, _, c in phases if c >= 2]
+    pao_alat = [n for n, _, c in phases if c >= 2 and c != 3]
     if pao_alat:
         print(f"💥 faza se nije izvela: {', '.join(pao_alat)} — "
               f"to NIJE isto što i faza bez nalaza.")
