@@ -1,6 +1,6 @@
 ---
 name: katedra
-description: "Meta-skill za UČENJE iz sesija: kvar, lažni nalaz ili autorova izmjena postaje pravilo, alat ili zakrpa za katedra-lite, rad-audit i rad-docx. Aktiviraj na 'zapiši kvar', 'napravi zakrpu', 'alat je krivo javio', 'nauči iz ove sesije', 'zamke.md'. Ne aktiviraj za plan, pisanje, audit, obranu ili predaju — to je kopilot katedra-lite. (Zadnje: §1.5 zakrpa.py --par, --nastavak-od, ladica doktrina.)"
+description: "Meta-skill za UČENJE iz sesija: kvar, lažni nalaz ili autorova izmjena postaje pravilo, alat ili zakrpa za katedra-lite, rad-audit i rad-docx. Aktiviraj na 'zapiši kvar', 'napravi zakrpu', 'alat je krivo javio', 'nauči iz ove sesije', 'zamke.md'. Ne aktiviraj za plan, pisanje, audit, obranu ili predaju — to je kopilot katedra-lite. (Zadnje: pravilo 8 i zakrpa.py --provjeri-tvrdnje — SKILL.md ne smije tvrditi ono što kod ne radi.)"
 ---
 
 # KATEDRA — skill za učenje
@@ -29,7 +29,27 @@ zakrpu koja to više ne dopušta.
    nule ili kad platforma ne prima zakrpu.
 7. **Ne piši kod tuđeg skilla.** Kvarovi lanca izrade idu u `rad-docx`, faze audita u
    `rad-audit`, sadržaj i modovi u `katedra-lite`. Ovaj skill piše ZAKRPU za njih, ne kopiju.
-8. **I ovaj skill podliježe vlastitim pravilima.** Kvar u `kvar.py`, `zakrpa.py` ili u ovom
+8. **Tvrdnja u SKILL.md-u bez testa je fikcija, i skuplja je od nedostajuće značajke.**
+   Sposobnost se ne upisuje u `SKILL.md` ni u manifest prije nego postoji test koji je
+   izvodi, a changelog ne nosi izmjerene brojke koje nisu proizvedene u toj sesiji.
+   Povod: `rad-audit` je u tri uzastopna unosa (R14, R15, R16) opisao popravke s
+   brojkama — „`detect_citation_style` sada zna `vancouver`", „lažni citat bez reference
+   11 → 0", „11 otvarajućih / 1 zatvarajući → 6/6" — a nijedan nije bio napisan.
+   Provjereno mehanički: nula pojava riječi `vancouver`, `HEADING_RE.search("Izvori i
+   literatura")` → `False`, izlaz zamjene navodnika i dalje `„tekst„`, suite 63 testa
+   umjesto tvrđenih 78. Nedostajuća značajka se primijeti kad zatreba; opisana
+   nepostojeća značajka se **ne provjerava**, jer sljedeća sesija čita opis kao gotov
+   posao. Prije svake zakrpe:
+
+   ```bash
+   python3 <SKILL>/scripts/zakrpa.py --provjeri-tvrdnje <korijen ciljanog skilla>
+   ```
+
+   Uspoređuje sposobnosti iz `SKILL.md` s manifestom, tvrdnje „N/M testova" sa stvarnim
+   brojem, i svaku oznaku kvara `R<N>` s postojanjem test-skupine `R<N>:`. Izlazni kod 1
+   znači da zakrpa ne smije izaći. Mjereno na `rad-audit`: 5 tvrdnji bez pokrića → 0.
+
+9. **I ovaj skill podliježe vlastitim pravilima.** Kvar u `kvar.py`, `zakrpa.py` ili u ovom
    `SKILL.md`-u dokumentira se i popravlja jednako kao kvar u bilo kojem satelitu — v.
    kvarove 36 i 37 u `katedra-lite/references/zamke.md` (sesija 2. 9. 2026.; taj katalog
    povijesno nastavlja numeraciju `rad-docx` kataloga od 24, novi unosi idu po vlasniku).
@@ -135,6 +155,18 @@ susjeda — dokaz iz krivog razloga prolazi jednako zeleno.
 
 Ili ručno, ali s ispisanim izlazom obaju stanja. Ako se kvar ne može reproducirati, nije
 dovoljno shvaćen — vrati se na 1.1.
+
+**Zatim provjeri da opis ne obećava više od koda** (pravilo 8):
+
+```bash
+python3 <SKILL>/scripts/zakrpa.py --provjeri-tvrdnje /put/rad/rad-audit
+# ✓ SKILL.md i kod se slažu     ← tek tada zakrpa smije u §1.5
+```
+
+Ovo se pokreće nad **izmijenjenim** stablom, ne nad baselineom, i hvata tri stvari koje
+su na `rad-audit` prošle neopaženo tri verzije zaredom: sposobnost koju SKILL.md navodi
+a manifest nema, tvrdnju o broju testova veću od stvarnog broja, i oznaku kvara bez
+ijednog testa.
 
 Za kvarove koji ovise o sadržaju rada napravi **fixture**: najmanji dokument koji ga izaziva,
 u `assets/`. Fixture je jeftiniji od cijelog rada i preživljava.

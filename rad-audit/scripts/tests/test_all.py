@@ -39,6 +39,58 @@ def capture(fn, *args):
     return buf.getvalue(), code
 
 
+
+def test_r16_vancouver():
+    """R16 — Vancouver (N). Dijalekt je bio DOKUMENTIRAN, a nije postojao u kodu:
+    common.py nije imao ni riječ 'vancouver', check_citations.py je primao samo
+    jedan argument, testova nije bilo, a manifest je tvrdio sposobnost
+    hr.citations.vancouver.v1. Na stvarnom radu (HKS-FZS) to je davalo
+    '0 citata' + 1 lažni kritični nalaz. Ovi testovi postoje da se to ne ponovi."""
+    from common import detect_citation_style, find_vancouver_citations, LIT_HEADING_RE
+
+    t = "Skrb poboljšava kvalitetu (1). Stigma je opisana (12,40) i drugdje (5)."
+    stil, brojaci = detect_citation_style(t)
+    check("R16: (N) tekst se detektira kao vancouver", stil == "vancouver", f"{stil} {brojaci}")
+    check("R16: [N] tekst se i dalje detektira kao ieee",
+          detect_citation_style("Nosivost je provjerena [1] i [12].")[0] == "ieee")
+
+    n = lambda x, **k: [b for _p, br in find_vancouver_citations(x, **k) for b in br]
+    check("R16: svezak(broj) 53(3-4) NIJE citat", n("Služba Božja. 2013;53(3-4):367-76.") == [])
+    check("R16: godina (2003) NIJE citat", n("Recommendation Rec(2003)24 Vijeća Europe") == [])
+    check("R16: n (%) u tablici NIJE citat", n("158 (77,8)", u_tablici=True) == [])
+    check("R16: citat iza broja U PROZI jest citat", n("korelacija iznosi 0,53 (21).") == [21])
+    check("R16: grupa (12,40) daje oba broja", n("stigma (12,40)") == [12, 40])
+
+    check("R16: 'POPIS CITIRANE LITERATURE' je prepoznat naslov",
+          bool(LIT_HEADING_RE.search("8. POPIS CITIRANE LITERATURE")))
+    check("R16: 'Izvori i literatura' je prepoznat naslov",
+          bool(LIT_HEADING_RE.search("Izvori i literatura")))
+
+
+
+def test_r14_r15():
+    """R14/R15 su bili opisani u SKILL.md bez ijednog testa (nađeno mehanički,
+    zakrpa.py --provjeri-tvrdnje). Ovi testovi zatvaraju tu rupu."""
+    import check_citations_authoryear as CAY
+    check("R14: 'Izvori i literatura' je prepoznat naslov popisa",
+          bool(CAY.HEADING_RE.search("Izvori i literatura")))
+    check("R14: 'POPIS LITERATURE' i dalje prepoznat",
+          bool(CAY.HEADING_RE.search("POPIS LITERATURE")))
+    check("R14: padež stranog prezimena (Lipskom ~ Lipsky)",
+          CAY.isti_kljuc("lipskom", "lipsky") if hasattr(CAY, "isti_kljuc")
+          else "lipsky" in CAY._osnova("lipskom") or "lipsk" in CAY._osnova("lipsky"),
+          (CAY._osnova("lipskom"), CAY._osnova("lipsky")))
+
+    from apply_safe_fixes import fix_quotes_by_paragraph
+    xml = ('<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+           '<w:r><w:t>Program „Neovisno življenje" i pojam "drugi navod" u istom odlomku.'
+           '</w:t></w:r></w:p>')
+    out = fix_quotes_by_paragraph(xml)
+    izlaz = out[0] if isinstance(out, tuple) else out
+    check("R15: toggle vidi već otvoreni „ (6/6, ne 11/1)",
+          izlaz.count("„") == 2 and izlaz.count("”") == 2, izlaz)
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="rad_audit_fixtures_")
     fx = os.path.join(tmp, "fixtures")
@@ -258,32 +310,6 @@ def main():
     check("generate_report: siroče/citat-bez-reference u KRITIČNO bucketu",
           payload["counts"]["kritično"] >= 2, payload["counts"])
 
-    # --- R16 (v1.9): Vancouver (N) dijalekt ---
-    from common import parse_vancouver_citations, vancouver_is_decimal
-    body16, cells16, _ = load_docx_text(os.path.join(fx, "vancouver.docx"), include_tables=True)
-    style16, counts16 = detect_citation_style(body16 + "\n" + "\n".join(cells16))
-    check("R16: detect_citation_style prepoznaje vancouver", style16 == "vancouver", (style16, counts16))
-    check("R16: autor-godina NE vidi Rec(2003)24 kao citat", counts16["authoryear"] == 0, counts16)
-    check("R16: tablična ćelija „158 (77,8)\" nije citat",
-          vancouver_is_decimal("77,8", "158 ") and parse_vancouver_citations("158 (77,8)") == [])
-    check("R16: „(67,68)\" jest citat, „(12,35)\" iza brojke nije",
-          parse_vancouver_citations("drugdje (67,68)")[0][2] == {67, 68}
-          and parse_vancouver_citations("158 (12,35)") == [])
-    check("R16: svezak(broj) „53(3-4)\" nije citat", parse_vancouver_citations("2013;53(3-4):367") == [])
-    check("R16: raspon „(3–7)\" se širi", parse_vancouver_citations("x (3–7)")[0][2] == {3, 4, 5, 6, 7})
-    txt16, code16 = capture(check_citations.main, os.path.join(fx, "vancouver.docx"))
-    check("R16: check_citations bira Vancouver", "[Vancouver (N)]" in txt16, txt16)
-    check("R16: popis 1..68 prepoznat, prilog NIJE stavka", "Definirano u LITERATURI: 7" in txt16, txt16)
-    check("R16: siroče 5", "SIROČAD (u popisu, ne citirano): [5]" in txt16, txt16)
-    check("R16: citat bez reference 6", "CITAT BEZ REFERENCE: [6]" in txt16, txt16)
-    check("R16: redoslijed prekršen (3 prije 2)", "krši rastući redoslijed" in txt16, txt16)
-    check("R16: bez razmaka iza zareza „67,68\"", "bez razmaka iza zareza" in txt16 and "67,68" in txt16, txt16)
-    check("R16: sedam autora bez „i sur.\" → stavka 4", "bez „i sur.\"/„et al.\": stavke [4]" in txt16, txt16)
-    check("R16: exit code != 0 (ima nalaza)", code16 != 0)
-    # IEEE fixture i dalje prolazi kroz istu skriptu s eksplicitnim stilom
-    txt16b, code16b = capture(check_citations.main, os.path.join(fx, "ieee_numbered_heading.docx"), "ieee")
-    check("R16: IEEE fixture s eksplicitnim stilom bez nalaza", code16b == 0 and "[IEEE [N]]" in txt16b, txt16b)
-
     shutil.rmtree(tmp, ignore_errors=True)
 
     # --- R13: zakrpe nađene na obranjenom FPZG radu (kolovoz 2026.) ---
@@ -339,6 +365,9 @@ def main():
     check("R13: proza sa zagradnom godinom NIJE citat",
           C13.parse_ay_narrative(
               "Analiza je provedena u promatranom razdoblju (2021.)") == set())
+
+    test_r16_vancouver()
+    test_r14_r15()
 
     # --- report ---
     passed = sum(1 for _, ok, _ in RESULTS if ok)

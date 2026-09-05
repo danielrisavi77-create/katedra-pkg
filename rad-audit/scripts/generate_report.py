@@ -91,9 +91,7 @@ def main(argv):
     if style in ("ieee", "unknown", "mixed"):
         txt, code = run_captured(check_citations.main, path, "ieee")
         phases.append(("B — Citiranje (IEEE [N])", style_note + "\n" + txt, code))
-    # v1.9: Vancouver (N) — numerički stil zdravstvenih fakulteta; prije je takav rad
-    # padao u „unknown" i dobivao lažni autor-godina nalaz iz „Rec(2003)24".
-    if style == "vancouver" or (style == "mixed" and style_counts.get("vancouver")):
+    if style == "vancouver" or (style in ("unknown", "mixed") and style_counts.get("vancouver", 0)):
         txt, code = run_captured(check_citations.main, path, "vancouver")
         phases.append(("B — Citiranje (Vancouver (N))", style_note + "\n" + txt, code))
     if style in ("authoryear", "unknown", "mixed"):

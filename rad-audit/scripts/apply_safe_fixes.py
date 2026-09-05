@@ -128,16 +128,20 @@ def fix_quotes_by_paragraph(doc_xml):
                 c["curly_left"] += len(curly_positions)
 
         # --- ravni navodnici (toggle po odlomku, inč-heuristika) ---
+        # R15: stanje se NE smije voditi togglom koji broji samo ravne navodnike.
+        # Odlomak koji je već otvoren hrvatskim „ dobio bi drugi „ umjesto ”
+        # („Neovisno življenje„). Stanje se zato čita iz CIJELOG prefiksa, uz
+        # već obavljene zamjene: otvoreno je ako je „ više nego ”.
         quote_positions = [i for i, ch in enumerate(full) if ch == '"']
-        state_open = True
         real_quotes = 0
         for i in quote_positions:
             prev_ch = full[i - 1] if i > 0 else ""
             if prev_ch.isdigit():
                 c["inch"] += 1
                 continue  # vjerojatna inč-oznaka — ostavi kao ravni "
+            prefiks = [replacement.get(j, ch) for j, ch in enumerate(full[:i])]
+            state_open = prefiks.count("„") <= prefiks.count("”")
             replacement[i] = "„" if state_open else "”"
-            state_open = not state_open
             real_quotes += 1
             c["straight"] += 1
 

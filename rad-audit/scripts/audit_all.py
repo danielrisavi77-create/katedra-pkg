@@ -50,18 +50,16 @@ def main(argv):
     body, cells, _ = load_docx_text(path, include_tables=True)
     style, style_counts = detect_citation_style(body + "\n" + "\n".join(cells))
     print(f"\n[detektiran stil citiranja: {style}  (IEEE-sličnih: {style_counts['ieee']}, "
-          f"autor-godina-sličnih: {style_counts['authoryear']}, "
-          f"Vancouver-sličnih: {style_counts.get('vancouver', 0)})]")
+          f"Vancouver-sličnih: {style_counts.get('vancouver', 0)}, "
+          f"autor-godina-sličnih: {style_counts['authoryear']})]")
     if style in ("ieee", "unknown"):
         run("B — CITIRANJE (IEEE [N])", check_citations.main, path, "ieee")
-    if style == "vancouver":
+    if style == "vancouver" or (style == "unknown" and style_counts.get("vancouver", 0)):
         run("B — CITIRANJE (Vancouver (N))", check_citations.main, path, "vancouver")
     if style in ("authoryear", "unknown", "mixed"):
         run("B — CITIRANJE (autor-godina)", check_citations_authoryear.main, path)
     if style == "mixed":
         run("B — CITIRANJE (IEEE [N])", check_citations.main, path, "ieee")
-        if style_counts.get("vancouver"):
-            run("B — CITIRANJE (Vancouver (N))", check_citations.main, path, "vancouver")
         print("\n[⚠ oba stila detektirana u sličnoj mjeri — provjeri ručno koristi li rad "
               "dosljedno JEDAN stil ili je miješanje namjerno (npr. norme u uglatim zagradama "
               "uz autor-godina tekst)]")
