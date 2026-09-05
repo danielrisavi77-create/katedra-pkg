@@ -1,3 +1,11 @@
+# v1.9.5 — `VERSION` prestaje tiho zaostajati (kvar 57, ograda → popravak)
+
+* **Zašto.** Kvar 57 je bio zapisan s ogradom, ne s popravkom: „`VERSION` i dalje piše rukom onaj tko radi commit". Izmjereno 5. 9. 2026. na ovom repou: datoteka je govorila **1.9.2**, a repo je bio **16 commita dalje**, s doktrinom v1.9.4 u `PROMJENE.md`. Svaka sesija koja je poslušala § 0.0 pravilo (4) ispisivala je tu brojku kao činjenicu — točno ona vrsta tihog kvara zbog koje pravilo 20 postoji, samo na razini isporuke.
+* **Popravak.** `bin/env.sh` uz sadržaj datoteke sada računa i otisak commita te broj commita otkad se `VERSION` nije mijenjao, pa `KATEDRA_PKG_VERZIJA` nosi cijelu istinu. Ostale varijable (`KATEDRA_PKG_VERZIJA_DATOTEKA`, `KATEDRA_PKG_COMMIT`, `KATEDRA_PKG_ZAOSTAJE`) izvezene su odvojeno. § 0.0 se ne mijenja — ondje se ta varijabla samo ispisuje, pa popravak stiže u sve sesije bez dodavanja ijednog koraka.
+* **Provjereno (3 stanja).** `VERSION` zaostaje → `1.9.2 (62c95f7 · ❗ VERSION zaostaje 16 commita, v. kvar 57)` · poslije podizanja na 1.9.4 → `1.9.4 (e5fda9e)`, bez upozorenja · raspakiran zip bez `.git` → `1.9.4 (bez gita — otisak se ne može provjeriti)`, jer nepoznato nije isto što i uredno.
+* **Uz to `VERSION` 1.9.2 → 1.9.4**, da tekuće stanje odgovara doktrini koja je u repou od PR-a #8.
+* **Granica.** Ovo ne veže `VERSION` uz commit nego ga čini **provjerljivim**. Broj se i dalje piše rukom; razlika je što se zaostajanje sada vidi bez pitanja.
+
 # v1.9.4 — isporuka i doktrina: kvarovi 54–57, pravila 33 i 34
 
 Zakrpa 1 popravljala je alate; ova popravlja **isporuku**. Pisana je nad `e57ac53`, dakle nad

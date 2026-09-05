@@ -61,6 +61,45 @@ BIBLIO_LINE_RE = re.compile(
 )
 
 
+ALIAS_U_ZAGRADI_RE = re.compile(r"\(([^)]{2,60})\)")
+
+
+def _aliasi_iz_autora(autor, glavni):
+    """Ključevi kratica u zagradi unutar imena institucije.
+
+    `Hrvatska narodna banka (HNB)` → {`hnb`}; `HNB (Hrvatska narodna banka)` →
+    {`hrvatska`}. Radi u oba smjera jer se u popisima pojavljuju oba.
+    """
+    out = set()
+    for unutra in ALIAS_U_ZAGRADI_RE.findall(autor or ""):
+        if not any(z.isalpha() for z in unutra):
+            continue
+        k = C.kljuc_prezimena(unutra)
+        if k and k != glavni:
+            out.add(k)
+    return out
+
+
+def biblio_aliasi(lit_text):
+    """{(alias, godina): (glavni, godina)} — za preslikavanje ključeva iz teksta."""
+    mapa = {}
+    for line in (lit_text or "").splitlines():
+        line = line.strip()
+        if not line or BIBLIO_LINE_RE.match(line):
+            continue
+        mi = BIBLIO_INST_RE.match(line)
+        if not mi:
+            continue
+        autor = mi.group(1).strip(" \t,.;:")
+        glavni = C.kljuc_prezimena(autor)
+        if not glavni:
+            continue
+        god = mi.group(2).lower()
+        for a in _aliasi_iz_autora(autor, glavni):
+            mapa.setdefault((a, god), (glavni, god))
+    return mapa
+
+
 def extract_biblio_keys(lit_text):
     keys = set()
     unmatched = 0
@@ -166,6 +205,13 @@ def main(path):
     if sup["footnotes"] or sup["endnotes"]:
         print(f"  (od toga u fusnotama/endnotama: {len(sup['footnotes']) + len(sup['endnotes'])} znakova teksta pretraženo)")
 
+    # Kratica institucije u tekstu (`(HNB, 2023)`) i pun naziv u popisu
+    # (`Hrvatska narodna banka (HNB) (2023)`) isti su izvor. Bez ovoga jedan
+    # institucionalni izvor daje DVA lažna nalaza odjednom — siroče i citat bez
+    # reference — a mjereno je da se to događa svakom takvom retku.
+    aliasi = biblio_aliasi(lit)
+    if aliasi:
+        cited = {aliasi.get(k, k) for k in cited}
     _sir, _bez = uskladi_kljuceve(cited, defined)
     orphans, undefined = sorted(_sir), sorted(_bez)
     print(f"\n  {'⚠ SIROČAD' if orphans else 'SIROČAD'} (u popisu, ne citirano): {orphans or 'nema'}")

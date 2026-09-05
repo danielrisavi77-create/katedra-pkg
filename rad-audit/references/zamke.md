@@ -366,3 +366,39 @@ Popravak je zasad postupak, ne kod: naredba iznad je **zadnji korak svake zakrpe
 `rad-audit/scripts/`** i tako stoji u `PROMJENE.md`. Ograda: dok se otisak upisuje rukom,
 ništa ne sprječava da ga netko osvježi bez pokretanja testova, pa uz njega uvijek ide i
 `python3 rad-audit/scripts/tests/test_all.py` (84 provjere).
+
+## 12. Kratica institucije u tekstu i pun naziv u popisu daju dva ključa, pa jedan izvor proizvede dva lažna nalaza
+
+`extract_biblio_keys` svodi redak popisa na (prvi pojam, godina) kroz
+`C.kljuc_prezimena`. Institucionalni autor u hrvatskim radovima redovito nosi oba oblika —
+pun naziv i kraticu — a koji je od njih „prvi pojam" ovisi o tome kojim je redom zapisan:
+
+```
+popis:  Hrvatska narodna banka (HNB) (2023). Bilten o bankama.   → ključ  hrvatska
+tekst:  Podaci o bankama objavljeni su (HNB, 2023).              → ključ  hnb
+```
+
+Isti izvor time ispada **istodobno siroče i citat bez reference**. Mjereno na dva
+institucionalna izvora u jednom radu:
+
+```
+  ⚠ SIROČAD (u popisu, ne citirano): [('državni', '2022'), ('hrvatska', '2023')]
+  ⚠ CITAT BEZ REFERENCE: [('dzs', '2022'), ('hnb', '2023')]
+REZULTAT: ⚠ ima nalaza / potrebna ručna provjera            izlaz 1
+```
+
+Četiri nalaza, nijedan stvaran. Obrnuti zapis (`HNB (Hrvatska narodna banka) (2023)`)
+prolazio je slučajno, jer je ondje kratica prva — pa je kvar izgledao kao da ga nema. To je
+zabilježeno u `POMIRENJE.md` kao sumnja i ostavljeno neizmjereno; mjerenje ga je našlo u
+suprotnom smjeru od očekivanog.
+
+Popravak: kratica u zagradi unutar imena institucije vodi se kao **alias**, a ne kao drugi
+unos u popisu. Ključ iz teksta preslika se na glavni prije usporedbe (`biblio_aliasi`), pa
+popis i dalje ima točno onoliko unosa koliko ima redaka. Upisivanje obaju ključeva kao
+definicija bilo bi lakše i pogrešno: nekorišteni oblik postao bi novo lažno siroče.
+
+Poslije popravka ista četiri slučaja: pun naziv (kratica) u popisu + kratica u tekstu → 0
+nalaza; kratica (pun naziv) + kratica → 0; kratica (pun naziv) + pun naziv u tekstu → 0.
+Peti slučaj, onaj koji **mora** pasti (pravilo 34): stvarno nedostajuća referenca
+`(Kovač, 2020)` i dalje se prijavljuje, izlaz 1. Suite 82 → **87 testova**, pet novih pokriva
+oba smjera, izostanak drugog unosa i dvije granice (zagrada bez slova, osobni autor).
