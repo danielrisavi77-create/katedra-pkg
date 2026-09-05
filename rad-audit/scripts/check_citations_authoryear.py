@@ -225,7 +225,11 @@ def main(path):
     print(f"\n  {'⚠ SIROČAD' if orphans else 'SIROČAD'} (u popisu, ne citirano): {orphans or 'nema'}")
     print(f"  {'⚠ CITAT BEZ REFERENCE' if undefined else 'CITAT BEZ REFERENCE'}: {undefined or 'nema'}")
 
-    print("\n⚠ HEURISTIKA — ključ je (prvi autor, godina), ne pun popis autora/naslov.")
+    # Kvar 74: ovo je trajna napomena o metodi, ne nalaz. Znak ⚠ ju je uvodio u
+    # bucketizaciju generate_report.py, pa je SVAKI rad — i savršeno čist —
+    # imao barem jedan „nalaz". Brojač koji nikad ne pokazuje nulu prestaje se
+    # čitati, a to je isti kvar kao gate koji nikad ne pada, samo obrnut.
+    print("\nNAPOMENA O METODI — ključ je (prvi autor, godina), ne pun popis autora/naslov.")
     print("  Prije zaključka ručno provjeri: duple godine istog prvog autora (2020a/2020b),")
     print("  'i dr.'/'et al.' grupe, i retke koje regex nije prepoznao (v. gore).")
 
