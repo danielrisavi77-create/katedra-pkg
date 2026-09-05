@@ -110,8 +110,51 @@ def citac_zadatak_komponente(_a, kat):
     kom = z.get("komponente") or []
     if not kom:
         return NEPOZNATO, "zadatak.json nema nijednu komponentu"
-    return DJELOMICNO, (f"{len(kom)} komponenti zapisano; prisutnost u dokumentu "
-                        f"provjerava rad-docx/provjeri_predaju.py --zadatak")
+    imena = [k.get("naziv", "?") for k in kom]
+
+    # Prvo nalaz gatea, ako postoji. `igle` govore samo da je komponenta strojno
+    # PROVJERLJIVA, ne da je provjera prošla — komponenta s iglama kojih u radu nema
+    # inače ulazi u „sve pokrivene", pa rubrika kaže ✅ dok provjeri_predaju.py nad
+    # istim zadatak.json-om javlja ❌. Jedini dokaz o prisutnosti je nalaz alata koji
+    # je gledao dokument, a ne zapis o tome što je trebalo gledati.
+    nalaz = (_ucitaj(os.path.join(kat, "predaja.json")) or {}).get("zadatak") or {}
+    if isinstance(nalaz, dict) and nalaz.get("provjeren"):
+        po_imenu = {n.get("naziv"): n for n in nalaz.get("komponente") or []}
+        strane = [n for n in imena if n not in po_imenu]
+        if strane:
+            return DJELOMICNO, (f"predaja.json ne poznaje {len(strane)} komponentu iz "
+                                f"zadatak.json — nalaz je stariji od zadatka: "
+                                + "; ".join(strane[:3]))
+        nema = [n for n in imena if po_imenu[n].get("status") == "nema_u_radu"]
+        if nema:
+            return NEISPUNJENO, (f"provjeri_predaju.py: {len(nema)} komponenti zadatak "
+                                 f"traži, a u radu ih nema: " + "; ".join(nema[:3]))
+        neprovjerljive = [n for n in imena
+                          if po_imenu[n].get("status") == "nije_strojno_provjerljivo"]
+        if neprovjerljive:
+            return DJELOMICNO, (f"{len(kom)} komponenti; {len(neprovjerljive)} bez igala i "
+                                f"bez zapisanog nalaza provjere: "
+                                + "; ".join(neprovjerljive[:3]))
+        alatom = sum(1 for n in imena if po_imenu[n].get("status") == "provjereno_alatom")
+        return ISPUNJENO, (f"{len(kom)} komponenti, sve potvrđene nalazom "
+                           f"provjeri_predaju.py ({alatom} kroz zapisan nalaz alata)")
+
+    # Bez nalaza gatea: `provjereno` uz komponentu jedini je dokaz koji uopće postoji.
+    # Zahtjev poput „stranica i kod parafraze" ne postoji kao niska u dokumentu, pa se
+    # ne da provjeriti iglama ni onda kad gate radi.
+    bez = [k.get("naziv", "?") for k in kom
+           if not (k.get("igle") or k.get("provjereno"))]
+    if bez:
+        return DJELOMICNO, (f"{len(kom)} komponenti zapisano, {len(bez)} bez igala i bez "
+                            f"zapisanog nalaza provjere: " + "; ".join(bez[:3]))
+    s_provjerom = sum(1 for k in kom if k.get("provjereno"))
+    if s_provjerom == len(kom):
+        return ISPUNJENO, (f"{len(kom)} komponenti, sve sa zapisanim nalazom provjere "
+                           f"(nema predaja.json — prisutnost u dokumentu nije neovisno "
+                           f"provjerena)")
+    return DJELOMICNO, (f"{len(kom)} komponenti zapisano, {len(kom) - s_provjerom} "
+                        f"pokriveno samo iglama — prisutnost u radu nije provjerena; "
+                        f"pokreni provjeri_predaju.py --json .katedra/predaja.json")
 
 
 def citac_evidence(a, kat):
@@ -177,9 +220,16 @@ def citac_dio_metodologija(_a, kat):
     if m.get("trazi_profil") == "provjeri" and m.get("status") == "nije-napravljeno":
         return NEPOZNATO, ("nije odlučeno ima li rad vlastito istraživanje — "
                            "odluči s Uputama u ruci (references/metodologija.md)")
-    if m.get("status") in ("napravljeno", "provjereno"):
+    # Kvar 46: obje su vrijednosti prije davale `djelomicno`, pa razlika između
+    # „napisano" i „netko je provjerio osam odjeljaka" nije značila ništa, a
+    # kriterij se nije mogao zatvoriti nijednim postupkom.
+    if m.get("status") == "provjereno":
+        return ISPUNJENO, ("potpunost osam odjeljaka je provjerena"
+                           + (f"; {m['napomena']}" if m.get("napomena") else ""))
+    if m.get("status") == "napravljeno":
         return DJELOMICNO, ("poglavlje postoji; potpunost osam odjeljaka provjerava "
-                            "čovjek (references/metodologija.md §9)")
+                            "čovjek (references/metodologija.md §9), pa se status "
+                            "nakon toga postavlja na `provjereno`")
     return NEISPUNJENO, f"status: {m.get('status')}"
 
 
@@ -331,10 +381,24 @@ def ucitaj_registar(put: str = REGISTAR) -> dict:
 
 
 def _empirijski(kat) -> bool:
+    """Ima li rad vlastito istraživanje.
+
+    Kvar 46: prije se izvodilo iz statusa dijela `metodologija`, a taj dio time
+    postaje uvjetno ključan — petlja u kojoj oznaka „napravljeno" sama sebi
+    stvara kriterij koji zatim ne može zatvoriti. Odgovor je odluka autora i
+    stoji u stanju projekta; registar dijelova je rezerva, i to samo preko
+    `analiza`, koja o metodologiji ne ovisi.
+    """
+    s = _ucitaj(os.path.join(kat, "stanje.json")) or {}
+    odluka = s.get("vlastito_istrazivanje")
+    if isinstance(odluka, bool):
+        return odluka
+    if isinstance(odluka, str) and odluka.strip().lower() in ("da", "ne"):
+        return odluka.strip().lower() == "da"
     d = _ucitaj(os.path.join(kat, "dijelovi.json")) or {}
     m = (d.get("dijelovi") or {}).get("metodologija") or {}
-    if m.get("status") in ("napravljeno", "provjereno"):
-        return True
+    if m.get("status") == "ne-primjenjuje-se":
+        return False
     a = (d.get("dijelovi") or {}).get("analiza") or {}
     return a.get("status") in ("napravljeno", "provjereno")
 

@@ -110,6 +110,23 @@ def build(out_dir):
     doc.add_paragraph('Horvat, D. (2018). Treći rad, nikad citiran u tekstu. Rijeka: Neki nakladnik.')
     doc.save(os.path.join(out_dir, "author_year.docx"))
 
+    # 3b) autor-godina bez osobnog autora: mediji/platforme, institucija i
+    #      prefiks/sufiks unutar citata. Sve jedinice jesu citirane i nijedna
+    #      ne smije postati lažno siroče ili citat bez reference.
+    doc = Document()
+    doc.add_paragraph(
+        'Medijski korpus čine objave (danas.hr, 2025; Index.hr, 2025; '
+        'Ministarstvo znanosti i obrazovanja, 2024; UNESCO, 2021). '
+        'Za usporedbu vidi (usp. Tonković, Krolo i Marcelić, 2014, za analizu).')
+    doc.add_paragraph('LITERATURA')
+    doc.add_paragraph('danas.hr (2025). Naslov članka. https://danas.hr/tekst')
+    doc.add_paragraph('Index.hr (2025). Drugi članak. https://www.index.hr/tekst')
+    doc.add_paragraph('Ministarstvo znanosti i obrazovanja (2024). Strategija obrazovanja.')
+    doc.add_paragraph('UNESCO. (2021). Global education report. Paris: UNESCO.')
+    doc.add_paragraph(
+        'Tonković, Željka, Krolo, Krešimir i Marcelić, Sven (2014). Kulturna potrošnja.')
+    doc.save(os.path.join(out_dir, "author_year_institutions.docx"))
+
     # 4) elektro domena (za auto-detekciju)
     doc = Document()
     doc.add_paragraph('Sustav radi na naponu 400 V i struji 16 A, uz snagu 6 kW.')

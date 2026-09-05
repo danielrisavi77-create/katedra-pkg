@@ -215,10 +215,17 @@ def _pages_human(evidence: list[dict[str, Any]]) -> list[str]:
     prije se ispisivao samo fizički indeks i to leksikografski (10, 105, 2, 9).
     """
     parovi: dict[int, str | None] = {}
+    ostali: list[str] = []
     for item in evidence:
         locator = item.get("locator", {}) or {}
         page = locator.get("page")
         if not isinstance(page, int):
+            # Kvar 47: lokator koji nije stranica (točka standarda, članak
+            # propisa, odlomak bez paginacije) ispisuje se odvojeno, da se ne
+            # bi činilo kako je sve mjereno istom mjerom.
+            oznaka = (locator.get("clause_label") or locator.get("passage"))
+            if oznaka and str(oznaka) not in ostali:
+                ostali.append(str(oznaka))
             continue
         label = locator.get("page_label")
         parovi.setdefault(page, str(label) if label is not None else None)
@@ -226,6 +233,7 @@ def _pages_human(evidence: list[dict[str, Any]]) -> list[str]:
     for page in sorted(parovi):
         label = parovi[page]
         out.append(f"{label} (pdf {page})" if label is not None else f"pdf {page}")
+    out.extend(ostali)
     return out
 
 

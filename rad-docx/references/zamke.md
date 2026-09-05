@@ -515,3 +515,39 @@ izvan redoslijeda: nema
 ```
 
 Prva inačica gledala je tri kontejnera i javljala zeleno nad dokumentom s pet prekršaja.
+
+
+## 24. Komponenta zadatka bez „igala" traži doslovan tekst zahtjeva unutar rada
+
+`provjeri_zadatak` uzima `k.get("igle") or [k["naziv"]]`. Kad komponenta nema igala, alat
+traži **opis zahtjeva** kao nisku u tekstu rada. Zahtjev je opis onoga što rad mora
+zadovoljiti, a ne rečenica koju rad mora sadržavati, pa se ne nalazi nikad.
+
+```python
+    for k in zadatak.get("komponente", []):
+        igle = k.get("igle") or [k["naziv"]]
+        if not any(i in sve for i in igle):
+            P.g(f"zadatak traži, a u radu nema: {k['naziv']}")
+```
+
+Na radu Paroci to je dalo **četiri lažne greške od pet komponenti**, uz poruku „rad se ne
+predaje":
+
+```
+· zadatak traži, a u radu nema: broj stranice i kod PARAFRAZE, ne samo kod doslovnog citata
+· zadatak traži, a u radu nema: svi elementi rada prema Uputama Katedre
+· zadatak traži, a u radu nema: tehničko oblikovanje prema Uputama Katedre
+```
+
+Sva tri zahtjeva bila su ispunjena: svih 65 citata imalo je lokator, 9/9 obaveznih dijelova
+bilo je gotovo, `check_rules` je javljao 0 kršenja od 15 pravila. Lažni nalaz je ovdje skup
+dvostruko, jer stoji pod naslovom „rad se ne predaje" i uči korisnika da tu poruku preskoči.
+
+Popravak: uz komponentu se dopušta polje `provjereno` (`{alat, nalaz, datum}`) za zahtjev
+koji se ne da izraziti niskom. Komponenta s iglama provjerava se kao dosad; komponenta s
+nalazom provjere ispisuje se kao ograničenje s imenom alata i njegovim nalazom; komponenta
+bez jednog i drugog ispisuje se kao „nije strojno provjerljivo", ne kao greška. Greška ostaje
+samo ondje gdje igle postoje, a u radu ih nema.
+
+Mjereno poslije zakrpe na istom radu: `✅ nijedna greška`, uz četiri retka pod
+„OGRANIČENJA — nije provjereno" koji imenuju alat i nalaz.

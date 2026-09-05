@@ -1,9 +1,123 @@
-# rad-audit — katalog kvarova
+# Katalog kvarova — `rad-audit`
 
-Format po `katedra/references/kvar.md`: naslov imenuje mehanizam, pa Simptom /
-Uzrok / Popravak / Gdje, pa izlaz koji to pokazuje.
+Vlastiti katalog motora. Numeracija teče od 1 i neovisna je o katalozima
+`rad-docx` (1–23) i `katedra-lite` (24–…). Referenca na kvar uvijek nosi vlasnika:
+„rad-audit 1", ne samo „kvar 1".
 
-## 1. Dijalekt citiranja dokumentiran, a nije napisan (Vancouver `(N)`)
+Format unosa: `katedra/references/kvar.md`.
+
+---
+
+## 1. Domena se detektira zbrajanjem podnizova, pa rad iz medijskih studija ispadne čelična konstrukcija
+
+`domains.detect_domain()` bodovao je svaki paket s `tl.count(k)` za korijene iz rječnika
+domene. `count` traži slobodan podniz, bez granice riječi, a rječnik `celik` sadrži korijene
+koji su u hrvatskom obične riječi: `stup`, `okvir`, `temelj`, `profil`.
+
+Na diplomskom radu iz medijskih studija (moralne panike oko koncerata, 13 203 riječi) to je
+dalo **83 boda za „celik"** i klasifikaciju `čelične konstrukcije / građevinarstvo`. Razlaganje
+po ključnoj riječi pokazuje da **nijedan pogodak nije bio pojam iz struke**:
+
+```
+stup     30×   dostupan, dostupna, dostupnost, nastup, nastupa
+okvir    38×   teorijski okvir, analitički okvir, uokvirivanje
+temelj   13×   temelji se, temeljna
+profil    2×   profilima (korisnički profil na mreži)
+```
+
+Posljedica nije kozmetička. Faza C nastavlja s rječnikom te domene, pa je „Vrijednosti po
+jedinici" ostalo prazno, „Kandidati za sukob" vratilo **„nema"**, a ručni podsjetnik na kraju
+faze glasio je „površina = Σ(a×b)?" i „broj stupova/greda vs broj okvira?" — nad radom o
+glazbi. Stvarni brojčani sukob u tom radu (isti podatak jednom kao **„oko četrdeset pet
+zemalja"**, drugi put kao **„iz oko 4 zemalja"**) prošao je neopaženo.
+
+Dva su uzroka i oba su popravljena u `scripts/domains/__init__.py`:
+
+1. **nema granice riječi** — korijeni se sad traže na početku riječi (`(?<!\w)` + korijen),
+   čime „nastup" i „dostupan" prestaju biti stupovi. Na istom radu 83 → 38 bodova.
+2. **golo zbrajanje nije dokaz struke** — na dovoljno dugom tekstu dvije česte riječi
+   prijeđu svaki fiksni prag. Domena se sad prihvaća samo ako uz `min_score` ima i jedan od
+   dva dokaza: **≥ 5 različitih** ključnih riječi (`MIN_RAZLICITIH`) ili **≥ 1 domensku
+   oznaku** iz `claim_patterns` (IPE 300, S235, RAL 9006, IP44, HTTP 404…). Rad iz medijskih
+   studija ima 4 različite i 0 oznaka → `generic`, što je točan odgovor.
+
+`detect_domain_detail()` uz odluku vraća i razlog, pa `numbers_inventory.py` ispisuje
+`↳ 'celik' ima 38 bodova, ali samo 4 različitih ključnih riječi (traži se 5) i 0 domenskih
+oznaka`. Kriva detekcija je time barem vidljiva, a ne tiha.
+
+Fixtures u `katedra/assets/`: `domena_celik.docx` (stvarni inženjerski rječnik — i prije i
+poslije daje `celik`, bez regresije) i `domena_drustvene.docx` (`celik` prije → `generic`
+poslije).
+
+## 2. Ključ `Prezime, I. (GODINA)` ne poznaje izvor bez osobnog autora, pa medij i institucija ispadnu citat bez reference
+
+Faza B gradi ključeve iz popisa literature uzorkom `Prezime, I. (GODINA)`. Izvor kojemu je
+autor institucija, medij ili platforma nema to lice, pa redak ne uđe u popis definiranih —
+a citat u tekstu uđe u popis citiranih. Razlika se onda javi kao kršenje.
+
+Prva pojava (25. 8. 2026., čekaonica `katedra/references/ideje.md`): rad s ministarstvima,
+zakonima u *Narodnim novinama*, strategijama i presudama, 8–9 lažnih siročadi, ručna
+provjera dala nula.
+
+Druga pojava (3. 9. 2026.): diplomski s korpusom medijskih tekstova. Motor je sam prijavio
+`(35 redaka u popisu literature sadrži godinu ali nije prepoznato kao 'Prezime, I.
+(GODINA)' — pregledaj ručno format)`, pa izlistao **38 „CITAT BEZ REFERENCE"**:
+
+```
+('danas.hr','2025') ('entrio','2025') ('index.hr','2025') ('jta','2025')
+('net.hr','2025') ('narod.hr','2025') ('poskok.info','2025') ('vreme.com','2025') …
+```
+
+Od tih 38 samo je jedan bio stvaran nalaz (`danas.hr`, izvor doista nije u popisu) i jedan
+stvarna pogreška u radu (`('dnevno.hr','3035')` — nemoguća godina, koju alat izlista ali ne
+prepoznaje kao nemoguću). Ostalo je šum, i u njemu se ta dva prava nalaza gube.
+
+Isti uzorak radi i obrnuto: `Tonković 2014` prijavljen je kao **siroče**, a citiran je u
+obliku `(…, 2020; usp. Tonković, Krolo i Marcelić, 2014, za analizu)` — ključ nije prepoznao
+`usp. …, GODINA, za …`.
+
+**Popravljeno u 1.9.2.** `BIBLIO_LINE_RE` ostaje prvi, stroži parser za osobne autore, a
+drugi parser uzima naziv institucionalnog autora prije prve parentetizirane godine. Time
+točke u nazivima medija/platformi i točka iza kratice više ne prekidaju ključ. Parser
+citata uklanja signalnu riječ (`usp.`, `vidi`, `prema`, `cf.`) i kratku napomenu nakon
+godine prije gradnje ključa.
+
+Dokaz je end-to-end fixture s `danas.hr`, `Index.hr`, Ministarstvom, UNESCO-om i
+Tonkovićem u obliku `usp. …, 2014, za analizu`: prije 2/5 definiranih, 1 lažno siroče i 3
+lažna citata bez reference; poslije 5/5, bez nalaza, exit 0. Guardovi zasebno dokazuju da
+stvarno nedostajući medij i nepodudarna godina i dalje ostaju prijavljeni.
+
+## 3. Faza A/F ispisuje „updateFields: NE" u punom dumpu, ali ga ne diže u nalaz
+
+Faza A/F provjerava Wordova polja i u punom ispisu uredno javlja da `settings.xml` ne traži
+osvježavanje polja. Bucketizacija u `kritično/srednje/kozmetičko` taj redak ne uzima. Iz
+faze se u sažetak digne samo `tblLayout fixed`, a `updateFields` ostane u tijelu izvještaja
+koje nitko ne čita do kraja.
+
+Na radu Paroci (seminarski, EFZG RFIR) izvještaj je izgledao ovako:
+
+```
+--- formatiranje koje zna praviti probleme ---
+pageBreakBefore: 0   ✓
+tblLayout fixed/autofit: 1/0   ⚠ fixed = kruti stupci
+...
+updateFields u settings.xml: NE — dodaj radi auto-osvježavanja
+REZULTAT: ✓ polja/zaštita uredni
+```
+
+`REZULTAT: ✓ polja/zaštita uredni` je pritom neistinit za dokument koji ima tri TOC i četiri
+SEQ polja, a ne traži njihovo osvježavanje. Rad je prošao dva kruga audita s **praznim
+sadržajem, praznim popisom slika i praznim popisom tablica**; mentorica bi ih vidjela prazne
+osim da sama pritisne Ctrl+A pa F9.
+
+Tih je jer izgleda kao uspjeh: linija s nalazom stoji tri retka iznad zelene kvačice.
+
+Popravak: `updateFields` koji nedostaje uz prisutna `fldChar` polja tipa TOC ili SEQ postaje
+nalaz razine **srednje**, a `REZULTAT` te faze prestaje biti ✓ dok god polja postoje bez
+zahtjeva za osvježavanjem. Ograda: sažetak faze ne smije tvrditi „uredni" na temelju
+podskupa provjera koje je sam ispisao.
+
+## 4. Dijalekt citiranja dokumentiran, a nije napisan (Vancouver `(N)`)
 
 **Simptom.** Diplomski rad HKS-a, Fakultet zdravstvenih studija (Danijela Stanić,
 palijativna skrb), 75 referenci i 132 navoda oblika `(1)`, `(12,40)`:
@@ -81,7 +195,7 @@ POSLIJE (zakrpa, isti rad.docx)
 testovi: 63/63 → 72/72 (9 novih, R16)
 ```
 
-## 2. Provjera redoslijeda prvog pojavljivanja ne ulazi u ocjenu
+## 5. Provjera redoslijeda prvog pojavljivanja ne ulazi u ocjenu
 
 **Simptom.** Nakon dodavanja 35 novih navoda u Uvod i Raspravu istog rada,
 redoslijed prvog pojavljivanja bio je `… 13, 40, 14, 29, 15 …` — sedam kršenja
@@ -114,7 +228,7 @@ Na stvarnom radu: nakon dodavanja 35 navoda redoslijed je pucao na mjestima
 5, 44, 35, 45, 43, 40, 41 i 42 (mjereno u četiri kruga, dok se nije zatvorio);
 sve je nađeno ad-hoc skriptom jer alat tu granu nije vodio u ocjenu.
 
-## 3. Domenska auto-detekcija nema biomedicinu, pa promašuje u tišini
+## 6. Domenska auto-detekcija nema biomedicinu, pa promašuje u tišini
 
 **Simptom.** Isti rad (palijativna skrb, sestrinstvo):
 
@@ -140,7 +254,7 @@ ispod kojega se bira `generic` umjesto najbolje ocijenjene tehničke domene.
 
 **Gdje.** `scripts/domains/`.
 
-## 4. R14 opisan, a `HEADING_RE` i `_osnova` nepromijenjeni
+## 7. R14 opisan, a `HEADING_RE` i `_osnova` nepromijenjeni
 
 **Simptom.** `HEADING_RE.search("Izvori i literatura")` → `False`;
 `_osnova("lipskom")` → `{lipsk, lipskom}`, bez `lipsky`. SKILL.md je taj popravak
@@ -160,7 +274,7 @@ rječniku naslova. `_osnova` uz goli korijen vraća i oblike sa završnim y/i/j/
 **Dokaz.** Prije: 3 testa skupine R14 padaju. Poslije: prolaze; `Izvori i
 literatura` i `POPIS CITIRANE LITERATURE` prepoznati, `lipskom` daje i `lipsky`.
 
-## 5. R15 opisan, a toggle navodnika nepromijenjen
+## 8. R15 opisan, a toggle navodnika nepromijenjen
 
 **Simptom.** `fix_quotes_by_paragraph` nad odlomkom
 `Program „Neovisno življenje" i pojam "drugi navod"` vraća
