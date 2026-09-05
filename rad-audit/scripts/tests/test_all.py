@@ -338,6 +338,17 @@ def test_stvarni_rad():
           "izre\u010deno je u istoj re\u010denici" in izlaz or "'\u010delik'" not in izlaz,
           izlaz[-350:])
 
+    # 102 — dijalekt navodnika (audit Znahor, B4)
+    hr_ihjj = "Tekst \u201eprvi\u201d i \u201edrugi\u201d navod."
+    hr_njem = "Tekst \u201eprvi\u201c i \u201edrugi\u201c navod."
+    for opis, tekst in [("IHJJ \u201e\u2026\u201d", hr_ihjj), ("njema\u010dki \u201e\u2026\u201c", hr_njem)]:
+        n = _tipografija_nalazi(TY, tekst)
+        check(f"R35: dosljedan dijalekt ({opis}) NIJE nalaz",
+              not any("zatvaraju\u0107eg navodnika" in x for x in n), (opis, n))
+    n = _tipografija_nalazi(TY, "Tekst \u201eprvi\u201d i \u201edrugi\u201c navod.")
+    check("R35: mije\u0161ana dva oblika JEST nalaz",
+          any("dva oblika" in x for x in n), n)
+
     # 78 — DOI nije množenje
     n = _tipografija_nalazi(TY, "DOI: 10.1177/1023263X251338198. Dostupno na mre\u017ei.")
     check("R26: DOI s X me\u0111u znamenkama NIJE mno\u017eenje",

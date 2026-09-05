@@ -1,7 +1,7 @@
 {
  "contract_version": "1",
  "engine": "rad-audit",
- "engine_version": "0.0.0-undeclared+bdb25905",
+ "engine_version": "0.0.0-undeclared+1eb9289d",
  "capabilities": [
   "audit.report-json.v1",
   "hr.citations.author-year.v1",

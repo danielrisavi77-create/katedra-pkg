@@ -495,3 +495,29 @@ na novom) — očekivano ponašanje diffa na razini teksta, ne bug; reci to kori
 > Tijek jednog moda ne treba biti u datoteci koja se učitava u svakoj poruci.
 
 `pisanje.md`. `nastavi rad` = uzmi prvo potpoglavlje iz `plan.json` sa `status: nije-napisano` (`python3 <KATEDRA_SKILL>/scripts/plan_state.py next`), ne pitaj gdje smo stali. Self-check nakon svakog potpoglavlja, pa upiši status i broj riječi.
+
+---
+
+## Redoslijed zahvata nad tekstom je lanac ovisnosti, ne preporuka
+
+Empirijski utvrđeno na stvarnom radu; obrnuti redoslijed je razbio numeraciju i
+tražio ponavljanje cijelog kruga.
+
+```
+renumeracija literature
+        ↓            (markdown nosi KONAČNE brojeve citata)
+zamjena / skraćivanje teksta
+        ↓
+tipografija
+        ↓
+naslovnice
+        ↓
+sekcije i numeracija stranica
+        ↓
+Wordova polja (TOC, SEQ, REF)
+```
+
+Zamjena teorijskog dijela mora ići **poslije** prenumeriranja literature: ako se
+tekst zamijeni prije, novi tekst nosi stare brojeve citata i numeracija se raspadne.
+Isto vrijedi nizvodno — polja se osvježavaju zadnja jer ovise o svemu iznad.
+

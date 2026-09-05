@@ -1,6 +1,6 @@
 ---
 name: katedra-lite
-description: "Kopilot za akademske radove (novi rad, plan, pisanje, poboljšanje, audit, obrana, predaja, povratak iz Worda; stanje u .katedra/). v1.9.5: tvrdi gate (preskočena blokirajuća provjera blokira, --dopusti-preskok), engine.py --audit kao korak faze audit, revizije.py i provjeri_predaju.py u gateu, tests/test_gate.py; §0.0 dohvat paketa iz git repoa katedra-pkg, Vancouver dijalekt, opseg po dijelovima, Upute → profil, provjera zamki proze, pravilo 29 (napredak), pravilo 30 + §0.7a (praćene izmjene prije ekstrakcije), §0.0 push naspram pulla i drift SKILL.md-a."
+description: "Kopilot za akademske radove (novi rad, plan, pisanje, poboljšanje, audit, obrana, predaja, povratak iz Worda; stanje u .katedra/). v1.9.6: audit Znahor (rub platna, mrtvi mediji, dijalekt navodnika, references/docx_zamke.md, profil mefri-sanitarno); tvrdi gate (preskočena blokirajuća provjera blokira, --dopusti-preskok), engine.py --audit kao korak faze audit, revizije.py i provjeri_predaju.py u gateu, tests/test_gate.py; §0.0 dohvat paketa iz git repoa katedra-pkg, Vancouver dijalekt, opseg po dijelovima, Upute → profil, provjera zamki proze, pravilo 29 (napredak), pravilo 30 + §0.7a (praćene izmjene prije ekstrakcije), §0.0 push naspram pulla i drift SKILL.md-a."
 ---
 
 # KATEDRA-LITE — kopilot za akademske radove

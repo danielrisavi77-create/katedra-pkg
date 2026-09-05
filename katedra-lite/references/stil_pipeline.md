@@ -179,3 +179,38 @@ raspodjela izgleda uredno, ali tekst se raspada.
 > Tijek jednog moda ne treba biti u datoteci koja se učitava u svakoj poruci.
 
 `pisanje.md` + `stil_pipeline.md`. Neprihvaćene Track Changes → `revizije.py prihvati` prvo (0.7a), inače dijagnoza čita krnj tekst. Redoslijed je obavezan: izmjeri (`check_ai_style.py`, `check_paragraphs.py`) → ukloni tikove → poveži → prelomi predugo → geometrija odlomaka. Nakon svakog koraka ponovno izmjeri i pokreni `verify_rewrite.py`. **Nikad sve odjednom.** Kroz cijeli zahvat: **identičan skup citata i brojki**. Hrpa strukturnih pomaka odjednom → prvo `zamjerke.py grupiraj --po mjesto` (karta premještanja, `pisanje.md` §1.5). Zatvaranje zamjerki: `zamjerke.py resolve`/`provjeri`. Vizualni prikaz izmjena: `revizije.py redline`.
+
+---
+
+## Stilske dimenzije su SPREGNUTE — popravak jedne ruši drugu
+
+Izmjereno na stvarnom radu. Skraćivanje predugih rečenica srušilo je koheziju s
+15+ na **13,4** i podiglo udio dvotočja na **3,9/1000**, jer se rečenica najlakše
+lomi upravo na dvotočju. Metrika „najdulja rečenica" je prošla, a tekst je postao
+isprekidan. Rješenje je bilo pretvoriti dvotočja u vezna sredstva: kohezija 15,1,
+dvotočja 2,7, najdulja rečenica 45 riječi.
+
+**Pravilo:** stilske se dimenzije mjere **zajedno**, prije i poslije zahvata, i
+nijedan zahvat se ne prijavljuje kao gotov dok se ne pokaže da nije pogoršao
+ostale. Alati mjere dimenzije neovisno, pa je bez ovoga moguće „popraviti" tekst u
+jednoj i ne primijetiti pad u drugoj.
+
+---
+
+## Strojni stil ne hvata kvarove koje sam zahvat proizvodi
+
+Nakon prepisivanja, čitanje rečenicu po rečenicu našlo je **četiri kvara koje je
+proizveo sam zahvat**, a nijedan alat nije prijavio:
+
+- „sumnjaju u njegov učinak" — zamjenica ostala bez imenice nakon lomljenja rečenice
+- „obje po 45/27 ispitanika" — slaganje roda nad imenicama različita roda
+- dva vezna sredstva bez sadržaja („Naime,", „Dakle,") umetnuta radi metrike
+
+Zadnji je najopasniji: **metrika kohezije mjeri prisutnost veznih sredstava, pa je
+zahvat koji ih umeće prazno formalno poboljšanje.** Alat tada potvrđuje ono što je
+sam pokvario.
+
+**Pravilo:** nakon svakog prepisivačkog prolaza ide **ljudsko čitanje cijelog
+izmijenjenog dijela**, i to se vodi kao korak u planu zadatka, ne kao dobra volja.
+Povezano s pravilom 31 i dijelom `citanje_tijela`.
+

@@ -1276,3 +1276,84 @@ To više nije dojam nego mjerenje: teorijski rad dao je posvojne pridjeve,
 empirijski veličine podskupina i raspodjele postotaka, pravni fusnotni aparat,
 tehnički tri oblika bibliografske jedinice.
 
+---
+
+## Kvarovi 98–104 — audit paketa nakon rada Znahor
+
+Izvor: `AUDITskillovanakonradaZnahor.md`, napisan poslije stvarne sesije na
+diplomskom radu MEDRI (8 297 → 13 830 riječi, 50 stranica, 11 tablica, 56 referenci).
+Nalazi su tamo podijeljeni po tome **tko griješi**, i to je razlikovanje zadržano.
+
+### Zajednički obrazac triju kvarova
+
+Autor audita ga imenuje točno: **alat mjeri pogrešnu razinu dokumenta.** Prored se
+čita iz stila `Normal` umjesto iz odlomka koji nosi sliku; numeracija iz posljednje
+sekcije umjesto iz one u kojoj kreće; marker se uspoređuje doslovno iako je zahvat
+tipografski. Nije riječ o tri neovisna buga nego o jednoj navici: **uzeti prvi
+dohvatljivi nositelj svojstva umjesto onoga koji svojstvo stvarno nosi.**
+
+| Kvar | Alat | Što je bilo | Što je sada |
+|---|---|---|---|
+| 98 | `check_paragraphs.py` | profil bez `format.odlomak` → `ap.error`, kod 2, trajno „alat pukao" | kod 3 = preskočeno, deklarirana granica (pravilo 20) |
+| 99 | `verify_rewrite.py` | marker se uspoređuje doslovno, pa tipografski popravak (NBSP, dvostruki razmak) blokira sam sebe | pod `--zahvat stil` bjelina se normalizira; pod `lomljenje` i `geometrija` marker ostaje doslovan |
+| 100 | `provjeri_predaju.py` | numeracija se tražila u `sekcije[-1]`, a to je u radu s 12 sekcija prilog | traži se sekcija koja numeraciju RESTARTA, u bilo kojoj poziciji |
+| 101 | `provjeri_predaju.py` | „prored je fiksan — inline slike se obrežu" i kad nijedna slika nije u fiksno prorezanom odlomku | nalaz samo za odlomke koji STVARNO nose sliku; inače upozorenje |
+| 102 | `check_typography.py` | bezuvjetno tražen zatvarajući U+201D | dijalekt `ihjj` / `njem`, kao Vancouver u `citation_dialects.py`; nalaz je NEDOSLJEDNOST, ne izbor |
+| 103 | `provjeri_prikaze.py` | nijedan alat nije gledao ŠTO je u slici | `_rub_odrezan()`: ne-bijeli pikseli na rubu platna |
+| 104 | `inventar_paketa.py` | mrtvi medijski dijelovi nevidljivi | `mrtvi_mediji()` + `tezina()` + `priprema_slanja.py` |
+
+### 103 — jedina rupa koju je našlo oko, a ne alat
+
+Legenda grafikona „zeleno: unutar sigurnog prostora" izašla je iz platna i u radu
+je pisalo `zeleno: unutar sigurnog pros`. Rad je prošao `provjeri_prikaze.py`,
+`gate --faza audit`, sve faze rad-audita i `provjeri_predaju.py`. Nijedan alat to
+nije vidio jer **svi mjere sliku kao pravokutnik** (dpi, širina, omjer, skala), a
+nijedan ne gleda sadržaj. `matplotlib` odsijeca tiho: bez upozorenja, bez iznimke,
+bez traga u datoteci.
+
+Provjereno na fixtureu s dvije slike: pogodila je točno onu odrezanu
+(`lijevo 16 px, gore 16 px, dolje 14 px`), a čistu je pustila. Granica je
+deklarirana: grafikon s punim pozadinskim ispunom (heatmap, fotografija) pali ovo
+uvijek, pa postoji `--dopusti-rub` umjesto tihog gašenja.
+
+### 104 — 749 kB nevidljivog sadržaja
+
+Zamjena slike ostavlja stari PNG u `word/media/`: relacija ostaje, referenca u
+`document.xml` nestaje. Na stvarnom radu **49 % datoteke**. Uz težinu nosi i
+**staru verziju grafikona**, dostupnu svakome tko raspakira .docx — za rad koji ide
+na provjeru podudarnosti i u repozitorij to je sadržaj, ne higijena.
+`priprema_slanja.py` piše ZASEBNU izlaznu datoteku; arhivska verzija ostaje
+netaknuta.
+
+### Doktrina koja je iz audita ušla u reference
+
+* `predaja.md` — **opseg se mjeri, ne procjenjuje** (izmjereno: prikazi su nosili
+  5 od 29 stranica koje je trebalo skratiti; pretpostavka bi stajala dan) i
+  **rad koji se ne može poslati nije predan** (1,5 MB ne prolazi kroz e-poštu).
+* `stil_pipeline.md` — **stilske dimenzije su spregnute** (skraćivanje rečenica
+  srušilo koheziju s 15+ na 13,4 i podiglo dvotočja na 3,9/1000) i **strojni stil
+  ne hvata kvarove koje sam zahvat proizvodi** (metrika kohezije mjeri prisutnost
+  veznih sredstava, pa je zahvat koji ih umeće prazno formalno poboljšanje).
+* `pisanje.md` — **redoslijed zahvata je lanac ovisnosti**: renumeracija →
+  zamjena teksta → tipografija → naslovnice → sekcije → polja.
+* `docx_zamke.md` (nova) — šest zamki, među njima najskuplja: `doc.paragraphs`
+  gradi NOVE omotače, pa `if p is sadrzaj` nikad nije istina i kod pisan da nešto
+  preskoči obriše sve. U stvarnoj sesiji obrisalo je 489 odlomaka.
+
+### Profil `mefri-sanitarno`
+
+Napravljen iz Naputka MEDRI 2025./2026. (12 pt, rubnici 2,5 cm, dvostruki prored,
+broj stranice donji desni kut, naslovi tablica iznad a slika ispod, Vancouver po
+redoslijedu pojavljivanja, sažetak ≤ 250 riječi, 15–50 stranica od Uvoda nadalje).
+Status `nepotvrdeno`, jer je dokument čitan preko sažimača: izravno preuzimanje
+nije prošlo kroz proxy i **egress nije zaobiđen**.
+
+Trošak nepostojanja profila je izmjeren u auditu: bez `resolved_profile.json` gate
+je preskočio **4 od 15 koraka**, uključujući jedan blokirajući, a sažetak je i dalje
+govorio „nijedna blokirajuća provjera nije pala". Taj je dio popravljen kvarom 58.
+
+Profil zasad stoji kao datoteka, kao i `hks-fzs`, i **nije upisan u registry**:
+`profile_registry.py --write` odbija generirati jer je admission bundle hash za
+`efzg` zastario. To se ne zaobilazi; upis u registry je zaseban zahvat koji počinje
+ponovnim pokretanjem `faculty_scale_gate.py`.
+

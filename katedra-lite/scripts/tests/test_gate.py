@@ -119,6 +119,35 @@ def main() -> int:
         check("G12: --dopusti-preskok bez razloga vraća 2", p.returncode == 2,
               p.returncode)
 
+    # ── kvarovi iz audita Znahor ─────────────────────────────────────────
+    # 98: profil bez format.odlomak je granica (kod 3), ne pad (kod 2)
+    import json as _json
+    with tempfile.TemporaryDirectory() as d:
+        prof = os.path.join(d, "p.json")
+        with open(prof, "w", encoding="utf-8") as fh:
+            _json.dump({"slug": "test", "format": {"velicina_pt": 12}}, fh)
+        from docx import Document
+        rad = os.path.join(d, "r.docx")
+        dd = Document(); dd.add_paragraph("Tekst rada u jednom odlomku."); dd.save(rad)
+        izlaz_cp = subprocess.run(
+            [sys.executable, os.path.join(SCRIPTS, "check_paragraphs.py"), rad,
+             "--profil", prof], capture_output=True, text=True)
+        check("Z1: profil bez format.odlomak daje kod 3 (preskoceno), ne 2",
+              izlaz_cp.returncode == 3,
+              (izlaz_cp.returncode, izlaz_cp.stderr[-160:]))
+
+    # 103: sadržaj odrezan rubom platna
+    import provjeri_prikaze as PP
+    check("Z2: _rub_odrezan postoji", callable(getattr(PP, "_rub_odrezan", None)))
+    from PIL import Image
+    cist = Image.new("RGB", (40, 40), "white")
+    check("Z2: bijelo platno nije odrezano", PP._rub_odrezan(cist) == {}, "")
+    odrezan = Image.new("RGB", (40, 40), "white")
+    for y in range(40):
+        odrezan.putpixel((0, y), (0, 0, 0))
+    check("Z2: crni stupac na lijevom rubu JEST nalaz",
+          "lijevo" in PP._rub_odrezan(odrezan), PP._rub_odrezan(odrezan))
+
     proslo = sum(1 for _, ok, _ in REZULTATI if ok)
     print("=" * 66)
     print(f"GATE TESTOVI: {proslo}/{len(REZULTATI)} prošlo")
