@@ -123,7 +123,11 @@ KVAR_RE = re.compile(r"\*\*(R\d+)\s*[—-]")
 
 def provjeri_tvrdnje(korijen):
     """Vraća popis nalaza (str). Prazan popis = SKILL.md i kod se slažu."""
-    korijen = pathlib.Path(korijen)
+    # Apsolutni put je obavezan: test suite se pokreće s `cwd` u `scripts/tests`,
+    # pa bi relativan korijen ondje pokazivao u prazno. Alat je tada ispisivao
+    # „suite se ne može pokrenuti" i obarao provjeru tvrdnji na vlastitom rukovanju
+    # putovima — lažni ❌ iz alata koji upravo lovi tvrdnje bez pokrića.
+    korijen = pathlib.Path(korijen).resolve()
     skill_md = korijen / "SKILL.md"
     if not skill_md.exists():
         return [f"❌ nema {skill_md}"]
