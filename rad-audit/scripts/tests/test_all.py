@@ -287,6 +287,57 @@ def test_stvarni_rad():
     check("R33: dvije vrijednosti uz sadr\u017eajni pojam JESU sukob",
           "zaposlenih" in izlaz and "⚠" in izlaz, izlaz[-400:])
 
+    # 93–97 — oblici popisa literature nađeni na stvarnim tehničkim radovima
+    JEDINICE = [
+        ("93: godina na kraju retka",
+         "Hrvatski zavod za javno zdravstvo. Hrvatski dan mo\u017edanog udara. "
+         "Zagreb: HZJZ, 2024.", ("hrvatski", "2024")),
+        ("93: institucija s malim rije\u010dima u nazivu",
+         "Dr\u017eavni zavod za statistiku. Istra\u017eivanje i razvoj u 2023., "
+         "priop\u0107enje ZTI-2024-2-1. Zagreb: DZS, 2024.", ("dr\u017eavni", "2024")),
+        ("97: godina uz broj sveska",
+         "Bezak, B., Kova\u010di\u0107, S. i Brali\u0107, M. Mehani\u010dka trombektomija. "
+         "Medicina Fluminensis. Vol. 57, br. 4(2021), str. 328\u2013340.", ("bezak", "2021")),
+        ("97: strani \u010dasopis s to\u010dkom iza broja",
+         "Luengo-Fernandez, R. i Leal, J. Economic burden of stroke across Europe. "
+         "European Stroke Journal. Vol. 5, br. 1(2020), str. 17\u201325.",
+         ("luengo-fernandez", "2020")),
+    ]
+    for opis, redak, ocekivano in JEDINICE:
+        kljucevi, _ = AY.extract_biblio_keys(redak)
+        check(f"R34: {opis}", ocekivano in kljucevi, (redak[:60], kljucevi))
+
+    # 94 — akronim iz nakladničkog dijela je alias
+    for redak, alias, glavni in [
+        ("Hrvatski zavod za javno zdravstvo. Atlas. Zagreb: HZJZ, 2024.",
+         "hzjz", "hrvatski"),
+        ("Dr\u017eavni zavod za statistiku. Istra\u017eivanje. Zagreb: DZS, 2024.",
+         "dzs", "dr\u017eavni"),
+    ]:
+        mapa = AY.biblio_aliasi(redak)
+        check(f"R34: akronim {alias.upper()} je alias za {glavni}",
+              mapa.get((alias, "2024")) == (glavni, "2024"), mapa)
+
+    # 95 — hrvatski izvor prikaza „(autorski sažetak prema: X, 2026)"
+    for tekst, ocekivan in [
+        ("(autorski sa\u017eetak prema: Podobnik, 2026)", "podobnik"),
+        ("(autorska analiza prema: Porter, 2008)", "porter"),
+        ("(Izvor: izrada autora prema: Murray, 2010)", "murray"),
+    ]:
+        k = C.parse_ay_citation_group(tekst.strip("()"))
+        check(f"R34: izvor prikaza daje klju\u010d {ocekivan}",
+              any(x[0] == ocekivan for x in k), (tekst, k))
+    k = C.parse_ay_citation_group("autorska analiza prema: Porter, 2008")
+    check("R34: 'autorska' NIJE klju\u010d",
+          not any(x[0].startswith("autorsk") for x in k), k)
+
+    # 96 — razlika izrečena u istoj rečenici je deklarirana
+    izlaz = _inv("\u010celik S355 nije kru\u0107i od \u010delika S235. "
+                 "Granica popu\u0161tanja iznosi 235 N i 355 N.")
+    check("R34: obje vrijednosti u istoj re\u010denici nisu sukob",
+          "izre\u010deno je u istoj re\u010denici" in izlaz or "'\u010delik'" not in izlaz,
+          izlaz[-350:])
+
     # 78 — DOI nije množenje
     n = _tipografija_nalazi(TY, "DOI: 10.1177/1023263X251338198. Dostupno na mre\u017ei.")
     check("R26: DOI s X me\u0111u znamenkama NIJE mno\u017eenje",

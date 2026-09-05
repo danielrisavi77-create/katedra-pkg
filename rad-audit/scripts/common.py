@@ -391,6 +391,14 @@ def parse_ay_segment(seg):
     # su dvije funkcije istog alata davale različite ključeve za isti citat.
     # Lokator stranice iza godine ("Becker, 2007: 45") ovdje se prepoznaje i
     # odbacuje: on je oznaka mjesta u izvoru, ne dio identiteta.
+    # Kvar 95: hrvatski izvor prikaza redovito glasi „(autorski sažetak prema:
+    # Podobnik, 2026)" ili „(autorska analiza prema: Porter, 2008)". Uzorak je
+    # skidao samo golo „prema" na početku, pa je ključ ispadao „autorski" i
+    # svaki takav izvor prijavljivan kao citat bez reference.
+    seg = re.sub(r"^.{0,60}?\bprema\s*:\s*", "", seg.strip(), flags=re.IGNORECASE)
+    seg = re.sub(r"^(?:izvor|izrada|obrada|prilagođeno|prilagodeno|autorski|autorska|"
+                 r"autorsko|vlastita|vlastiti)\b[^:]{0,40}:\s*", "", seg,
+                 flags=re.IGNORECASE)
     seg = re.sub(r"^(?:usp\.|vidi|vidjeti|prema|cf\.)\s+", "", seg.strip(),
                  flags=re.IGNORECASE)
     m = re.match(r"\s*(.+?),\s*(\d{4})\.?([a-z]?)" + LOKATOR +

@@ -50,6 +50,36 @@ BIBLIO_INST_RE = re.compile(
 # prolazio raščlambu i svaki citat u tekstu ispadao je siroče. Uz to nije poznavao
 # čestice u prezimenu („Van der Zwan, Natascha") ni institucionalne autore s
 # raspisom („HNB (Hrvatska narodna banka) (2023)").
+# Jedinica kojoj godina stoji na kraju retka: uzima se prvi autorski dio
+# (prezime ili naziv institucije) i završna godina.
+BIBLIO_KRAJ_RE = re.compile(
+    r"^[•\-\d\.\)\s]*"
+    r"((?:(?:van|von|de|del|della|di|da|dos|der|den|la|le|ten|ter)\s+)*"
+    r"[A-ZČĆŠŽĐ][\wčćžšđ\-]+"
+    # institucionalni naziv nosi male riječi u sredini („Državni zavod za
+    # statistiku", „Hrvatski zavod za javno zdravstvo"); negramzivo, pa se
+    # skupina širi tek dok se ne nađe točka ili zarez iza naziva
+    r"(?:\s+[A-Za-zČĆŠŽĐčćžšđ][\wčćžšđ\-]*){0,8}?)"
+    r"\s*[.,]\s*"
+    r".{5,800}?"
+    r"(?:\(|,\s*|\.\s*|\s)(\d{4}[a-z]?)\.?\s*$",
+    re.UNICODE | re.DOTALL,
+)
+
+# Kvar 97: časopisna jedinica u hrvatskom tehničkom i medicinskom obliku nosi
+# godinu uz broj sveska, a iza nje slijede stranice:
+#   „… Medicina Fluminensis. Vol. 57, br. 4(2021), str. 328–340."
+# Godina tako nije ni u prvih 120 znakova (BIBLIO_LINE_RE) ni na kraju retka
+# (BIBLIO_KRAJ_RE). Na FER seminaru su četiri takve jedinice davale četiri
+# lažna nalaza „citat bez reference".
+BIBLIO_SVEZAK_RE = re.compile(
+    r"^[•\-\d\.\)\s]*"
+    r"((?:(?:van|von|de|del|della|di|da|dos|der|den|la|le|ten|ter)\s+)*"
+    r"[A-ZČĆŠŽĐ][\wčćžšđ\-]+)"
+    r"[.,].{5,600}?\d\s*\((\d{4}[a-z]?)\)",
+    re.UNICODE | re.DOTALL,
+)
+
 BIBLIO_LINE_RE = re.compile(
     r"^[•\-\d\.\)\s]*"
     r"((?:(?:van|von|de|del|della|di|da|dos|der|den|la|le|ten|ter)\s+)*"
@@ -94,22 +124,49 @@ def _aliasi_iz_autora(autor, glavni):
     return out
 
 
+def _akronimi(redak, glavni):
+    """Samo VELIKIM slovima pisani akronimi, po cijelom retku.
+
+    Kvar 94: institucija se u tekstu citira akronimom („DZS, 2024", „HZJZ, 2024",
+    „WIPO, 2025"), a u popisu je raspisana, s akronimom tek u nakladničkom dijelu
+    („Zagreb: HZJZ, 2024."). Traži se ISKLJUČIVO akronim: prvi pokušaj je uzimao
+    svaku veliku riječ retka, pa je „Ljetopis" iz naslova postao alias i oborio
+    test R13. Alias može samo potisnuti lažni nalaz, nikad ga stvoriti.
+    """
+    out = set()
+    for tok in re.findall(r"\b[A-ZČĆŠŽĐ]{2,6}\b", redak or ""):
+        k = C.kljuc_prezimena(tok)
+        if k and k != glavni:
+            out.add(k)
+    return out
+
+
 def biblio_aliasi(lit_text):
     """{(alias, godina): (glavni, godina)} — za preslikavanje ključeva iz teksta."""
     mapa = {}
     for line in (lit_text or "").splitlines():
         line = line.strip()
+        # Jedinica s godinom u zagradi („Becker, Gary (2007) …") ide starim
+        # putem: ondje je svaka velika riječ ime ili naslov, ne alias. Testovi
+        # R13 („zagrada bez slova nije alias", „osobni autor nema alias") pali
+        # su čim je ta ograda maknuta — zato ostaje.
         if not line or BIBLIO_LINE_RE.match(line):
             continue
         mi = BIBLIO_INST_RE.match(line)
-        if not mi:
+        mk = (BIBLIO_KRAJ_RE.match(line) or BIBLIO_SVEZAK_RE.match(line)) \
+            if not mi else None
+        m = mi or mk
+        if not m:
             continue
-        autor = mi.group(1).strip(" \t,.;:")
+        autor = m.group(1).strip(" \t,.;:")
         glavni = C.kljuc_prezimena(autor)
         if not glavni:
             continue
-        god = mi.group(2).lower()
-        for a in _aliasi_iz_autora(autor, glavni):
+        god = m.group(2).lower()
+        # Kvar 94: akronim često stoji tek u nakladničkom dijelu retka
+        # („Zagreb: HZJZ, 2024."), a ne u autorskom. Alias se zato traži po
+        # CIJELOM retku; alias može samo potisnuti lažni nalaz, ne stvoriti ga.
+        for a in _aliasi_iz_autora(autor, glavni) | _akronimi(line, glavni):
             mapa.setdefault((a, god), (glavni, god))
     return mapa
 
@@ -134,6 +191,19 @@ def extract_biblio_keys(lit_text):
                 kljuc = C.kljuc_prezimena(autor)
                 if kljuc:
                     keys.add((kljuc, mi.group(2).lower()))
+                    continue
+            # Kvar 93 (nađen na stvarnom FER seminaru): u hrvatskom i tehničkom
+            # obliku popisa godina stoji na KRAJU jedinice, bez zagrada:
+            #   „Bezak, B., … Mehanička trombektomija… 2021."
+            #   „Državni zavod za statistiku. Istraživanje i razvoj… Zagreb: DZS, 2024."
+            # BIBLIO_LINE_RE traži godinu u prvih 120 znakova, pa je promašio
+            # polovicu popisa: 16 citata iz teksta prijavljeno je kao CITAT BEZ
+            # REFERENCE, iako je svaka jedinica bila uredno u popisu.
+            mk = BIBLIO_KRAJ_RE.match(line) or BIBLIO_SVEZAK_RE.match(line)
+            if mk:
+                kljuc = C.kljuc_prezimena(mk.group(1))
+                if kljuc:
+                    keys.add((kljuc, mk.group(2).lower()))
                     continue
             if re.search(r"\d{4}", line) and len(line) > 15:
                 unmatched += 1

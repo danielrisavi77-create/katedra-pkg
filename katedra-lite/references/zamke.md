@@ -1215,3 +1215,64 @@ vrijednosti uz sadržajni pojam jest).
 Četiri stvarna rada iz četiri različita fakulteta i tri različita stila
 citiranja. Svaki od njih otkrio je barem jedan kvar koji ostali nisu.
 
+---
+
+## Kvarovi 93–97 — tehnički radovi: popis literature u tri neprepoznata oblika
+
+**Radovi:** `Uvod i teorija` (čelične konstrukcije, S235/S355, IEEE `[N]`, 3 749
+riječi) i `Seminar - FER` (komercijalizacija inovacija, autor-godina, 3 922
+riječi, 4 tablice). Peti i šesti stvarni rad, i prvi s IEEE stilom.
+
+Prvi prolaz: FER seminar **16 kritičnih nalaza „citat bez reference"**, a svaka
+je jedinica bila uredno u popisu. Uzrok: raščlamba popisa poznavala je samo
+godinu u zagradi u prvih 120 znakova retka. Tri oblika koje nije poznavala, sva
+tri uobičajena u hrvatskim tehničkim i medicinskim popisima:
+
+| Kvar | Oblik | Primjer |
+|---|---|---|
+| 93 | godina na kraju retka | `Hrvatski zavod za javno zdravstvo. Atlas. Zagreb: HZJZ, 2024.` |
+| 93 | naziv institucije s malim riječima u sredini | `Državni zavod za statistiku. Istraživanje…` |
+| 97 | godina uz broj sveska, iza nje stranice | `Medicina Fluminensis. Vol. 57, br. 4(2021), str. 328–340.` |
+
+**94 — akronim u nakladničkom dijelu.** Institucija se u tekstu citira akronimom
+(`DZS, 2024`, `HZJZ, 2024`, `WIPO, 2025`), a u popisu je raspisana, s akronimom
+tek iza mjesta izdanja. Alias je dotad hvatao samo akronim u zagradi uz autora.
+Prvi pokušaj zakrpe uzimao je **svaku veliku riječ retka**, pa je `Ljetopis` iz
+naslova postao alias i odmah oborio postojeći test R13. Traži se isključivo
+akronim.
+
+**95 — hrvatski izvor prikaza.** `(autorski sažetak prema: Podobnik, 2026)` i
+`(autorska analiza prema: Porter, 2008)` davali su ključ `autorski`, jer je
+uzorak skidao samo golo „prema" na početku segmenta.
+
+**96 — razlika izrečena u istoj rečenici.** „Čelik S355 nije krući od čelika
+S235" nosi obje vrijednosti u istoj rečenici, dakle razlika je izrečena i pitanje
+„je li razlika deklarirana" ima odgovor u samom tekstu. Isto za visinu na strehi
+i na sljemenu (4,50 m i 6,50 m).
+
+**Izmjereno:** FER seminar 16 kritičnih na 0; čelične konstrukcije 5 srednjih na
+1. Preostali jedan nalaz na čeličnim konstrukcijama je **istinit**: redoslijed
+prvog pojavljivanja IEEE navoda je 1, 2, **4, 3**, 5, dakle `[4]` stoji prije
+`[3]`, što u numeriranju po pojavljivanju treba prenumerirati.
+
+**Ograda:** R34, jedanaest tvrdnji, uključujući negativnu (`autorska` ne smije
+biti ključ) i test da alias ne nastaje iz naslova.
+
+---
+
+## Korpus na kojem je lanac provjeren (šest radova, pet fakulteta, četiri stila)
+
+| Rad | Tip | Citiranje | Kritično | Srednje |
+|---|---|---|---|---|
+| politička ekonomija (FPZG) | teorijski | autor-godina | 0 | 3 |
+| Znahor (MEDRI) | empirijski, 11 tablica | Vancouver | 0 | 9 |
+| palijativna skrb (HKS) | empirijski, 12 tablica | Vancouver, 173 citata | 0 | 5 |
+| obiteljsko pravo (PFZG) | pravni | 105 fusnota | 0 | 4 |
+| čelične konstrukcije | tehnički | IEEE `[N]` | 1 (istinit) | 1 |
+| komercijalizacija (FER) | pregledni | autor-godina | 0 | 2 |
+
+**Svaki od šest radova otkrio je barem jedan kvar koji nijedan drugi nije.**
+To više nije dojam nego mjerenje: teorijski rad dao je posvojne pridjeve,
+empirijski veličine podskupina i raspodjele postotaka, pravni fusnotni aparat,
+tehnički tri oblika bibliografske jedinice.
+

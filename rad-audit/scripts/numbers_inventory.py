@@ -110,7 +110,19 @@ def main(path, domain_override=None):
     }
     NAJVISE_VRIJEDNOSTI = 3
 
-    conflicts, raspodjele = [], 0
+    # Kvar 96: „Čelik S355 zbog toga nije krući od čelika S235" nosi obje
+    # vrijednosti u ISTOJ rečenici, dakle razlika je izrečena. Isto vrijedi za
+    # visinu na strehi i na sljemenu. Pitanje „je li razlika deklarirana" ima
+    # odgovor u samom tekstu, pa se ne postavlja.
+    recenice_svih = sentences(text)
+
+    def _izrecena(vrijednosti):
+        for r in recenice_svih:
+            if all(v in r for v in vrijednosti):
+                return True
+        return False
+
+    conflicts, raspodjele, izrecene = [], 0, 0
     for k, units in sorted(kw_vals.items()):
         if k.lower() in NIJE_POJAM or len(k) < 4 or k.isdigit():
             continue
@@ -120,6 +132,9 @@ def main(path, domain_override=None):
             vv = sorted(vals, key=lambda x: float(x.replace(",", ".")))
             if len(vv) > NAJVISE_VRIJEDNOSTI:
                 raspodjele += 1
+                continue
+            if _izrecena(vv):
+                izrecene += 1
                 continue
             conflicts.append((k, u, vv))
     print("\nKandidati za sukob (isti pojam, dvije ili tri vrijednosti iste jedinice):")
@@ -131,6 +146,8 @@ def main(path, domain_override=None):
     if raspodjele:
         print(f"  ({raspodjele} pojmova ima više od {NAJVISE_VRIJEDNOSTI} vrijednosti — "
               f"to je raspodjela, ne sukob, i ne prijavljuje se)")
+    if izrecene:
+        print(f"  ({izrecene} razlika izrečeno je u istoj rečenici — deklarirano)")
 
     # Kvar 65: zbroj_kategorija() i uzorak_nalazi() bile su definirane ISPOD
     # bloka `if __name__ == "__main__"`, pa ih ni main() ni generate_report
