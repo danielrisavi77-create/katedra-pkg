@@ -146,5 +146,56 @@
         "derivation": "Izvedeno iz pravila „2–3 odlomka po stranici” uz TNR 12, prored 1,5 i profilne margine; vrijednost 5 nije doslovno propisana."
       }
     }
-  }
+  },
+  "primjerci": [
+    {
+      "id": "efzg-rfir-seminarski-ocjena5-2026",
+      "vrsta": "seminarski",
+      "izvor": "obranjeni seminarski rad s istog kolegija (RFIR), ocjena 5, ustupio student 4. 9. 2026.",
+      "zabiljezeno": "2026-09-05",
+      "mjereno": {
+        "margine_cm": {
+          "gore": 2.5,
+          "dolje": 2.5,
+          "lijevo": 2.5,
+          "desno": 2.5
+        },
+        "velicina_pt": 12,
+        "naslov_1_pt": 14,
+        "naslov_2_pt": 12,
+        "naslov_1_bold": false,
+        "naslov_2_bold": false,
+        "prijelom_pred_poglavljem": true,
+        "numerirani_pododjeljci": "X.Y. (s točkom na kraju)",
+        "rijeci_tijela": 3990,
+        "broj_poglavlja_1": 5,
+        "prikazi": {
+          "tablica": 6,
+          "slika": 1
+        },
+        "polja": {
+          "TOC": 3,
+          "SEQ": 6,
+          "REF": 9,
+          "PAGEREF": 27
+        },
+        "literatura_jedinica": 15,
+        "literatura_skupine": [
+          "Knjige i znanstveni radovi",
+          "Propisi i standardi",
+          "Mrežni izvori"
+        ],
+        "zavrsna_tocka_u_popisu": false,
+        "uvod_potpoglavlja": [
+          "Predmet i cilj rada",
+          "Izvori podataka i metode prikupljanja",
+          "Struktura rada"
+        ],
+        "sazetak_hr": false,
+        "summary_en": false,
+        "zivotopis": false
+      },
+      "napomena": "Dvije vrijednosti proturječe overlayu efzg-rfir-seminarski (inferred, confidence 0.75): prijelom pred poglavljem (overlay false, uzorak 8/8 ima prijelom) i opseg (overlay 3000–4000 riječi, uzorak 3990 riječi tijela na 13 stranica, a Upute Katedre prema izjavi studenta traže 15–20 stranica). Obje ostaju zapisane; primjerak je opservacija, Upute su norma."
+    }
+  ]
 }

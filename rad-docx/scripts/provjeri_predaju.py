@@ -324,7 +324,15 @@ def provjeri_format(P, docx_put, d, profil):
         if prored is not None and not u_stilu:
             P.u("prored je zadan po odlomcima, a ne u stilu ni u docDefaults — "
                 "svaki novi odlomak koji se dopiše past će na drugu vrijednost")
-        if pravila and "AUTO" not in pravila.upper() and "POINT" not in pravila.upper() \
+        # `_prevladava` vraća None kad prored nigdje nije zadan, a `str(None)` je
+        # niska „None": istinita i bez AUTO/POINT/MULTIPLE, pa je grana ispod
+        # okidala GREŠKU „prored je fiksan (None)" na svakom dokumentu koji
+        # prored nasljeđuje iz predloška. Poruka je uz to bila obrnuta od
+        # istine (nije zadan ≠ fiksan je), a nalaz je blokirao predaju —
+        # o istom dokumentu alat je u istom ispisu javljao i „prored nije
+        # zadan" (upozorenje) i „prored je fiksan" (greška).
+        if pravila and pravila != "None" \
+                and "AUTO" not in pravila.upper() and "POINT" not in pravila.upper() \
                 and "MULTIPLE" not in pravila.upper():
             P.g(f"prored je fiksan ({pravila}) — inline slike se obrežu na visinu retka")
 

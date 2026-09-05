@@ -37,6 +37,14 @@
         "popis tablica",
         "popis slika"
       ]
+    },
+    "predaja": {
+      "turnitin": false,
+      "administrativni_rep_dana": 0,
+      "koraci": [
+        "mentor odobrava finalnu verziju",
+        "slanje cijelog rada e-mailom nositelju"
+      ]
     }
   },
   "provenance": {
@@ -45,6 +53,12 @@
       "type": "inferred",
       "confidence": 0.75,
       "verified_at": "2026-08-04"
+    },
+    "/rules/predaja": {
+      "source": "koraci iz efzg.json (Turnitin, uvez primjeraka, unos u repozitorij, prijava obrane) su koraci završnog rada; seminarski se predaje e-mailom nositelju, pa rep od 14 dana za njega ne postoji",
+      "type": "inferred",
+      "confidence": 0.8,
+      "verified_at": "2026-09-05"
     }
   }
 }

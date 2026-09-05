@@ -126,18 +126,38 @@ _VLASTITI_KORIJEN_RE = re.compile(r"\bautor\w*\b", re.IGNORECASE)
 # promakne pogriješi u mekšem smjeru (prikaz se pripiše studentu), a to je samo
 # propušten signal — dok je obrnuti smjer lažna tvrdnja „rad nema nijedan
 # vlastiti prikaz" na radu u kojem su svi prikazi autorski.
-_TUDJE_AUTORSTVO_RE = re.compile(
+# v1.9.3: uzorak je bio JEDAN s `re.IGNORECASE`, pa je grana „vlastito ime
+# velikim slovom iza korijena" hvatala i mala slova: „izrada autora prema…"
+# davala je match „autora p" i cijeli redak proglašavala tuđim autorstvom.
+# Posljedica je bila upravo ona koju komentar iznad zove najgorom: na radu
+# sa šest autorskih prikaza rubrika je javila „0 vlastitih prikaza od 6",
+# jer profil traži da izvor imenuje podlogu („Izvor: izrada autora prema
+# ZPD, čl. 28."), a taj oblik uvijek ima riječ iza korijena. Popravak dijeli
+# uzorak na dva: popis zajedničkih imenica ostaje neosjetljiv na veličinu
+# slova, a strukturni znak (veliko slovo) mora doista biti veliko slovo.
+_TUDJE_AUTORSTVO_IMENICE_RE = re.compile(
     r"\bautor\w*\s+(?:tim\w*|skupin\w*|kolektiv\w*|grup\w*|projekt\w*|"
-    r"studij\w*|istraživanj\w*|istrazivanj\w*|publikacij\w*)\b"
-    r"|\bautor\w*\s+[A-ZČĆŽŠĐ]",
+    r"studij\w*|istraživanj\w*|istrazivanj\w*|publikacij\w*)\b",
     re.IGNORECASE,
 )
+# Zastavica se odnosi SAMO na slovo iza korijena. Korijen `autor` traži se i
+# dalje neosjetljivo na veličinu slova: „Izvor: Autor Ivić (2020)" i „Autorica
+# Marić (2019)" tuđe su autorstvo jednako kao njihove male inačice. S uzorkom
+# koji je cijeli osjetljiv na veličinu slova prolazili su kao studentov vlastiti
+# prikaz — lažno zeleno na autorstvu, skuplje od lažno crvenog koje je v1.9.3
+# uklonila. Mjereno na šest redaka izvora: v1.9.3 3 promašaja, ovako 0.
+_TUDJE_AUTORSTVO_IME_RE = re.compile(r"(?i:\bautor\w*)\s+[A-ZČĆŽŠĐ]")
+
+
+def _tudje_autorstvo(t):
+    return bool(_TUDJE_AUTORSTVO_IMENICE_RE.search(t)
+                or _TUDJE_AUTORSTVO_IME_RE.search(t))
 
 
 def je_vlastiti_prikaz(red: str, norm) -> bool:
     """Je li izvor prikaza studentov vlastiti rad."""
     t = str(red or "")
-    if _TUDJE_AUTORSTVO_RE.search(t):
+    if _tudje_autorstvo(t):
         return False
     if _VLASTITI_KORIJEN_RE.search(t):
         return True

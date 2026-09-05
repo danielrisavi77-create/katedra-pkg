@@ -291,3 +291,78 @@ uz već obavljene zamjene: otvoreno je ako je `„` više nego `”`.
 
 **Dokaz.** Prije: `„…„` i `”…„`. Poslije: `„…”` i `„…”`, 2 otvarajuća i 2
 zatvarajuća u istom odlomku.
+
+## 9. Lokator stranice poznaje samo dvotočku, pa narativni citat u apa-hr dijalektu nestaje
+
+Lokator u `common.LOKATOR` bio je pisan za FPZG oblik `(Becker, 2007: 9)`. Apa-hr piše
+`, str. 170`, i taj oblik zagradni parser proguta repnom klauzulom, a narativni nema.
+Posljedica je da `Šimović (2008, str. 6)` nije citat, a njegov redak u popisu literature
+postaje siroče. Na seminarskom radu iz poreznog računovodstva bilo je pet narativnih i
+četiri zagradna citata: siročad je bilo **točno tih pet**, a sva četiri zagradna prošla su
+uredno. Nalaz je time izgledao kao autorov propust („polovica literature nije citirana"),
+a bio je dijalekt koji alat ne poznaje.
+
+```
+PRIJE:   Citirano u tekstu: 5
+         ⚠ SIROČAD: [('anić-antić','2012'),('anić-antić','2018'),
+                     ('banović','2020'),('bratić','2006'),('šimović','2008')]
+POSLIJE: Citirano u tekstu: 10
+         SIROČAD: nema
+```
+
+Popravak proširuje `LOKATOR` na oba dijalekta (`: 9` i `, str. 170`, uz `s.`, `p.`, `pp.`).
+Ograda: uzorak i dalje traži broj iza kratice, pa `(Autor, 2020, prema Ivić)` nije lokator
+nego druga stvar. Razlikuje se od kvara 2: ondje izvor **nema osobnog autora**, ovdje ga ima,
+a ispada zbog oblika stranice. 84 regresijska testa prolaze nepromijenjeno.
+
+## 10. Točka unutar zagrade i redni broj pred velikim slovom lome rečenicu, pa faza E mjeri staccato kojega nema
+
+`common.sentences` štiti kratice, ali ne i dva česta slučaja u pravnoj i računovodstvenoj
+prozi: redni broj iza najavne riječi (`prema članku 6. ZPD-a`) i točku unutar otvorene
+zagrade (`(MRS 12, t. 24.)`). Prvi lomi rečenicu na velikom slovu koje slijedi, drugi
+proizvodi fragment `24.).` od jedne riječi. Nedostajalo je i pravilo o rednom broju pred
+malim slovom, koje `katedra-lite/hr_text.py` ima od početka, pa se lomio i datum
+(`od 1.` + `siječnja 2026.`).
+
+```
+PRIJE:   rečenica: 305 | medijan: 19   | vrlo kratke (≤8): 73 (24 %)
+POSLIJE: rečenica: 270 | medijan: 21.0 | vrlo kratke (≤8): 43 (16 %)
+```
+
+Ručno brojenje iste proze daje 193 rečenice i medijan 24, pa je alat prijavljivao staccato
+ritam na tekstu kojemu je medijan iznad praga. Popravak dodaje tri pravila zaštite prije
+dijeljenja. Ograda koja ostaje: preostalih 16 % kratkih fragmenata nisu rečenice nego
+brojevi naslova (`1.2.`, `UVOD 1.1.`) koje ekstrakcija ulijeva u isti tok teksta — to je
+kvar ekstrakcije, ne dijeljenja, i mjeri se zasebno. Isti mehanizam u drugom kodu vodi se
+kao `katedra-lite` kvar 51.
+
+## 11. Otisak motora se računa iz izvora, a u contract se upisuje rukom, pa svaka zakrpa tiho obori audit
+
+`katedra_adapter.otisak_motora()` hashira sve `*.py` u `scripts/` osim sebe i vraća
+`0.0.0-undeclared+<8 znakova>`. `engine_contract.json` istu vrijednost nosi kao statičan
+tekst. Svaka izmjena bilo koje skripte motora mijenja otisak, contract ostaje star, i
+Katedra odbija rezultat:
+
+```
+⚠️  nekompatibilan rezultat (DocumentAuditResult):
+    DocumentAuditResult engine_version ne odgovara engine contractu
+contract: 0.0.0-undeclared+975259d7 | stvarno: 0.0.0-undeclared+835f7663
+```
+
+Zapreka je ispravna po namjeri (contract mora opisivati motor koji stvarno radi), ali nema
+dokumentiranog koraka koji contract osvježava, pa popravak jednog kvara u motoru gasi cijeli
+audit dok netko ne pogodi uzrok. U ovoj se sesiji to dogodilo odmah nakon popravaka kvarova
+3 i 4: `--provjeri` je i dalje javljao ✅ (čita contract, ne otisak), a tek `--audit` je pao,
+i to porukom koja ne spominje da je uzrok vlastita izmjena.
+
+```bash
+python3 -c "import sys,json; sys.path.insert(0,'rad-audit/scripts'); \
+import katedra_adapter as ka; p='rad-audit/scripts/engine_contract.json'; \
+c=json.load(open(p)); c['engine_version']=ka.otisak_motora(); \
+json.dump(c,open(p,'w'),ensure_ascii=False,indent=2)"
+```
+
+Popravak je zasad postupak, ne kod: naredba iznad je **zadnji korak svake zakrpe koja dira
+`rad-audit/scripts/`** i tako stoji u `PROMJENE.md`. Ograda: dok se otisak upisuje rukom,
+ništa ne sprječava da ga netko osvježi bez pokretanja testova, pa uz njega uvijek ide i
+`python3 rad-audit/scripts/tests/test_all.py` (84 provjere).

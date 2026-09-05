@@ -66,6 +66,34 @@ def _mod(vrijednosti):
     return max(set(vrijednosti), key=vrijednosti.count)
 
 
+# Stilovi koji NISU tijelo, iako nisu ni naslovi: natpis prikaza, unosi sadržaja
+# i popisa prikaza. Znaju biti dulji od 80 znakova i nose vlastitu veličinu pisma
+# (natpis 11 pt, unos sadržaja 11 pt), pa upadnu u mjerenje tijela. Na uzorku s
+# ocjenom 5 tijelo je imalo 59 odlomaka BEZ izričite veličine (nasljeđuje 12 pt iz
+# docDefaults), a jedinih pet odlomaka s izričitom veličinom bili su natpisi od
+# 11 pt — mod je zato ispao 11 pt, upisao se u profil kao primjerak i po pravilu
+# 17 nadjačao profil, pa je check_rules poslije blokirao rad zbog „11 pt".
+_NIJE_TIJELO = ("caption", "table of figures", "toc", "sadržaj", "sadrzaj",
+                "header", "footer", "footnote", "endnote", "bibliography",
+                "natpis", "opis slike")
+
+
+def _zadana_pt(d):
+    """Veličina pisma iz docDefaults (w:sz je u polovicama točke)."""
+    try:
+        import re as _re
+        xml = d.styles.element.xml
+        m = _re.search(r"<w:docDefaults>.*?<w:sz w:val=\"(\d+)\"", xml, _re.S)
+        return int(m.group(1)) / 2 if m else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _nije_tijelo(stil):
+    s = (stil or "").strip().lower()
+    return any(s.startswith(x) or s == x for x in _NIJE_TIJELO)
+
+
 def izmjeri(put):
     """Opservacije s jednog obranjenog rada. Ništa se ne tumači kao pravilo."""
     import docx
@@ -107,8 +135,10 @@ def izmjeri(put):
             naslovi2.append(t)
             n2_pt.append(pt)
             n2_bold.append(bool(bold))
-        elif not razina and len(t) > 80:   # razina_naslova vraća 0 za tijelo
-            tijelo_pt.append(pt)
+        elif not razina and len(t) > 80 and not _nije_tijelo(stil):
+            # None znači „nasljeđuje iz docDefaults", a ne „nema veličinu":
+            # bez ove zamjene odlomci tijela ne ulaze u mod i mjeri se natpis.
+            tijelo_pt.append(pt if pt is not None else _zadana_pt(d))
             try:
                 # font_stila vraća (ime, veličina) — za primjerak treba samo ime
                 f = font_stila(d.styles[stil], tema)

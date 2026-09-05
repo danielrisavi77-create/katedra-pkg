@@ -1,3 +1,94 @@
+# v1.9.3 — kako je zakrpa primijenjena, i dva popravka u njoj
+
+Zakrpa je nastala na bazi `fd253b6` (PR #4), pa ne poznaje ni PR #5 ni PR #6. Isporučena je
+i kao bundle, pa je spojena **trosmjerno** umjesto prepisivanjem: `common.py`,
+`provjeri_predaju.py`, `primjerci.py`, `tempo.py`, `hr_text.py` i `check_argument.py` git je
+pomirio sam, a ručno je riješeno sedam sukoba.
+
+* **Numeracija.** Zakrpa je svoje unose numerirala od brojeva koje su u međuvremenu potrošili
+  PR #5 i PR #6. Kako su to različiti kvarovi, a ne verzije istih, pomaknuti su iza
+  postojećih: katedra-lite **45–48 → 50–53**, rad-audit **3–5 → 9–11**, rad-docx
+  **24–25 → 25–26**. Isto vrijedi za doktrinu: `main` već ima željezno pravilo 31 („Rad koji
+  nitko nije pročitao nije provjeren rad"), pa je pravilo o uzorku kao riziku ponavljanja
+  postalo **32**. Uz brojeve su poravnate i **13 unutarnjih referenci** u tekstu zakrpe —
+  prenumeracija bez toga ostavlja upute koje pokazuju na tuđe unose, što je gore od sudara
+  jer izgleda točno.
+* **Otisak motora.** `engine_version` je sha256 nad `rad-audit/scripts/*.py`, pa poslije spoja
+  nije točan nijedan od ponuđenih. Preračunat nad spojenim stablom: **`fb8ae4bb`**. To je
+  ujedno korak koji zakrpa sama traži u svojem kvaru 11.
+
+**Popravak 1 — `check_argument.py`, veličina slova u zastavici tuđeg autorstva.** Zakrpa
+ispravno razdvaja popis imenica od strukturnog znaka, ali je novi uzorak `\bautor\w*\s+[A-Z…]`
+u cijelosti osjetljiv na veličinu slova, pa mu je i **korijen** postao osjetljiv. Time
+„Izvor: Autor Ivić (2020)", „Autori Ivić i Perić (2021)" i „Autorica Marić (2019)" prolaze kao
+**studentov vlastiti prikaz**. Lažno zeleno na autorstvu skuplje je od lažno crvenog koje je
+zakrpa uklonila. Zastavica se sada odnosi samo na slovo iza korijena
+(`(?i:\bautor\w*)\s+[A-ZČĆŽŠĐ]`). Mjereno na šest redaka izvora: zakrpa 3 promašaja, poslije 0,
+uz zadržan popravak („izrada autora prema ZPD, čl. 28." i dalje vlastito).
+
+**Popravak 2 — nije popravak nego mjera koja ne stoji.** UPUTE tvrde „84 testa prolaze", a
+`rad-audit/scripts/tests/test_all.py` **nije u zakrpi**: suite ima 82 testa i svih 82 prolazi.
+Za dva rad-audit popravka (dijalekt lokatora, dijeljenje rečenica) u suiteu nema nijednog
+testa. Po pravilu 8 skilla `katedra` to je tvrdnja bez pokrića; ovdje je zapisana, a ne
+prešućena. Popravci su umjesto toga izmjereni ručno prije/poslije (v. niže).
+
+**Izmjereno na ovom stroju, prije/poslije, nad verzijama iz gita:**
+
+* `hr_text.recenice` — „Prema točki 4. MRS-a 12 odgođena porezna imovina…" prije je bila
+  **dvije** rečenice, sada **jedna**; na fixtureu od četiri rečenice s pravnim referencama
+  5 → 4.
+* `check_argument._tudje_autorstvo` — „Izvor: izrada autora prema ZPD, čl. 28." prije **tuđe**,
+  sada **vlastito** (to je kvar 52), uz zadržano prepoznavanje stvarnog tuđeg autorstva.
+* Katalozi poslije prenumeracije: katedra-lite **30 unosa / zadnji 53**, rad-audit **11 / 11**,
+  rad-docx **26 / 26**, sva tri `kvar.py --provjeri` exit 0.
+* `zakrpa.py --provjeri-tvrdnje` nad `rad-audit` i `katedra-lite`: „✓ SKILL.md i kod se slažu".
+
+**Nije provjereno ovdje:** `profile_resolver.py` ne može validirati razriješeni profil jer na
+ovom stroju nema paketa `jsonschema`, pa je promjena overlaya (`administrativni_rep_dana: 0`
+za seminarski) potvrđena čitanjem JSON-a, ne izvođenjem. Deklarirano ograničenje, ne nalaz.
+
+# v1.9.3 — sesija „porezne olakšice" (5. 9. 2026.): mjerila koja su mjerila krivu stvar
+
+Sve niže potječe iz jedne sesije u kojoj je seminarski rad prošao sve modove uz uzorak s
+ocjenom 5 kao predložak. Zajedničko im je da nijedan nije srušio skriptu: svi su tiho dali
+krivu brojku, a autor je po njoj mijenjao uredan rad.
+
+* **Kvar 50 — `primjerci.py` mjerio je veličinu pisma iz natpisa prikaza.** Odlomak tijela
+  koji veličinu nasljeđuje iz `docDefaults` vraća `None` i ispada iz moda; na uzorku je
+  takvih bilo **59**, a jedinih pet s izričitom veličinom bili su natpisi od 11 pt. Mjereno
+  `11.0` umjesto `12.0`. Kvar se širi jer po pravilu 17 primjerak nadjačava profil: 11 pt je
+  ušlo u `resolved_profile.json` i `check_rules` je zatim blokirao vlastiti generirani rad.
+  Popravak izbacuje `Caption`, `table of figures`, `TOC*`, zaglavlja i fusnote iz uzorka
+  tijela i čita `docDefaults` kad odlomak nema izričitu veličinu.
+* **Kvar 51 — `hr_text.recenice` lomio je rečenicu na rednom broju pravne reference.**
+  `prema članku 6. ZPD-a` postajalo je dvije rečenice. Na fixtureu pravne proze: 6 rečenica,
+  medijan 9,5 i 50 % kratkih prije, 4 rečenice, medijan 15,5 i 0 % kratkih poslije.
+  `check_ai_style` je zbog toga javljao staccato na tekstu iznad praga. Ograda se izgovara:
+  `To stoji u članku 6. Sljedeće poglavlje…` sada se spaja u jednu rečenicu.
+* **Kvar 52 — `re.IGNORECASE` gasio je strukturni znak u `check_argument.py`.**
+  `\bautor\w*\s+[A-ZČĆŽŠĐ]` s `IGNORECASE` hvata i mala slova, pa je `izrada autora prema
+  ZPD` davalo podudarnost `autora p` i cijeli izvor prijavljivalo kao tuđe autorstvo.
+  Mjereno na radu sa šest autorskih prikaza: `vlastitih: 0 · prerađenih: 6` prije,
+  `vlastitih: 6 · prerađenih: 0` poslije. Pogađa **svaki** izvor koji uz autorstvo imenuje
+  podlogu, dakle oblik koji profil traži, i nagrađuje brisanje provenijencije — u toj je
+  sesiji autor doista izbrisao „prema ZPD, čl. 28." iz dva izvora da zadovolji mjerilo.
+* **Kvar 53 — rep predaje čitao se s razine fakulteta.** 14 dana iz `efzg.json` pokriva
+  Turnitin, uvez i repozitorij, korake završnog rada; seminarski se predaje e-mailom.
+  Svaki seminarski s rokom kraćim od 14 dana dobivao je „ROK JE PROŠAO ILI GA JEDE
+  ADMINISTRATIVNI REP". Overlay `efzg-rfir-seminarski` dobiva vlastiti blok `predaja`
+  (rep 0, dva stvarna koraka), a `tempo.py` uz brojku ispisuje i odakle je uzeta.
+* **`scripts/slicnost.py`** (novo) — preklapanje rada s referentnim dokumentom po n-gramima
+  nad riječima, uz podjelu na **nužno** (naziv propisa, broj NN, oznaka točke standarda) i
+  **izbježivo** (proza). Mjereno na istom radu prije i poslije prepisivanja: 8-grami
+  2,09 % → 0,91 %, izbježivih 43 → 5. Izlazni kod je uvijek 0: ovo je mjera, ne presuda.
+* **Željezno pravilo 32** — uzorak s ocjenom je istovremeno mjerilo oblika i rizik
+  ponavljanja. Pravila 17 i 24 pokrivaju oblik; sadržajno preklapanje s radom istog
+  kolegija nije mjerio nitko, a mentor koji je oba rada čitao vidi ga bez alata.
+* **Profil.** `efzg.json` dobiva primjerak `efzg-rfir-seminarski-ocjena5-2026` s izmjerenim
+  vrijednostima obranjenog rada; dvije proturječe overlayu (`prijelom_pred_poglavljem`
+  false naspram 8/8 izmjereno, opseg 3000–4000 riječi naspram 3990 riječi na 13 stranica) i
+  obje ostaju zapisane, jer je primjerak opservacija, a Upute su norma.
+
 # v1.9 — kvarovi 45–49 sa sesije „rad Paroci", uz pravilo 31
 
 * **Kvar 45 — `check_rules.py`, format papira.** Margine su se mjerile, papir nije, a procjena broja stranica u tom istom modulu pretpostavlja A4. Rad na US Letteru prolazio je sve provjere jer su margine bile točne, iako je razlika 1,76 cm visine. Novo pravilo `format.stranica` čita format iz profila (`format.stranica`, zadano `a4`), tolerancija 0,2 cm, razina **kršenje**, i imenuje nađeni format. Mjereno: isti rad na A4 → 5 u skladu, **0 kršenja**; na Letteru → **1 kršenje**, „nađeno 21.59 × 27.94 cm — to je LETTER".
