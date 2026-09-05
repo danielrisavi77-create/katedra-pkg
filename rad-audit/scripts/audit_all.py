@@ -21,22 +21,33 @@ sys.path.insert(0, HERE)
 import check_citations
 import check_citations_authoryear
 import check_fields
+import check_placeholders
 import check_typography
 import check_repetition
 import numbers_inventory
 from common import load_docx_text, detect_citation_style
 
 
+# Kvar 63: run() je gutao i izlazni kod i iznimku, a main() je bezuvjetno
+# vraćao 0. Audit je time bio izvještaj koji se smije ignorirati bez ijedne
+# tehničke posljedice. Sada svaki korak upisuje svoj kod, a main vraća najgori.
+KODOVI: dict[str, int] = {}
+
+
 def run(title, fn, *args):
     print("\n\n" + "#" * 60)
     print("#  " + title)
     print("#" * 60)
+    kod = 0
     try:
-        fn(*args)
-    except SystemExit:
-        pass
+        kod = fn(*args) or 0
+    except SystemExit as e:
+        kod = e.code if isinstance(e.code, int) else (1 if e.code else 0)
     except Exception as e:
-        print(f"[greška u modulu: {e}]")
+        print(f"⚠ greška u modulu: {e}")
+        kod = 2
+    KODOVI[title] = kod
+    return kod
 
 
 def main(argv):
@@ -46,6 +57,7 @@ def main(argv):
         sources = argv[argv.index("--sources") + 1]
 
     run("A/F — POLJA I FORMATIRANJE", check_fields.main, path)
+    run("A2 — RADNE OZNAKE U TEKSTU", check_placeholders.main, path)
 
     body, cells, _ = load_docx_text(path, include_tables=True)
     style, style_counts = detect_citation_style(body + "\n" + "\n".join(cells))
@@ -79,8 +91,16 @@ def main(argv):
     print("\n\n" + "=" * 60)
     print("Objedinjeni audit gotov. Ručno još: aritmetika, format svake reference,")
     print("granica dokaza, XSD validacija (docx skill), i vizualni render ako radi.")
+    pukli = [t for t, k in KODOVI.items() if k >= 2]
+    nalazi = [t for t, k in KODOVI.items() if k == 1]
+    if pukli:
+        print(f"💥 faze koje se NISU izvele: {', '.join(pukli)}")
+    if nalazi:
+        print(f"❌ faze s nalazima: {', '.join(nalazi)}")
+    if not pukli and not nalazi:
+        print("✅ nijedna faza nije prijavila nalaz.")
     print("=" * 60)
-    return 0
+    return max(KODOVI.values(), default=0)
 
 
 if __name__ == "__main__":

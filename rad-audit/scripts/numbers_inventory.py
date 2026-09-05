@@ -102,10 +102,35 @@ def main(path, domain_override=None):
     else:
         print("  nema")
 
+    # Kvar 65: zbroj_kategorija() i uzorak_nalazi() bile su definirane ISPOD
+    # bloka `if __name__ == "__main__"`, pa ih ni main() ni generate_report
+    # nikad nisu pozvali. Opisane su u pipeline.md kao aktivne faze.
+    recenice = [r for r in _re.split(r"(?<=[.!?])\s+", text) if r.strip()]
+    zbrojevi = zbroj_kategorija(recenice)
+    print("\nSkupovi kategorija koji tvore cjelinu:")
+    if zbrojevi:
+        for n in zbrojevi:
+            print(f"  ⚠ ukupno {n['ukupno']} = {' + '.join(str(x) for x in n['kategorije'])}"
+                  + ("" if n["ima_uputnicu"] else "  — BEZ uputnice u rečenici"))
+            print(f"      {n['recenica']}")
+    else:
+        print("  nema")
+
+    uzorci = uzorak_nalazi(recenice)
+    print("\nVeličine uzorka i brojivi pojmovi (cijeli broj + imenica):")
+    if uzorci:
+        for n in uzorci:
+            print(f"  ⚠ '{n['pojam']}': {', '.join(str(v) for v in n['vrijednosti'])}"
+                  f"  — ista imenica, različiti brojevi")
+            for rec in n["recenice"]:
+                print(f"      {rec}")
+    else:
+        print("  nema")
+
     print("\nPODSJETNIK — ručno provjeri aritmetiku koja se DA izračunati:")
     print("  površina = Σ(a×b) ?   |   Σ(paneli×pokrivna širina) = površina krova ?")
     print("  (broj okvira−1)×raster ≈ duljina ?   |   broj stupova/greda vs broj okvira ?")
-    return 0
+    return 1 if (conflicts or zbrojevi or uzorci) else 0
 
 
 if __name__ == "__main__":
@@ -164,4 +189,53 @@ def zbroj_kategorija(recenice: list[str], tolerancija: int = 0) -> list[dict]:
                     "recenica": r.strip()[:200],
                 })
                 break
+    return nalazi
+
+# ------------------------------------------------- v1.9.5 cijeli broj + imenica
+IMENICE_UZORKA = (
+    "ispitanik", "ispitanica", "sudionik", "sudionica", "student", "studentica",
+    "predmet", "slučaj", "slucaj", "jedinica", "opažanje", "opazanje",
+    "odgovor", "anketa", "intervju", "dokument", "rad", "članak", "clanak",
+    "škola", "skola", "poduzeće", "poduzece", "općina", "opcina", "županija",
+    "zupanija", "država", "drzava", "zemlja",
+)
+
+
+def _osnova(rijec: str) -> str:
+    """Grubo krati hrvatski padežni nastavak. Namjerno grubo: cilj je grupirati
+    ispitanik / ispitanika / ispitanicima pod isti pojam, ne lematizirati."""
+    r = rijec.lower()
+    for n in ("ijima", "ima", "ove", "ovi", "ama", "ika", "aka", "e", "a", "i", "u", "o"):
+        if len(r) - len(n) >= 4 and r.endswith(n):
+            return r[: -len(n)]
+    return r
+
+
+def uzorak_nalazi(recenice):
+    """Isti pojam, dvije različite veličine: „obuhvatilo je 147 ispitanika" i
+    „u uzorku je bilo 152 ispitanika".
+
+    Kvar 64: inventar je tražio broj uz MJERNU JEDINICU (kW, m², %), pa cijeli
+    broj uz imenicu nije ulazio ni u jedan brojač. Veličina uzorka je najčešća
+    proturječnost među poglavljima i bila je jedina koju nijedan alat nije vidio.
+    """
+    po_pojmu: dict[str, dict[int, str]] = {}
+    uzorak = _re.compile(
+        r"(?<![\w.,])(\d{1,6})\s+([A-Za-zČĆŽŠĐčćžšđ]{4,})", _re.UNICODE)
+    for r in recenice:
+        for broj, rijec in uzorak.findall(r):
+            osn = _osnova(rijec)
+            if not any(osn.startswith(_osnova(i)[:5]) for i in IMENICE_UZORKA):
+                continue
+            po_pojmu.setdefault(osn, {}).setdefault(int(broj), r.strip()[:160])
+    nalazi = []
+    for pojam, vrijednosti in sorted(po_pojmu.items()):
+        if len(vrijednosti) < 2:
+            continue
+        nalazi.append({
+            "vrsta": "UZORAK_NESUGLASAN",
+            "pojam": pojam,
+            "vrijednosti": sorted(vrijednosti),
+            "recenice": [vrijednosti[v] for v in sorted(vrijednosti)],
+        })
     return nalazi

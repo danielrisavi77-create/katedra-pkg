@@ -16,9 +16,10 @@ from common import load_docx_text, sentences
 def main(path, top=15):
     body, _cells, _ = load_docx_text(path, include_tables=False)  # samo proza
     # odreži popis literature (inače "HRN EN"/"Zagreb: HZN" dominiraju)
-    m = list(re.finditer(
-        r"(?im)^\s*(?:\d+\.?\s*)?(LITERATURA|POPIS LITERATURE|REFERENCE|BIBLIOGRAFIJA|POPIS IZVORA|IZVORI)\s*$",
-        body))
+    # Kvar 69: treća kopija istog uzorka, također bez „IZVORI I LITERATURA".
+    # Naslovi i nakladnici iz popisa kvarili su mjeru ritma rečenica.
+    from common import LIT_HEADING_RE
+    m = list(LIT_HEADING_RE.finditer(body))
     if m:
         body = body[:m[-1].start()]
     sents = sentences(body)
@@ -54,11 +55,13 @@ def main(path, top=15):
                 break
 
     # atribucijski glagoli
+    upozorenja = 0
     for verb in ["navodi", "navode", "opisuje", "prikazuje"]:
         c = len(re.findall(r"\b" + verb + r"\b", body))
         if c >= 8:
             print(f"\n⚠ glagol '{verb}': {c}× — variraj uvode izvora")
-    return 0
+            upozorenja += 1
+    return 1 if upozorenja else 0
 
 
 if __name__ == "__main__":

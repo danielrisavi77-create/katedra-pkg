@@ -166,3 +166,42 @@ lažnih alarma.
 ```bash
 cd scripts/tests && python3 test_all.py     # mora završiti izlaznim kodom 0
 ```
+
+---
+
+## v1.9.5 — 5. 9. 2026. — audit koji može pasti
+
+**Exit-code disciplina.** `audit_all.py` je bezuvjetno vraćao 0, `numbers_inventory`
+i `check_repetition` također i kad imaju nalaza, a iznimka u modulu upisivala se bez
+znaka ⚠ pa je ispadala iz sažetka: srušena faza izgledala je kao faza bez nalaza.
+Sada `audit_all` vraća `max(KODOVI.values())`, faza s kodom ≥ 2 ulazi u nalaze kao
+KRITIČNO „faza nije izvedena", a `generate_report` pada i na tome, ne samo na
+kritičnom bucketu.
+
+**Faza D više ne nestaje tiho.** `cross_check.glob` bio je nerekurzivan, pa su izvori
+u podmapi (`izvori/pdfovi/`) davali nula pročitanih datoteka, kod 2 i čist izvještaj.
+
+**Nove provjere.** `check_placeholders.py` (faza A2: radne oznake u tijelu, ćelijama,
+fusnotama, endnotama, zaglavljima i podnožjima — faza A ju je propisivala, alat je bio
+u drugom skillu i nitko ga odavde nije zvao). `numbers_inventory.uzorak_nalazi`
+(cijeli broj uz imenicu: „147 ispitanika" naspram „152 ispitanika" — inventar je tražio
+broj uz mjernu jedinicu, pa najčešća proturječnost među poglavljima nije postojala ni u
+jednom brojaču). Tipografija: duga crtica, en-crtica u umetnutom položaju, nedosljedan
+postotak, `20°C`, tri točke, polunavodnici.
+
+**Mrtav kod oživljen.** `pin_cite_nalazi` i `zbroj_kategorija` bile su definirane ispod
+`if __name__ == "__main__"`; `pipeline.md` ih opisuje kao aktivne faze.
+
+**Lažni nalazi počišćeni PRIJE podizanja blokada** (gate koji pada iz krivih razloga
+zaobiđe se za tjedan dana): prefiksno stapanje `Markov`/`Marković`, naslov iznad citata
+kao ključ autora, uvodna riječ „Prema" kao prezime, tri kopije `LIT_HEADING_RE`.
+
+**Manifest.** `osvjezi_contract.py` — `engine_contract.json` je u repou stajao na
+`+7b0ef703`, a stvarni otisak koda bio je drukčiji: Katedra bi u MOTOR načinu odbila
+rezultat, dok bi `engine.py --provjeri` javljao ✅ jer čita manifest, ne kod. Sada je to
+zadnji korak `test_all.py` (skupina R22), pa se razilaženje vidi kao pad testa.
+
+**Test suite: 101/101** (prije 87). Novo: `tests/test_bolesni.py` — fixture s po jednim
+primjerkom svake klase pogreške, tvrdnja da audit **mora pasti**, i negativna kontrola da
+zdravi rad prolazi bez kritičnih nalaza. Do sada je suite mjerio samo odsutnost šuma;
+nijedan test nije tvrdio da rad s pogreškom pada.

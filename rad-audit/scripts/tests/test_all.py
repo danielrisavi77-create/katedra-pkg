@@ -91,6 +91,98 @@ def test_r14_r15():
           izlaz.count("„") == 2 and izlaz.count("”") == 2, izlaz)
 
 
+
+def test_v195():
+    """Regresije uvedene 5.9.2026. (kvarovi 61–71).
+
+    Svaki test ovdje odgovara jednom kvaru koji je propuštao pogreške u predanu
+    verziju. Pravilo: kvar bez izvršivog testa vraća se.
+    """
+    import common as C
+    import check_citations_authoryear as AY
+    import numbers_inventory as NI
+    import check_typography as TY
+    import check_placeholders as PH
+
+    # Kvar 67 — prefiksno stapanje ključeva
+    siroces, bez_ref = AY.uskladi_kljuceve(
+        {("markov", "2021")}, {("marković", "2021")})
+    check("R17: Markov i Marković NISU isti autor",
+          ("marković", "2021") in siroces and ("markov", "2021") in bez_ref,
+          (siroces, bez_ref))
+    siroces, bez_ref = AY.uskladi_kljuceve(
+        {("markovića", "2021")}, {("marković", "2021")})
+    check("R17: padež (Markovića ~ Marković) i dalje spaja",
+          not siroces and not bez_ref, (siroces, bez_ref))
+
+    # Kvar 68 — narativni citat ne prelazi odlomak
+    kljucevi = C.parse_ay_narrative("1. UVOD\nPrema Beckeru (2007) tržište reagira.")
+    check("R18: naslov iznad citata ne postaje autor",
+          ("uvod", "2007") not in kljucevi, kljucevi)
+
+    # Kvar 70 — uvodna riječ nije prezime
+    check("R18: 'Prema Kovačević (2019)' daje ključ kovačević",
+          ("kovačević", "2019") in C.parse_ay_narrative(
+              "Prema Kovačević (2019) izlaznost raste."),
+          C.parse_ay_narrative("Prema Kovačević (2019) izlaznost raste."))
+
+    # Kvar 64 — cijeli broj uz imenicu
+    n = NI.uzorak_nalazi(["Obuhvaćeno je 147 ispitanika.",
+                          "U analizu je ušlo 152 ispitanika."])
+    check("R19: 147 vs 152 ispitanika je nalaz", len(n) == 1, n)
+    n = NI.uzorak_nalazi(["Obuhvaćeno je 147 ispitanika.",
+                          "Svih 147 ispitanika je odgovorilo."])
+    check("R19: ista brojka dvaput NIJE nalaz", n == [], n)
+
+    # Kvar 65 — zbroj kategorija je pozvan iz main(), ne mrtav kod
+    check("R19: zbroj_kategorija dostupan iz modula",
+          callable(getattr(NI, "zbroj_kategorija", None)))
+    check("R19: uzorak_nalazi dostupan iz modula",
+          callable(getattr(NI, "uzorak_nalazi", None)))
+
+    # Kvar 66 — tipografija koju referenca traži
+    for ime, izvor, trag in [
+        ("duga crtica", "Tekst \u2014 umetak \u2014 dalje.", "duga crtica"),
+        ("trotočka", "Tekst se nastavlja...", "tri točke"),
+        ("nedosljedan postotak", "Udio 45% i udio 62 % rada.", "postotak nedosljedno"),
+    ]:
+        nalazi = _tipografija_nalazi(TY, izvor)
+        check(f"R20: {ime} je nalaz",
+              any(trag in x for x in nalazi), nalazi)
+
+    # Kvar 71 — radne oznake, uključujući fusnote
+    check("R21: check_placeholders postoji i ima uzorke",
+          bool(PH.UZORCI) and callable(PH.nalazi))
+
+    # Kvar 69 — jedan LIT_HEADING_RE za sve tri točke
+    import check_overlap as CO
+    import check_repetition as CR  # noqa: F401
+    check("R21: check_overlap koristi zajednički LIT_HEADING_RE",
+          CO.LIT_HEADING_RE is C.LIT_HEADING_RE)
+
+
+def _tipografija_nalazi(TY, tekst):
+    """Pokreni tipografske provjere nad golim tekstom, bez .docx-a."""
+    import io
+    import contextlib
+    from unittest import mock
+    buf = io.StringIO()
+    with mock.patch.object(TY, "load_docx_text", lambda p, include_tables=True: (tekst, [], None)):
+        with contextlib.redirect_stdout(buf):
+            TY.main("(test)")
+    return [r.strip() for r in buf.getvalue().splitlines() if "⚠" in r]
+
+
+def test_manifest():
+    """Kvar 1/11: manifest motora mora se slagati s otiskom koda."""
+    import subprocess
+    r = subprocess.run([sys.executable, os.path.join(SCRIPTS, "osvjezi_contract.py")],
+                       capture_output=True, text=True)
+    check("R22: engine_contract.json se slaže s otiskom koda "
+          "(popravak: python3 osvjezi_contract.py --upisi)",
+          r.returncode == 0, r.stdout.strip().splitlines()[-1:] )
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="rad_audit_fixtures_")
     fx = os.path.join(tmp, "fixtures")
@@ -393,6 +485,8 @@ def main():
 
     test_r16_vancouver()
     test_r14_r15()
+    test_v195()
+    test_manifest()
 
     # --- report ---
     passed = sum(1 for _, ok, _ in RESULTS if ok)

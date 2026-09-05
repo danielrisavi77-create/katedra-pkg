@@ -84,7 +84,10 @@ def main(argv):
 
     rad_text = read_any(rad)
     sources = {}       # ime -> (sirovi tekst, normalizirani tekst)
-    for p in sorted(glob.glob(os.path.join(folder, "*"))):
+    # Kvar 62: nerekurzivni glob je faze D tiho gasio čim su izvori bili u
+    # podmapi (izvori/pdfovi/…): nula pročitanih datoteka, izlazni kod 2, a
+    # izvještaj je izgledao čisto.
+    for p in sorted(glob.glob(os.path.join(folder, "**", "*"), recursive=True)):
         txt = read_any(p)
         if txt:
             sources[os.path.basename(p)] = (txt, norm(txt))

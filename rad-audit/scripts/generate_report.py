@@ -24,6 +24,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 import check_fields
+import check_placeholders
 import check_citations
 import check_citations_authoryear
 import check_typography
@@ -32,6 +33,14 @@ import numbers_inventory
 from common import load_docx_text, detect_citation_style
 
 CRITICAL_HINTS = [
+    # Kvar 61: iznimka u modulu upisivala se kao "[greška u modulu: ...]" BEZ
+    # znaka ⚠, pa je ispadala i iz sažetka i iz brojača — srušena faza izgledala
+    # je kao faza bez nalaza. Alat koji je pukao nije provjera koja je prošla.
+    "greška u modulu", "faza nije izvedena", "nije nađeno u izvorima",
+    # radne oznake: rad koji ih nosi nije spreman za predaju, bez obzira na ostalo
+    "tvrdnja bez izvora", "nedovršen tekst", "radna bilješka",
+    "nepotvrđen podatak", "rezervirano mjesto", "tekst ispune",
+    "interna napomena", "otvoreno pitanje",
     "NEURAVNOTEŽENO", "NEPRIHVAĆENE IZMJENE", "SIROČAD", "CITAT BEZ REFERENCE",
     "NEMA U IZVORIMA", "nije nađeno u izvorima", "BEZ vidljive oznake citata",
     "documentProtection: ⚠ DA", "permStart", "rupe u numeraciji",
@@ -65,8 +74,8 @@ def run_captured(fn, *args):
     except SystemExit as e:
         code = e.code if isinstance(e.code, int) else (1 if e.code else 0)
     except Exception as e:
-        buf.write(f"[greška u modulu: {e}]\n")
-        code = 1
+        buf.write(f"⚠ greška u modulu: {e}\n")
+        code = 2
     return buf.getvalue(), code
 
 
@@ -81,6 +90,12 @@ def main(argv):
 
     txt, code = run_captured(check_fields.main, path)
     phases.append(("A/F — Polja i formatiranje", txt, code))
+
+    # Kvar 71: faza A je u SKILL.md-u tražila provjeru placeholdera, a alat je
+    # bio u drugom skillu i nitko ga odavde nije zvao. [TREBA IZVOR] u fusnoti
+    # prolazio je do predane verzije.
+    txt, code = run_captured(check_placeholders.main, path)
+    phases.append(("A2 — Radne oznake u tekstu", txt, code))
 
     body, cells, _ = load_docx_text(path, include_tables=True)
     style, style_counts = detect_citation_style(body + "\n" + "\n".join(cells))
@@ -127,6 +142,14 @@ def main(argv):
         for line in ptxt.split("\n"):
             if "⚠" in line:
                 buckets[classify(line)].append((name, line.strip()))
+        # Faza s izlaznim kodom ≥ 2 nije prazna faza, nego faza koja se nije
+        # izvela (pukla, odbila ulaz, nije našla građu). Do v1.9.4 se to vidjelo
+        # samo u phase_exit_codes, koje nitko nije čitao, a ukupna ocjena je
+        # ostajala nepromijenjena — najtiši način da audit „prođe".
+        if pcode >= 2:
+            buckets["kritično"].append(
+                (name, f"⚠ faza nije izvedena (izlazni kod {pcode}) — "
+                       f"nalazi ove faze NE POSTOJE, nisu prazni"))
     total = sum(len(v) for v in buckets.values())
 
     md = [f"# Sažetak audita — `{os.path.basename(path)}`\n"]
@@ -161,7 +184,11 @@ def main(argv):
             json.dump(payload, f, ensure_ascii=False, indent=2)
         print(f"✔ JSON spremljen: {out_json}")
 
-    return 1 if buckets["kritično"] else 0
+    pao_alat = [n for n, _, c in phases if c >= 2]
+    if pao_alat:
+        print(f"💥 faza se nije izvela: {', '.join(pao_alat)} — "
+              f"to NIJE isto što i faza bez nalaza.")
+    return 1 if (buckets["kritično"] or pao_alat) else 0
 
 
 if __name__ == "__main__":

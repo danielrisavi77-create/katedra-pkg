@@ -63,6 +63,38 @@ def main(path):
     nbsp = t.count(" ")
     print(f"NBSP (nedjeljivi razmak): {nbsp}  " + ("(preporuka: ubaci između broja i jedinice)" if nbsp == 0 else ""))
 
+    # Kvar 66: references/typography_hr.md i lektura.md izrijekom traže sve
+    # donje provjere, a nijedna nije postojala u kodu. Tekst s dugom crticom i
+    # miješanim „45%" / „62 %" dobivao je ispis „✓ tipografija čista".
+    em = t.count("\u2014")
+    if em:
+        findings.append(f"⚠ duga crtica — (U+2014): {em}× — u hrvatskom tekstu "
+                        f"ide zarez, dvotočje, zagrade ili nova rečenica")
+
+    en_umetnuto = len(re.findall(r"[^\d\s]\s\u2013\s[^\d\s]", t))
+    if en_umetnuto:
+        findings.append(f"⚠ en-crtica – u umetnutom položaju: {en_umetnuto}× — "
+                        f"– je za raspone (2015–2020), ne za umetanje")
+
+    pct_bez = len(re.findall(r"\d%", t))
+    pct_sa = len(re.findall(r"\d[\s\u00a0]%", t))
+    if pct_bez and pct_sa:
+        findings.append(f"⚠ postotak nedosljedno: {pct_bez}× (45%) i {pct_sa}× (45 %) — "
+                        f"odaberi jedan oblik i drži ga kroz cijeli rad")
+
+    stupanj = len(re.findall(r"\d\u00b0[CF]", t))
+    if stupanj:
+        findings.append(f"⚠ stupanj bez razmaka: {stupanj}× (20°C) — ide (20 °C)")
+
+    trotocka = len(re.findall(r"(?<!\.)\.\.\.(?!\.)", t))
+    if trotocka:
+        findings.append(f"⚠ tri točke umjesto trotočke …: {trotocka}× (U+2026)")
+
+    polunavodnici = t.count("\u2018") + t.count("\u2019")
+    if polunavodnici:
+        findings.append(f"⚠ engleski polunavodnici ' ' : {polunavodnici}× — "
+                        f"citat u citatu ide ‚…\u2018")
+
     print("\nNALAZI:")
     if findings:
         for f in findings:

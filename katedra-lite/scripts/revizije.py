@@ -158,6 +158,56 @@ def cmd_prihvati(a) -> int:
     return 0
 
 
+def count_revisions(src: str) -> dict:
+    """Prebroji praćene izmjene bez ijednog zapisa. Vraća {part: {ins, del}}.
+
+    Zašto postoji: pravilo 30 traži prihvat praćenih izmjena PRIJE prve
+    ekstrakcije, a jedini alat koji ih je vidio ujedno je i pisao novu datoteku.
+    Provjera koja mijenja ulaz ne može biti prvi korak gatea.
+    """
+    try:
+        zin = zipfile.ZipFile(src, "r")
+    except (OSError, zipfile.BadZipFile) as exc:
+        raise SystemExit(f"❌ ne mogu pročitati {src}: {exc}")
+    summary = {}
+    with zin:
+        for item in zin.infolist():
+            if not (item.filename.startswith("word/") and item.filename.endswith(".xml")
+                    and any(key in item.filename for key in PARTS_TO_PROCESS)):
+                continue
+            data = zin.read(item.filename)
+            n_ins = data.count(b"<w:ins ") + data.count(b"<w:ins>")
+            n_del = data.count(b"<w:del ") + data.count(b"<w:del>")
+            n_mv = data.count(b"<w:moveFrom ") + data.count(b"<w:moveTo ")
+            if n_ins or n_del or n_mv:
+                summary[item.filename] = {"ins": n_ins, "del": n_del, "premjesteno": n_mv}
+    return summary
+
+
+def cmd_provjeri(a) -> int:
+    summary = count_revisions(a.ulaz)
+    uk_ins = sum(v["ins"] for v in summary.values())
+    uk_del = sum(v["del"] for v in summary.values())
+    uk_mv = sum(v["premjesteno"] for v in summary.values())
+    nalaz = bool(summary)
+    if a.json_out:
+        with open(a.json_out, "w", encoding="utf-8") as fh:
+            json.dump({"rad": a.ulaz, "ima_pracene_izmjene": nalaz,
+                       "ins": uk_ins, "del": uk_del, "premjesteno": uk_mv,
+                       "dijelovi": summary}, fh, ensure_ascii=False, indent=2)
+    if not nalaz:
+        print(f"✅ {a.ulaz} nema praćenih izmjena — ekstrakcija čita ono što je u dokumentu.")
+        return 0
+    print(f"❌ {a.ulaz} ima praćene izmjene: {uk_ins} umetanja, {uk_del} brisanja, "
+          f"{uk_mv} premještanja, u {len(summary)} dijelova paketa.")
+    for part, c in summary.items():
+        print(f"   {part}: ins={c['ins']} del={c['del']} mv={c['premjesteno']}")
+    print("   Svaka ekstrakcija nad ovim dokumentom čita KRIVI tekst: obrisani odlomci")
+    print("   se broje, umetnuti ne. Opseg, sažetak i citati bit će pogrešni.")
+    print(f"   Prvo: python3 revizije.py prihvati {a.ulaz} rad-prihvaceno.docx")
+    return 1
+
+
 # ───────────────────────── redline ─────────────────────────
 
 RED = RGBColor(0xC0, 0x00, 0x00)
@@ -400,6 +450,11 @@ def main() -> int:
     p_prihvati.add_argument("izlaz")
     p_prihvati.add_argument("--json", action="store_true", help="strojno čitljiv sažetak na stdout")
 
+    p_provjeri = sub.add_parser("provjeri", help="ima li dokument praćenih izmjena (ne mijenja ga)")
+    p_provjeri.add_argument("ulaz")
+    p_provjeri.add_argument("--json", dest="json_out", metavar="PUT",
+                            help="zapiši nalaz u JSON")
+
     p_redline = sub.add_parser("redline", help="obojena usporedba dvije verzije .docx-a, za čovjeka")
     p_redline.add_argument("prije", help="bazna (starija) verzija .docx-a")
     p_redline.add_argument("poslije", help="nova (finalna) verzija .docx-a")
@@ -414,6 +469,8 @@ def main() -> int:
     a = ap.parse_args()
     if a.cmd == "prihvati":
         return cmd_prihvati(a)
+    if a.cmd == "provjeri":
+        return cmd_provjeri(a)
     if a.cmd == "redline":
         return cmd_redline(a)
     if a.cmd == "toc":
