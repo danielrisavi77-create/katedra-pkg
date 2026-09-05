@@ -175,7 +175,10 @@ def zbroj_kategorija(recenice: list[str], tolerancija: int = 0) -> list[dict]:
             continue
         for izostavi in range(-1, len(ostali)):
             skup = [b for i, b in enumerate(ostali) if i != izostavi]
-            if abs(sum(skup) - ukupno) <= tolerancija and len(skup) >= 3:
+            # Kvar 89: bez donjeg praga uzorak je „ukupno 3 = 1 + 1 + 0 + 1"
+            # proglašavao skupom kategorija. Male brojke se zbrajaju slučajno.
+            if (abs(sum(skup) - ukupno) <= tolerancija and len(skup) >= 3
+                    and ukupno >= 20 and all(b > 0 for b in skup)):
                 uputnica = bool(_re.search(r"\([^)]*\d{4}[^)]*\)", r))
                 nalazi.append({
                     "vrsta": "ZBROJ_KATEGORIJA",
@@ -211,6 +214,26 @@ def _osnova(rijec: str) -> str:
     return r
 
 
+# Kvar 88 (nađen na drugom stvarnom radu): prva izvedba je hvatala SVAKI broj uz
+# imenicu, pa je u empirijskom radu s tablicama podskupina prijavljivala
+# „ispitan: 11, 27, 45, 114, 127, 129" — dakle veličine podskupina, koje se
+# legitimno razlikuju. Provjera koja u radu s tablicama uvijek opali je šum.
+#
+# Traži se samo ono što je i bila namjera: proturječna veličina UKUPNOG uzorka.
+# Zato broj mora stajati u okviru koji govori o cjelini, a rečenica ne smije
+# nositi oznaku podskupine.
+OKVIR_UKUPNO = _re.compile(
+    r"(?i)\b(?:ukupno|sveukupno|u\s+analizu\s+je\s+u[šs]lo|analizom\s+je\s+obuhva[ćc]en\w*"
+    r"|obuhva[ćc]en\w*\s+je|obuhvatil\w+|sudjeloval\w+\s+je|sudjelovalo"
+    r"|uzork\w+\s+(?:od|je\s+[čc]inil\w+)|ispunil\w+\s+je|odazval\w+\s+se"
+    r"|kona[čc]n\w+\s+uzor\w+|N\s*=)\W{0,20}$")
+
+OZNAKA_PODSKUPINE = _re.compile(
+    r"(?i)(od\s+toga|njih\b|%|posto\b|skupin\w+|kategorij\w+|podskupin\w+"
+    r"|me[đd]u\s+|prema\s+(?:spolu|dobi|godini|studij\w+)|tablic\w+|slik\w+"
+    r"|redak|stupac|u\s+dobi|starij\w+|mla[đd]\w+)")
+
+
 def uzorak_nalazi(recenice):
     """Isti pojam, dvije različite veličine: „obuhvatilo je 147 ispitanika" i
     „u uzorku je bilo 152 ispitanika".
@@ -223,7 +246,12 @@ def uzorak_nalazi(recenice):
     uzorak = _re.compile(
         r"(?<![\w.,])(\d{1,6})\s+([A-Za-zČĆŽŠĐčćžšđ]{4,})", _re.UNICODE)
     for r in recenice:
-        for broj, rijec in uzorak.findall(r):
+        if OZNAKA_PODSKUPINE.search(r):
+            continue                      # rečenica opisuje dio, ne cjelinu
+        for m in uzorak.finditer(r):
+            broj, rijec = m.group(1), m.group(2)
+            if not OKVIR_UKUPNO.search(r[:m.start()]):
+                continue                  # broj ne stoji u okviru ukupnog uzorka
             osn = _osnova(rijec)
             if not any(osn.startswith(_osnova(i)[:5]) for i in IMENICE_UZORKA):
                 continue

@@ -1070,3 +1070,46 @@ izmišljena, nego da ništa u projektu ne pokazuje da postoji. Savjetodavno u mo
 **Izmjereno na stvarnom radu:** 27 jedinica, 21 s identifikatorom, 6 službenih,
 0 nepotvrđenih. Prije zakrpe 80 i 79: 30 „jedinica" i 4 lažno nepotvrđene.
 
+---
+
+## Kvarovi 87–90 — drugi stvarni rad, druga vrsta rada
+
+**Rad:** MEDRI, sveučilišni diplomski sanitarnog inženjerstva, empirijski,
+14 008 riječi, 11 tablica, uzorak n=172, Vancouver numerički. Dakle sve ono
+čega u prvom radu (teorijski, autor-godina) nije bilo.
+
+Prvi prolaz: **0 kritičnih, 15 srednjih, 3 kozmetička**. Kritičnih nije bilo, ali
+su tri klase srednjih i kozmetičkih nalaza bile lažne, i sve tri iz koda napisanog
+istoga dana.
+
+**87 — crta u umetnutom položaju.** Provjeru je trebalo maknuti, ne popraviti.
+U hrvatskom je crta (–) ISPRAVAN znak za umetanje („rad – uz ogradu – pokazuje"),
+jednako kao za raspone; nepravilna je duga crtica (—), koje u hrvatskom nema.
+Provjera je prijavila 18 ispravnih umetanja. **Pogrešna provjera nije stroža
+provjera, nego provjera koja uči autora krivo.**
+
+**88 — veličina podskupine nije proturječje.** `uzorak_nalazi` je hvatao SVAKI
+broj uz imenicu, pa je u empirijskom radu s tablicama podskupina prijavljivao
+`ispitan: 11, 27, 45, 114, 127, 129` i `sudion: 2, 27, 29, … 172`. To su veličine
+podskupina i legitimno se razlikuju. Namjera je bila proturječna veličina UKUPNOG
+uzorka, pa broj sada mora stajati u okviru koji govori o cjelini (`OKVIR_UKUPNO`),
+a rečenica ne smije nositi oznaku podskupine (`OZNAKA_PODSKUPINE`).
+
+**89 — sitni brojevi se zbrajaju slučajno.** „ukupno 3 = 1 + 1 + 0 + 1" nije skup
+kategorija. Prag: ukupno ≥ 20 i svaka kategorija > 0.
+
+**90 — engleska posvojna množina.** Zakrpa 77 je popravila `Orbán’s`, ali ne i
+`students’`, `consumers’`, `Scientists’`: apostrof je uvijek IZA slova, a navodnik
+je onaj kojemu slovo ne PRETHODI. Druga polovica uvjeta bila je suvišna i lažna.
+
+Poslije: **0 kritičnih, 10 srednjih, 1 kozmetički**, i taj jedan je stvaran
+(zatvarajući navodnik U+201C umjesto U+201D, 14×). Prvi rad nepromijenjen
+(0 kritičnih), dakle zakrpe nisu zamijenile jedan šum drugim.
+
+**Ograda:** R30 i R31, svaka s oba smjera.
+
+**Pravilo koje iz ovoga slijedi, dopunjeno:** jedan stvarni rad nije dovoljan.
+Teorijski rad s autor-godina citiranjem i empirijski rad s tablicama podskupina
+pokazuju različite klase lažnih nalaza. Prije nego provjera uđe u blokadu, mora
+proći kroz oba tipa.
+

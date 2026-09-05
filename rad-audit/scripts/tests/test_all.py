@@ -213,6 +213,35 @@ def test_stvarni_rad():
     check("R25: pravi polunavodnici JESU nalaz",
           any("polunavodnic" in x for x in n), n)
 
+    # 87 — crta u umetnutom položaju je ISPRAVNA u hrvatskom
+    n = _tipografija_nalazi(TY, "Rad \u2013 uz ogradu \u2013 pokazuje pomak.")
+    check("R30: crta u umetnutom polo\u017eaju NIJE nalaz (hrvatski)",
+          not any("umetnut" in x for x in n), n)
+    n = _tipografija_nalazi(TY, "Rad \u2014 uz ogradu \u2014 pokazuje pomak.")
+    check("R30: duga crtica JEST nalaz", any("duga crtica" in x for x in n), n)
+
+    # 90 — engleska posvojna množina nije polunavodnik
+    n = _tipografija_nalazi(TY, "Scientists\u2019 warning on affluence. University students\u2019 behavior.")
+    check("R30: posvojna mno\u017eina (students\u2019) NIJE polunavodnik",
+          not any("polunavodnic" in x for x in n), n)
+
+    # 88 — veličina podskupine nije proturječje ukupnog uzorka
+    import numbers_inventory as NI2
+    n = NI2.uzorak_nalazi([
+        "U analizu je u\u0161lo 172 ispitanika.",
+        "Prema spolu, 114 ispitanika bile su \u017eene.",
+        "Odgovor je dalo 45 ispitanika u dobi do 21 godine."])
+    check("R31: veli\u010dine podskupina NISU proturje\u010dje", n == [], n)
+    n = NI2.uzorak_nalazi([
+        "U analizu je u\u0161lo 172 ispitanika.",
+        "Ukupno je sudjelovalo 180 ispitanika."])
+    check("R31: dvije razli\u010dite veli\u010dine UKUPNOG uzorka JESU nalaz", len(n) == 1, n)
+
+    # 89 — sitni brojevi se zbrajaju slučajno
+    check("R31: 'ukupno 3 = 1+1+0+1' nije skup kategorija",
+          NI2.zbroj_kategorija(["Bilo je ukupno 3 slu\u010daja: 1 i 1 te 0 i 1."]) == [],
+          NI2.zbroj_kategorija(["Bilo je ukupno 3 slu\u010daja: 1 i 1 te 0 i 1."]))
+
     # 78 — DOI nije množenje
     n = _tipografija_nalazi(TY, "DOI: 10.1177/1023263X251338198. Dostupno na mre\u017ei.")
     check("R26: DOI s X me\u0111u znamenkama NIJE mno\u017eenje",

@@ -75,10 +75,11 @@ def main(path):
         findings.append(f"⚠ duga crtica — (U+2014): {em}× — u hrvatskom tekstu "
                         f"ide zarez, dvotočje, zagrade ili nova rečenica")
 
-    en_umetnuto = len(re.findall(r"[^\d\s]\s\u2013\s[^\d\s]", t))
-    if en_umetnuto:
-        findings.append(f"⚠ en-crtica – u umetnutom položaju: {en_umetnuto}× — "
-                        f"– je za raspone (2015–2020), ne za umetanje")
+    # Kvar 87: ovu je provjeru trebalo maknuti, a ne popraviti. U hrvatskom je
+    # crta (–) ISPRAVAN znak za umetanje („rad – uz ogradu – pokazuje"), jednako
+    # kao za raspone; nepravilna je duga crtica (—), koja se u hrvatskom ne
+    # koristi. Provjera je na stvarnom radu prijavila 18 ispravnih umetanja.
+    # Pogrešna provjera nije stroža provjera, nego provjera koja uči autora krivo.
 
     pct_bez = len(re.findall(r"\d%", t))
     pct_sa = len(re.findall(r"\d[\s\u00a0]%", t))
@@ -98,7 +99,11 @@ def main(path):
     # navodnik. Na stvarnom radu je 8 od 9 pogodaka bilo iz engleskih naslova u
     # popisu literature, gdje je apostrof ispravan.
     otvarajuci = t.count("\u2018")
-    zatvarajuci_ne_apostrof = len(re.findall(r"(?<![A-Za-zÀ-ɏ])\u2019|\u2019(?![A-Za-zÀ-ɏ])", t))
+    # Kvar 90: druga polovica uvjeta („U+2019 kojemu ne slijedi slovo") hvatala je
+    # englesku posvojnu množinu iz popisa literature: „students’ behavior",
+    # „consumers’ awareness", „Scientists’ warning". Apostrof je uvijek IZA slova;
+    # navodnik je onaj kojemu slovo ne PRETHODI.
+    zatvarajuci_ne_apostrof = len(re.findall(r"(?<![A-Za-zÀ-ɏ])\u2019", t))
     polunavodnici = otvarajuci + zatvarajuci_ne_apostrof
     if polunavodnici:
         findings.append(f"⚠ engleski polunavodnici: {polunavodnici}× "
