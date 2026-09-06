@@ -2232,3 +2232,80 @@ Ista je mjera primijenjena na satelite: `rad-audit` 507 → 730 zn. i `rad-docx`
 od deset provjera dodanih u v1.9.5–v1.9.10, pa se za te zadatke skill nije imao
 razloga aktivirati. Opis smije rasti kad opisuje površinu, i mora se kratiti kad
 opisuje prošlost.
+
+---
+
+## 119. Provjera tvrdnji rušila se na hrvatskoj konzoli, pa je nalaz koji je NAŠLA izlazio kao traceback
+
+Novi zrcalni smjer (kvar 117) nije se dao izmjeriti jer `zakrpa.py
+--provjeri-tvrdnje` na ovom računalu uopće nije dolazio do ispisa. Dva mjesta,
+oba kodna stranica konzole (`cp1250`):
+
+```
+1) subprocess.run(..., text=True)   ← bez `encoding`
+   dijete (test_all.py) ispisuje ✓ i ⚠ u UTF-8, roditelj dekodira cp1250:
+   UnicodeDecodeError → dretva čitača umre → r.stdout je None →
+   TypeError: expected string or bytes-like object, got 'NoneType'
+
+2) print(" ", nalaz)                ← nalaz počinje znakom ⚠
+   UnicodeEncodeError: 'charmap' codec can't encode character '⚠'
+```
+
+Prvo mjerenje zbog toga je pokazalo **„rad-audit: 0 nedokumentiranih"** — nula
+koja je bila pad, ne čistoća. Isti alat s popravljenim ispisom na istom commitu
+javlja **9**. Pravilo 20 doslovno: alat koji je pukao nije provjera koja je
+prošla, a najskuplji oblik tog kvara je onaj u kojem pad izgleda kao uredan
+rezultat.
+
+Popravak: dekodiranje djeteta je izrijekom `encoding="utf-8",
+errors="replace"` (uz `PYTHONIOENCODING=utf-8` u okolini djeteta), a vlastiti
+ispis dobiva `sys.stdout.reconfigure(errors="replace")`. Kodna stranica se ne
+mijenja — č, ć, ž, š i đ postoje u cp1250 — mijenja se samo to da znak koji u
+njoj ne postoji izađe kao `?` umjesto da obori alat:
+
+```
+prije:  Traceback … UnicodeEncodeError            (izlaz 1, nula nalaza)
+poslije: ? `scripts/check_hipoteze.py` postoji, a ne spominje ga nitko
+```
+
+Ograda: `bin/testovi.sh` već izvozi `PYTHONIOENCODING=utf-8` (kvar 114), pa suite
+ovo ne bi uhvatio — kvar se vidi samo kad se alat pokrene rukom, kako ga se i
+pokreće. Zato popravak stoji u samom alatu, ne u pokretaču.
+
+---
+
+## 120. Brojka „31 stvarni kvar” stajala je u opisu nad katalogom od 26, a kvar 37 ju je zapisao još 2. rujna
+
+Kvar 37 (2. rujna 2026.) izmjerio je da `rad-docx/SKILL.md` na dva mjesta tvrdi
+**31 stvarni kvar** nad katalogom koji ih tada nosi **23**, i predložio popravak:
+provjeru koja svaku takvu tvrdnju traži na disku. Provedena je samo polovica —
+ona za **skripte** (`SKILL.md` zove datoteku koje nema). Brojka o veličini
+kataloga ostala je proza, pa ju je i dalje mjerio samo onaj tko se sjeti.
+
+Četiri dana i osamdesetak unosa poslije, stanje na `main`:
+
+```
+$ grep -c '^## [0-9]' rad-docx/references/zamke.md   → 26
+$ grep -c '31 stvarni kvar' rad-docx/SKILL.md        → 1     (i „katalog zamki 23→31" u opisu)
+```
+
+Tvrdnja je preživjela vlastiti unos u katalogu jer katalog nije alat: unos opisuje
+kvar, ali ništa ne pada dok netko ne pogleda. **Nalaz bez ograde je bilješka.**
+
+Popravak: `zakrpa.py --provjeri-tvrdnje` dobiva šesti nalaz — svaki redak
+`SKILL.md`-a koji spominje `zamke.md` i broji kvarove uspoređuje se s brojem
+unosa u tom katalogu. Brojke u `rad-docxu` ispravljene su na izmjerenih 26.
+
+```
+prije:  ❌ SKILL.md tvrdi „31 stvarni kvar" o references/zamke.md, a katalog nosi 26 unosa
+poslije: ✓ SKILL.md i kod se slažu          (svih 7 skillova)
+```
+
+Provjera gleda **samo `SKILL.md`**, ne i reference. Razlog je u ovom istom
+katalogu: unos 37 doslovno nosi tuđi `31 stvarni kvar` kao dokaz, pa bi
+skeniranje referenci prijavilo citat kao tvrdnju. Lažan nalaz iz alata koji lovi
+lažne tvrdnje skuplji je od tvrdnje koju propusti (kvar 91).
+
+Ograda: `test_zakrpa.py` R49 — kriva brojka mora pasti, točna ne smije, citat u
+referenci ne smije. Mutacija (usporedba zamijenjena s `if False`) obara prvu:
+9/9 → 8/9.

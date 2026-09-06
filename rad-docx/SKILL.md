@@ -1,6 +1,6 @@
 ---
 name: rad-docx
-description: "Motor izrade predajnog .docx-a iz markdown rukopisa: petlja do fiksne točke paginacije, živa polja (TOC/SEQ/REF), nedjeljivi prikazi, sekcije i numeracija, provjera prije predaje. Aktiviraj na 'izgradi docx iz rukopisa', 'gradi.py', 'provjeri_predaju', 'sadržaj nema brojeve stranica'. Kućni stil daje satelit (fpzg-diplomski); plan, pisanje i audit vodi katedra-lite. (Zadnje: katalog zamki 23→31.) Od v1.9.10 i: mrtvi medijski dijelovi, težina paketa i priprema_slanja.py, parity popisa prikaza, provjeri_povratak.py za rad vraćen iz Worda."
+description: "Motor izrade predajnog .docx-a iz markdown rukopisa: petlja do fiksne točke paginacije, živa polja (TOC/SEQ/REF), nedjeljivi prikazi, sekcije i numeracija, provjera prije predaje. Aktiviraj na 'izgradi docx iz rukopisa', 'gradi.py', 'provjeri_predaju', 'sadržaj nema brojeve stranica'. Kućni stil daje satelit (fpzg-diplomski); plan, pisanje i audit vodi katedra-lite. (Zadnje: katalog zamki 23→26.) Od v1.9.10 i: mrtvi medijski dijelovi, težina paketa i priprema_slanja.py, parity popisa prikaza, provjeri_povratak.py za rad vraćen iz Worda."
 ---
 
 # RAD-DOCX — od rukopisa do predajnog dokumenta
@@ -158,7 +158,7 @@ Izlazni kod 1 = **ne predaje se**. Provjerava, po redu težine:
 | `references/polja.md` | `TOC`, `PAGEREF`, `REF`, zabilješke, dvije varijante |
 | `references/prikazi.md` | natpis/izvor kao nedjeljiv blok, unakrsne reference i hrvatska deklinacija |
 | `references/brojke.md` | `model.json`, osnovica zaokruživanja, crna lista, komponente zadatka |
-| `references/zamke.md` | 31 stvarni kvar: `docx-js`, python-docx, LibreOffice, matplotlib, mjerenje, provenijencija stranica, autor-godina uparivanje |
+| `references/zamke.md` | 26 stvarnih kvarova: `docx-js`, python-docx, LibreOffice, matplotlib, mjerenje, provenijencija stranica, autor-godina uparivanje |
 
 ## Paket i slanje
 
