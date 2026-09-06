@@ -55,8 +55,9 @@ class LazniRun:
 
 
 class LazniIzlaz:
-    def __init__(self, stdout="", returncode=0):
+    def __init__(self, stdout="", returncode=0, stderr=""):
         self.stdout = stdout
+        self.stderr = stderr
         self.returncode = returncode
 
 
@@ -115,6 +116,33 @@ def main():
     check("R62: nadji_claude() vraća put kad alat postoji",
           pt.nadji_claude() == "/put/do/claude")
     pt.shutil.which = stara_which
+
+    # R67: pokreće se točno onaj put koji je provjera potvrdila. Na Windowsu
+    #      izvršni oblik je `claude.CMD`; golo ime ne postoji za CreateProcess,
+    #      pa je provjera prolazila a pokretanje padalo (kvar 128).
+    stara_which2 = pt.shutil.which
+    pt.shutil.which = lambda ime: "/put/do/claude.CMD"
+    lazni3 = LazniRun(LazniIzlaz(""))
+    pt.subprocess.run = lazni3
+    pt.prvi_skill("upit", 5, None)
+    check("R67: pokreće se put iz nadji_claude(), ne golo ime",
+          lazni3.poziv[0][0] == "/put/do/claude.CMD", lazni3.poziv[0][:2])
+    pt.shutil.which = stara_which2
+
+    # R68: razlog neuspjeha iz prijepisa stiže u izvještaj. „nema odgovora"
+    #      ne razlikuje „skill nije okinuo" od „sesija se nije ni pokrenula".
+    import json as _j
+    greska_redak = _j.dumps({"type": "result", "is_error": True,
+                             "result": "Failed to authenticate: OAuth session expired"})
+    pt.subprocess.run = LazniRun(LazniIzlaz(greska_redak, returncode=1))
+    rg = pt.prvi_skill("upit", 5, None)
+    check("R68: razlog neuspjeha stiže u izvještaj",
+          rg["greska"] and "authenticate" in rg["greska"], rg)
+
+    pt.subprocess.run = LazniRun(LazniIzlaz("", returncode=1))
+    rg2 = pt.prvi_skill("upit", 5, None)
+    check("R68: bez razloga ostaje stara poruka",
+          rg2["greska"] == "nema odgovora", rg2)
 
     pt.subprocess.run = stari
     print("=" * 70)

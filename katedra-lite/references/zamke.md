@@ -2697,3 +2697,71 @@ na krivca. Ograda: `katedra-lite/scripts/tests/test_drift.py` — fixture ima
 hrvatske navodnike i dijakritiku, bez kojih uzrok (b) ne bi ni pao, i put se
 gradi s `os.sep` kako ga alat doista gradi. Mutacije: vraćen razdjelnik 2 od 4,
 vraćeno dekodiranje 2 od 4.
+
+---
+
+## 128. Provjera je potvrdila alat koji se onda nije dao pokrenuti, a neuspjeh je izgledao kao odziv 0 %
+
+Nakon instalacije CLI-ja mjerenje je krenulo, i **kontrolni upit je pao**:
+
+```
+$ pokreni_trigger.py --skup kontrola.json --mapa <mapa s radom> --ponavljanja 1
+❌ [DA ] —   0%  Napiši mi plan i program za seminarski rad iz obiteljskog prava.
+```
+
+Taj upit je u prošlom mjerenju imao stopu **1.0**. Da su prvo pokrenuta dva
+sporna upita, dobila bi se ista nula i „potvrdila" bi tvrdnju o opisu. Pravilo 35
+doslovno: mjerilo se provjerava na poznatom ishodu prije nego broj postane sud.
+
+Tri sloja, svaki je davao istu nulu:
+
+**(a) Provjera i radnja tražile su različite stvari.** `nadji_claude()` koristi
+`shutil.which`, koji na Windowsu poštuje `PATHEXT` i vraća `claude.CMD`.
+`subprocess.run(["claude", …])` ide kroz `CreateProcess`, koji golo ime ne
+razrješava:
+
+```
+shutil.which('claude')            → C:\Users\…\npm\claude.CMD
+subprocess.run(['claude', …])     → FileNotFoundError [WinError 2]
+subprocess.run([which_rezultat])  → rc 0, „2.1.263 (Claude Code)"
+```
+
+Preflight iz kvara 124 je time prolazio, a svaki posao padao — provjera koja
+potvrđuje nešto što radnja ne koristi.
+
+**(b) Razlog neuspjeha nije stizao u izvještaj.** Vraćalo se golo
+`"nema odgovora"`, a prijepis ga je nosio:
+
+```
+{"type":"result","is_error":true,
+ "result":"Failed to authenticate: OAuth session expired and could not be refreshed"}
+```
+
+Razlika je cijeli sud: „skill nije okinuo" je nalaz o opisu, „sesija se nije ni
+pokrenula" je nalaz o okolini.
+
+**(c) CLI ne vidi karticu iz desktop aplikacije.** Kartice žive u
+`%APPDATA%\Claude\local-agent-mode-sessions\…`, a CLI čita `~/.claude/skills`
+i projektni `.claude/skills`. Mjerenje se zato postavlja tako da se skillovi
+kopiraju u **projektni** `.claude/skills/` mjerne mape — ništa ne ostaje na
+sustavu, a `init` događaj potvrđuje da ih sesija vidi:
+
+```
+"skills":["katedra","katedra-lite","rad-audit","rad-docx","rad-orchestrator", …]
+```
+
+Popravak: pokreće se put koji je provjera vratila; razlog iz `result` događaja
+(ili `stderr`) prenosi se u izvještaj. Poslije popravka isti kontrolni upit
+javlja:
+
+```
+greska: Failed to authenticate: OAuth session expired and could not be refreshed
+```
+
+što je istinit ishod — mjerenje i dalje nije obavljeno, ali sada se zna zašto, i
+nitko ga ne može pročitati kao sud o opisu skilla.
+
+Ograda: `test_trigger.py` R67 (pokreće se put iz `nadji_claude()`, ne golo ime) i
+R68 (razlog iz prijepisa stiže u izvještaj; bez razloga ostaje stara poruka).
+Mutacije: golo ime obara R67, ugašen prijenos razloga obara R68 — svaka jednu od
+11.
