@@ -2926,3 +2926,46 @@ Ograda: `test_indeks.py` R70 — ograda usred rečenice i u nabrajanju mora se
 prepoznati, ograda na početku retka mora i dalje vrijediti, a `Ograda koje nema`
 i proza o nedostatku ograde ne smiju se brojati. Mutacija (vraćeno sidro) obara
 dvije od deset.
+
+## Kvar 116 — kartica i repo razišle su se u jednoj brojci, i ta je brojka lokator
+
+**Kad:** 6. 9. 2026. **Gdje:** `katedra-lite/SKILL.md:511` (pravilo 35).
+
+Kartica je osvježena na v1.9.13 iz druge linije rada. `drift.py` je javio
+razilaženje, a cijela razlika u tekstu bila je jedna riječ:
+
+```
+kartica:  ... instalirana kartica pod svojim (kvar 121). ...
+repo:     ... instalirana kartica pod svojim (kvar 114). ...
+```
+
+Katalog ima unose do 115. `kvar 121` ne postoji ni u jednom skillu paketa.
+Router je upućivao na unos kojega nema, a to je gore od nikakve upute: izgleda
+provjerljivo, pa se ne provjerava. Broj kvara je lokator kao i broj stranice
+(kvar 47, ista klasa).
+
+Odluka nije donesena procjenom koja je verzija „novija", nego mjerenjem: ista
+provjera puštena je nad objema.
+
+```
+repo (kvar 114):     ✓ SKILL.md i kod se slažu
+kartica (kvar 121):  ❌ poziva se na kvar kojega u zamke.md nema: 121
+                        (zadnji unos u katalogu je 115)
+```
+
+**Ograda:** `zakrpa.py --provjeri-tvrdnje`, provjera 5b: svaki `kvar N` u
+SKILL.md-u mora postojati u `references/zamke.md`. Provjera je prije puštanja
+proizvela **dva lažna nalaza na samom katedra-lite SKILL.md-u**, i oba su
+zatvorena prije nego je nalaz proglašen kvarom:
+
+* `rad-audit kvar 3` je kvar u **tuđem** katalogu, s vlastitom numeracijom; broj
+  kojemu prethodi ime drugog skilla ne traži se ovdje;
+* `zamke.md` je fragment koji se nadovezuje na unos 23, pa broj **ispod** prvog
+  unosa nije dokaz da unosa nema, nego da je raniji dio kataloga drugdje.
+  Prijavljuju se samo brojevi **iznad** zadnjeg unosa: oni upućuju u budućnost
+  i sigurno ne pogađaju.
+
+**Šire od ovog kvara.** Paket sada ima dvije linije rada koje pišu u istu
+karticu. `drift.py` mjeri razliku, ali ne zna spojiti; provjera 5b hvata samo
+onu klasu razilaženja koja se da provjeriti brojkom. Ostalo i dalje traži
+čovjeka koji zna što je gdje nastalo.
