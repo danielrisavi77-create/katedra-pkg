@@ -59,7 +59,12 @@ def prvi_skill(upit: str, timeout: int, model: str | None,
     pogledao `ls` ima li dokumenta, pa tek onda pozvao skill. Odgoda nije
     promašaj. Isti oblik greške kao u `run_eval.py` — mjerilo, ne opis.
     """
-    cmd = ["claude", "-p", upit, "--output-format", "stream-json", "--verbose"]
+    # Kvar 128: `["claude", …]` na Windowsu ne postoji za CreateProcess —
+    # izvršni oblik je `claude.CMD`. `nadji_claude()` ga nalazi (PATHEXT),
+    # pa je provjera prolazila, a pokretanje padalo: provjera i radnja
+    # tražile su različite stvari. Pokreće se točno ono što je provjereno.
+    izvrsni = nadji_claude() or "claude"
+    cmd = [izvrsni, "-p", upit, "--output-format", "stream-json", "--verbose"]
     if model:
         cmd += ["--model", model]
     env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
@@ -74,6 +79,7 @@ def prvi_skill(upit: str, timeout: int, model: str | None,
         # Alat koji je pukao nije mjerenje koje je palo (pravilo 20).
         return {"skill": None, "pozicija": None, "greska": "nema `claude` CLI-ja"}
     n = 0
+    razlog = None
     for redak in p.stdout.splitlines():
         redak = redak.strip()
         if not redak:
@@ -82,6 +88,11 @@ def prvi_skill(upit: str, timeout: int, model: str | None,
             e = json.loads(redak)
         except json.JSONDecodeError:
             continue
+        # Kvar 128: prijepis nosi razlog neuspjeha, a harness je vraćao golo
+        # „nema odgovora". Razlika je između „skill nije okinuo" i „sesija se
+        # nije ni pokrenula" — prvo je nalaz o opisu, drugo o okolini.
+        if e.get("type") == "result" and e.get("is_error"):
+            razlog = str(e.get("result") or e.get("api_error_status") or "")[:200]
         if e.get("type") != "assistant":
             continue
         for c in e.get("message", {}).get("content", []):
@@ -97,7 +108,8 @@ def prvi_skill(upit: str, timeout: int, model: str | None,
     return {
         "skill": None,
         "pozicija": None,
-        "greska": "nema odgovora" if p.returncode else None,
+        "greska": (razlog or (p.stderr or "").strip()[:200] or "nema odgovora")
+                  if p.returncode else None,
     }
 
 

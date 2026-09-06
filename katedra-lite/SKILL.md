@@ -1,6 +1,6 @@
 ---
 name: katedra-lite
-description: "Kopilot za akademske radove na hrvatskom: novi rad, plan i program, pisanje, poboljšanje, audit, obrana, predaja, povratak iz Worda. Vodi stanje u .katedra/ i pokreće provjere kroz gate po fazama (plan, pisanje, audit, predaja): citati i literatura, brojke naspram izvora, hipoteze, statistika, aritmetika u tablicama, metapodaci, jezik, prikazi, Word polja. Aktiviraj kad korisnik piše ili dorađuje seminarski, završni, diplomski ili specijalistički rad, traži audit rada, provjeru citata, predajnu verziju ili pripremu obrane. Motori su sateliti: rad-audit (audit), rad-docx (izrada .docx-a), fpzg-diplomski i drugi profili (kućni stil), replikacija-pspp (neovisna provjera brojki). v1.9.15."
+description: "Kopilot za akademske radove na hrvatskom: novi rad, plan i program, pisanje, poboljšanje, audit, obrana, predaja, povratak iz Worda. Vodi stanje u .katedra/ i pokreće provjere kroz gate po fazama (plan, pisanje, audit, predaja): citati i literatura, brojke naspram izvora, hipoteze, statistika, aritmetika u tablicama, metapodaci, jezik, prikazi, Word polja. Aktiviraj kad korisnik piše ili dorađuje seminarski, završni, diplomski ili specijalistički rad, traži audit rada, provjeru citata, predajnu verziju ili pripremu obrane. Motori su sateliti: rad-audit (audit), rad-docx (izrada .docx-a), fpzg-diplomski i drugi profili (kućni stil), replikacija-pspp (neovisna provjera brojki). v1.9.16."
 ---
 
 # KATEDRA-LITE — kopilot za akademske radove
@@ -547,6 +547,18 @@ uvjet. Izvještaj tu razliku sam izriče.
 
 Mjeri se opis **kartice koja je instalirana**, ne onaj u repou. Ako se razlikuju,
 broj vrijedi za karticu — `drift.py` kaže razlikuju li se.
+
+Dvije stvari koje mjerenje traži, a nisu očite (kvar 128):
+
+1. **CLI mora biti prijavljen.** `claude -p` bez valjane sesije vraća
+   „Failed to authenticate” i svaki upit ispada kao odziv 0 %. Prijava je
+   `claude` jednom, interaktivno.
+2. **CLI ne vidi kartice desktop aplikacije.** Kopiraj skillove u projektni
+   `.claude/skills/` mjerne mape i provjeri `init` događaj — polje `skills`
+   mora ih nabrajati.
+
+I prije svega: pokreni **kontrolni upit s poznatim ishodom**. Nula koja dolazi
+iz okoline izgleda jednako kao nula koja dolazi iz opisa.
 
 ## 2. TIJEK PO MODOVIMA
 
