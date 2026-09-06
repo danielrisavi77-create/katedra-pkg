@@ -221,7 +221,7 @@ def _redak_skripti(s):
 def repo_korijen(put_datoteke):
     try:
         out = subprocess.run(["git", "-C", os.path.dirname(put_datoteke), "rev-parse",
-                              "--show-toplevel"], capture_output=True, text=True, timeout=20)
+                              "--show-toplevel"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=20)
         return out.stdout.strip() or None if out.returncode == 0 else None
     except Exception:
         return None
@@ -231,10 +231,25 @@ def smjer_iz_povijesti(korijen, rel_put, kartica_norm):
     """Ako sadržaj kartice = neka RANIJA verzija iz repoa → kartica zaostaje. Inače None."""
     if not korijen:
         return None
+    # Kvar 127: `os.path.relpath` na Windowsu daje `katedra-lite\SKILL.md`, a
+    # `git show <rev>:<put>` prima SAMO kosu crtu:
+    #     fatal: path 'katedra-lite\SKILL.md' exists on disk, but not in '98e6bfc'
+    # Svaki `show` je time padao, petlja nije nasla nista, i alat je javljao
+    # „sadrzaj kartice NIJE nijedna ranija verzija iz repoa" — optuzbu da je
+    # kartica rucno mijenjana, nad karticom koja je uredno jednu verziju iza.
+    rel_put = str(rel_put).replace(os.sep, "/")
     try:
+        # Kvar 127: `text=True` bez `encoding` dekodira git-ov izlaz kodnom
+        # stranicom konzole. Na cp1250 `git show` nad SKILL.md-om baci
+        # UnicodeDecodeError, `except Exception` ga proguta, i alat javi
+        # „sadržaj kartice NIJE nijedna ranija verzija iz repoa" — optužbu
+        # da je kartica ručno mijenjana, nad karticom koja je uredno jednu
+        # verziju iza. Pravilo 20: alat koji je pukao nije provjera koja je
+        # prošla, a najskuplji oblik je onaj u kojem pad izgleda kao nalaz.
         log = subprocess.run(["git", "-C", korijen, "log", "--format=%h %ad", "--date=short",
                               "-n", str(POVIJEST_DUBINA), "--", rel_put],
-                             capture_output=True, text=True, timeout=60)
+                             capture_output=True, text=True, encoding="utf-8",
+                             errors="replace", timeout=60)
         if log.returncode != 0:
             return None
         for redak in log.stdout.splitlines():
@@ -244,13 +259,16 @@ def smjer_iz_povijesti(korijen, rel_put, kartica_norm):
             h = dio[0]
             datum = dio[1] if len(dio) > 1 else ""
             pok = subprocess.run(["git", "-C", korijen, "show", "%s:%s" % (h, rel_put)],
-                                 capture_output=True, text=True, timeout=30)
+                                 capture_output=True, text=True, encoding="utf-8",
+                                 errors="replace", timeout=30)
             if pok.returncode != 0:
                 continue
             if sha(normaliziraj(pok.stdout)) == sha(kartica_norm):
                 return {"commit": h, "datum": datum}
-    except Exception:
-        return None
+    except Exception as e:
+        # Neuspjela pretraga NIJE nalaz da ranije verzije nema. Razlika je
+        # cijeli sud o kartici, pa se kaže naglas (kvar 127).
+        return {"greska": "%s: %s" % (type(e).__name__, e)}
     return None
 
 
@@ -320,7 +338,16 @@ def main():
     rel = os.path.relpath(repo_put, korijen) if korijen else None
     povijest = None if n["iste"] else smjer_iz_povijesti(korijen, rel, normaliziraj(kartica_txt))
 
-    if povijest:
+    # Kvar 127: tri ishoda, ne dva. „Pretraga je pukla" nije „kartica nije
+    # nijedna ranija verzija" — druga rečenica optužuje da je kartica ručno
+    # mijenjana, a prva kaže da se ne zna.
+    if povijest and povijest.get("greska"):
+        smjer = ("razlika je %d/%d redaka; pretraga ranijih verzija NIJE USPJELA "
+                 "(%s) — smjer se ne tvrdi"
+                 % (n["redaka_samo_u_kartici"], n["redaka_samo_u_repou"],
+                    povijest["greska"]))
+        povijest = None
+    elif povijest:
         smjer = ("kartica zaostaje za repoom — njezin sadržaj je verzija iz commita %s (%s)"
                  % (povijest["commit"], povijest["datum"]))
     elif n["iste"]:
