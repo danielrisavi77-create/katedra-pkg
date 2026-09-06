@@ -2765,3 +2765,116 @@ Ograda: `test_trigger.py` R67 (pokreće se put iz `nadji_claude()`, ne golo ime)
 R68 (razlog iz prijepisa stiže u izvještaj; bez razloga ostaje stara poruka).
 Mutacije: golo ime obara R67, ugašen prijenos razloga obara R68 — svaka jednu od
 11.
+
+## 129. zbroj po fazama nije trošak jednog rada
+**Kad:** 6. 9. 2026., u prvom pokretanju vlastitog alata za mjerenje troška.
+**Gdje:** `katedra-lite/scripts/mjera.py::izvjestaj`.
+
+Prvi izvještaj `mjera.py` završavao je retkom **UKUPNO ~121.822 tokena ulaza** i
+ta je brojka bila namijenjena određivanju cijene po radu. Krivo, i to za 84 %.
+
+`SKILL.md` (~12.637 tokena) ulazi u **svaku** fazu, pa se u zbroju od četiri faze
+plaća četiri puta. To vrijedi samo ako se svaka faza vozi u zasebnom razgovoru.
+Vozi li se rad u jednom razgovoru, router se plaća jednom, a reference se dijele.
+
+Izmjereno, isti rad, iste četiri faze:
+
+```
+zbroj po fazama:  ~121.822 tokena
+jedinstveno:       ~66.261 tokena   (SKILL.md jednom + unija 21 reference)
+razlika:           ~55.561 tokena   = ponavljanje, 46 % zbroja
+```
+
+Cijena postavljena po zbroju bila bi gotovo dvostruko previsoka, a to je najgora
+vrsta pogreške u cjeniku: ne gubi se na marži nego na prodaji, i ne vidi se.
+
+**Ograda:** izvještaj sada ispisuje **oba** retka, `ZBROJ` i `JEDINSTVENO`, uz
+rečenicu koja imenuje što koji znači i gdje stvarna cijena leži. `--json` nosi
+`PROCJENA_tokena_zbroj_po_fazama`, `PROCJENA_tokena_jedinstveno` i
+`upozorenje`, pa se jedna brojka ne da izvaditi iz konteksta.
+
+**Provjera mjerila prije suda (pravilo 35), ista sesija u kojoj je pravilo
+zapisano.** Sekunde su provjerene na poznatom ishodu: zbroj koraka 1,38 s
+naspram stvarnog trajanja gatea 1,44 s, razlika 0,05 s je pokretanje interpretera.
+Tokeni nisu prošli istu provjeru dok se nije rastavilo što ulazi u zbroj.
+
+**Što mjerenje NIJE.** Ulazni kontekst je procjena iz znakova (`/ 3.2`), ne
+tokenizator. Sekunde su mjerene na fixture radu od 832 znaka, pa vrijede kao
+**donja granica**: pravi rad od 60 stranica dulje se čita i dulje provjerava.
+Ljudski koraci su mjereni s jednom statičkom oznakom (`dijelovi`, nosi
+`citanje_tijela`), pa je i `nesmanjivo: 1` donja granica, ne konačan broj.
+
+---
+
+## 130. Predviđanje iz kvara 121 opovrgnuto mjerenjem: opis nije bio uzrok, prazna mapa jest
+
+Kvar 121 je zapisao provjerljivo predviđanje: dva upita s odzivom 0 % imaju ga zato
+što opis v1.9.5 ne imenuje njihove sposobnosti, pa **te dvije nule nestaju bez ijedne
+izmjene opisa** čim kartica bude osvježena. Na temelju toga opis se namjerno nije
+prepisivao.
+
+Izmjereno 6. 9. 2026., kartica jednaka repou (`drift.py` zeleno), CLI prijavljen,
+instrument potvrđen kontrolnim upitom s poznatim ishodom (100 %, prvi alat):
+
+```
+uvjet                    opis        odziv
+prazna mapa              v1.9.5      0 %      (staro mjerenje)
+prazna mapa              v1.9.16     0 %      (0 od 3 prolaza, bez ijedne greške)
+mapa s radom (rad.docx)  v1.9.16     oba okinula u svakom izmjerenom prolazu
+```
+
+```
+✅ [DA ] rad-audit      #6   „Provjeri metapodatke ovog .docx-a…"
+✅ [DA ] katedra-lite   #3   „Nađi mi proturječja između Rezultata i Rasprave…"
+```
+
+**Predviđanje ne stoji.** Novi opis, koji obje sposobnosti izrijekom imenuje
+(`metapodaci`, `hipoteze`, `brojke naspram izvora`), u praznoj mapi ne mijenja
+ništa — nula ostaje nula. Ono što mijenja ishod je **prisutnost dokumenta**.
+
+Uzrok je u samim upitima: oba govore o dokumentu („ovog .docx-a", „u ovom radu").
+Model koji dokumenta nema prvo ga traži i sesija završi prije nego dođe do skilla.
+Za takve upite prazna mapa nije „donja granica" nego **pod od nule**: nijedan opis
+ih ondje ne može podići.
+
+Ograničenje je bilo zapisano u istom izvještaju („odziv je donja granica, ne
+stvarni"), ali je pročitano kao mjera nesigurnosti, a ne kao razlog zbog kojeg
+brojka ne govori o predmetu. Iz toga slijedi pravilo koje nije bilo izrečeno:
+**eval čiji uvjet ne sadrži artefakt na koji se upit poziva ne mjeri opis, nego
+uvjet.** Skup upita koji govore „ovaj rad" traži rad u mapi, inače mjeri koliko
+model ustraje bez datoteke.
+
+Što ostaje nakon opovrgnuća: opis v1.9.16 nije pokvaren, ali ni dokazano bolji za
+ova dva upita — mjerenje koje bi to razlučilo je isti skup u mapi s radom, na
+starom i novom opisu. Zapisano kao otvoreno, ne kao zaključak.
+
+---
+
+## 131. Prolaz koji je pukao brojio se kao prolaz u kojem skill nije okinuo
+
+U istom mjerenju oba sporna upita javila su **67 %**, uz `greska: timeout`. Stopa
+je računata po svim prolazima:
+
+```python
+okidanja = [(o["skill"] in OBITELJ) if o["skill"] else False for o in prolazi]
+stopa = sum(okidanja) / len(okidanja)
+```
+
+Prolaz koji je istekao nema `skill`, pa ulazi kao **False**. Tri prolaza, dva
+okidanja, jedan timeout → 0.67. Ali treći prolaz nije izmjerio ništa: točan je
+zapis „2 od 2 izmjerena prolaza okinula, treći nije izmjeren".
+
+Razlika nije kozmetička. Stopa 67 % čita se kao „okida nepouzdano" — nalaz o
+**opisu**; timeout je nalaz o **okolini**. Isti oblik kao kvarovi 121, 124 i 128,
+i četvrti put u dva dana: pad alata ušao je u brojku kao ishod mjerenja.
+
+Popravak: u nazivnik ulaze samo izmjereni prolazi; izvještaj nosi `prolaza` i
+`izmjereno`, a ispis dopisuje `[2/3 izmjereno]` kad se razlikuju.
+
+```
+prije:   67 %
+poslije: 100 % [2/3 izmjereno]
+```
+
+Ograda: `test_trigger.py` R69 — tri prolaza od kojih jedan timeout moraju dati
+stopu 1.0 uz `izmjereno: 2`. Mutacija (svi prolazi u nazivnik) obara je: 13/13 → 12/13.

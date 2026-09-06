@@ -33,6 +33,7 @@ import os
 import shlex
 import subprocess
 import sys
+import time
 from datetime import datetime
 
 SKRIPTE = os.path.dirname(os.path.abspath(__file__))
@@ -63,8 +64,18 @@ ZNAK = {OK: "✅", NALAZ: "❌", PRESKOCENO: "➖", PUKAO: "💥",
 
 
 class Korak:
+    """Jedan korak faze.
+
+    ``covjek=True`` znači: korak po svojoj naravi traži čovjeka, bez obzira na
+    ishod (npr. obavezno čitanje tijela rada, pravilo 31). To je zaseban podatak
+    od ``blokira``: blokirajući korak koji prođe ne traži nikoga, a ljudski
+    korak traži čovjeka i kad je sve zeleno. Mjeri se jer je broj ljudskih
+    koraka po fazi jedina brojka koja kaže koliko je lanac daleko od toga da
+    ga korisnik vozi sam.
+    """
+
     def __init__(self, kid, naziv, argv, *, blokira=True, treba=(),
-                 satelit=None, zasto=""):
+                 satelit=None, zasto="", covjek=False):
         self.kid = kid
         self.naziv = naziv
         self.argv = argv
@@ -72,6 +83,7 @@ class Korak:
         self.treba = list(treba)
         self.satelit = satelit
         self.zasto = zasto
+        self.covjek = covjek
 
 
 def _k(*dijelovi):
@@ -293,7 +305,10 @@ def koraci(faza: str, c: dict) -> list[Korak]:
         _revizije(rad, kat),
         Korak("dijelovi", "svi obavezni dijelovi rada napravljeni",
               _k("dijelovi.py", "--kat", kat, "--provjeri", "--faza", "predaja"),
-              zasto="rad kojemu fali dio pada formalno, prije nego ga itko pročita"),
+              covjek=True,
+              zasto="rad kojemu fali dio pada formalno, prije nego ga itko pročita; "
+                    "nosi i dio citanje_tijela (razina rucno), jedinu blokadu u "
+                    "paketu koju alat ne može sam zadovoljiti (pravilo 31)"),
         Korak("pravila", "usklađenost s profilom fakulteta",
               _k("check_rules.py", rad, "--profil", profil, "--tip", tip or "zavrsni",
                  "--strogo",
@@ -404,35 +419,40 @@ def _razrijesi_satelit(korak: Korak) -> tuple[list[str] | None, str]:
 
 
 def pokreni(korak: Korak, cwd: str, suho: bool) -> dict:
+    pocetak = time.perf_counter()
+
+    def _rez(**kw):
+        kw.setdefault("korak", korak.kid)
+        kw.setdefault("naziv", korak.naziv)
+        kw.setdefault("blokira", korak.blokira)
+        kw["covjek"] = korak.covjek
+        kw["sekunde"] = round(time.perf_counter() - pocetak, 3)
+        return kw
+
     argv, poruka = korak.argv, ""
     if korak.satelit:
         argv, poruka = _razrijesi_satelit(korak)
         if argv is None:
-            return {"korak": korak.kid, "naziv": korak.naziv, "stanje": PRESKOCENO,
-                    "blokira": korak.blokira, "razlog": poruka, "naredba": None}
+            return _rez(stanje=PRESKOCENO, razlog=poruka, naredba=None)
 
     fale = [t for t in korak.treba if t and not os.path.exists(t)]
     if fale:
-        return {"korak": korak.kid, "naziv": korak.naziv, "stanje": PRESKOCENO,
-                "blokira": korak.blokira,
-                "razlog": "nema ulaza: " + ", ".join(os.path.relpath(f, cwd) for f in fale),
-                "naredba": " ".join(shlex.quote(a) for a in argv)}
+        return _rez(stanje=PRESKOCENO,
+                    razlog="nema ulaza: " + ", ".join(
+                        os.path.relpath(f, cwd) for f in fale),
+                    naredba=" ".join(shlex.quote(a) for a in argv))
 
     naredba = " ".join(shlex.quote(a) for a in argv)
     if suho:
-        return {"korak": korak.kid, "naziv": korak.naziv, "stanje": "planirano",
-                "blokira": korak.blokira, "naredba": naredba, "razlog": korak.zasto}
+        return _rez(stanje="planirano", naredba=naredba, razlog=korak.zasto)
 
     try:
         r = subprocess.run(argv, cwd=cwd, capture_output=True, text=True, timeout=900)
     except subprocess.TimeoutExpired:
-        return {"korak": korak.kid, "naziv": korak.naziv, "stanje": PUKAO,
-                "blokira": korak.blokira, "kod": None, "naredba": naredba,
-                "razlog": "provjera nije završila u 15 minuta"}
+        return _rez(stanje=PUKAO, kod=None, naredba=naredba,
+                    razlog="provjera nije završila u 15 minuta")
     except OSError as e:
-        return {"korak": korak.kid, "naziv": korak.naziv, "stanje": PUKAO,
-                "blokira": korak.blokira, "kod": None, "naredba": naredba,
-                "razlog": str(e)}
+        return _rez(stanje=PUKAO, kod=None, naredba=naredba, razlog=str(e))
 
     kod = r.returncode
     if kod == 0:
@@ -449,10 +469,8 @@ def pokreni(korak: Korak, cwd: str, suho: bool) -> dict:
         stanje = PUKAO
     izlaz = (r.stdout or "").strip()
     grijeh = (r.stderr or "").strip()
-    return {"korak": korak.kid, "naziv": korak.naziv, "stanje": stanje,
-            "blokira": korak.blokira, "kod": kod, "naredba": naredba,
-            "razlog": korak.zasto,
-            "izlaz": izlaz[-4000:], "greska": grijeh[-2000:]}
+    return _rez(stanje=stanje, kod=kod, naredba=naredba, razlog=korak.zasto,
+                izlaz=izlaz[-4000:], greska=grijeh[-2000:])
 
 
 def _bitni_redci(izlaz: str, koliko: int = 8) -> list[str]:

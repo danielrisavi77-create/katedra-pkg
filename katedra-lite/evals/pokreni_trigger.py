@@ -159,9 +159,15 @@ def main() -> int:
     redci, tocno = [], 0
     for i, stavka in enumerate(skup):
         prolazi = po_upitu.get(i, [])
-        okidanja = [(o["skill"] in OBITELJ) if o["skill"] else False for o in prolazi]
+        # Kvar 131: prolaz koji je pukao (timeout, pad sesije) nije prolaz u
+        # kojem skill nije okinuo. Brojanje takvog prolaza kao promašaja
+        # spušta stopu i pretvara kvar okoline u nalaz o opisu — isti oblik
+        # kao kvarovi 121, 124 i 128. U nazivnik ulaze samo IZMJERENI prolazi.
+        izmjereni = [o for o in prolazi if not o.get("greska") or o.get("skill")]
+        okidanja = [(o["skill"] in OBITELJ) if o["skill"] else False
+                    for o in izmjereni]
         stopa = sum(okidanja) / len(okidanja) if okidanja else 0.0
-        okinuo = stopa > 0.5
+        okinuo = stopa > 0.5 and bool(izmjereni)
         ok = okinuo == stavka["should_trigger"]
         tocno += ok
         redci.append({
@@ -169,6 +175,8 @@ def main() -> int:
             "ocekivano": stavka["should_trigger"],
             "okinuo": okinuo,
             "stopa": round(stopa, 2),
+            "prolaza": len(prolazi),
+            "izmjereno": len(izmjereni),
             "skill": next((o["skill"] for o in prolazi if o["skill"]), None),
             "pozicija": next((o["pozicija"] for o in prolazi if o["skill"]), None),
             "greska": next((o["greska"] for o in prolazi if o["greska"]), None),
@@ -210,8 +218,10 @@ def main() -> int:
             znak = "✅" if r["prolaz"] else "❌"
             koji = r["skill"] or "—"
             poz = f"#{r['pozicija']}" if r.get("pozicija") else "  "
+            mjera = ("" if r.get("izmjereno") == r.get("prolaza")
+                     else f" [{r.get('izmjereno')}/{r.get('prolaza')} izmjereno]")
             print(f"{znak} [{'DA ' if r['ocekivano'] else 'NE '}] {koji:<18} "
-                  f"{poz:<4} {r['stopa']:.0%}  {r['upit'][:56]}")
+                  f"{poz:<4} {r['stopa']:.0%}{mjera}  {r['upit'][:56]}")
         print()
     print(f"{tocno}/{ukupno} točno ({izv['tocnost']:.0%}) → {a.izlaz}")
     return 0 if tocno == ukupno else 1
