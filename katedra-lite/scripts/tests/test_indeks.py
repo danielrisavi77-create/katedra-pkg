@@ -95,8 +95,25 @@ def main():
         # naglas umjesto da se prešuti kao prolaz.
         print("  (preskočeno) R53: kvar.py nije uz karticu — usporedba se ne može izvesti")
 
+    # R70: ograda se prepoznaje i usred rečenice (kvar 132). Uzorak usidren
+    #      na početak retka propuštao je „…na krivca. Ograda: test_drift.py"
+    #      i „12. Ograda po pravilu 34: …", pa popis --bez-ograde nije mjerio
+    #      dug nego oblikovanje: 47 od 79 naspram izmjerenih 34.
+    def ograda(tijelo):
+        return indeks._ima_ogradu(tijelo)
+
+    check("R70: ograda usred rečenice se prepoznaje",
+          ograda("tekst i tekst. Ograda: `test_drift.py` — fixture nosi navodnike."))
+    check("R70: ograda u nabrajanju se prepoznaje",
+          ograda("12. Ograda po pravilu 34: `## 71.` prepisan u `## 75.` obara skupinu"))
+    check("R70: ograda na početku retka i dalje vrijedi",
+          ograda("prvi redak" + chr(10) + "Ograda: `test_kvar.py` (sedam provjera)"))
+    check("R70: „Ograda koje nema” nije ograda",
+          not ograda("Popravak stoji. Ograda koje nema: nitko to ne mjeri."))
+    check("R70: proza o nedostatku ograde nije ograda",
+          not ograda("Nalaz bez ograde je bilješka, i tako je ostalo."))
+
     print("=" * 70)
-    ukupno = 5 if os.path.exists(kvar_py) else 4
     print("REZULTATI TESTOVA: %d/%d prošlo"
           % (len(SVE) - len(PALO), len(SVE)))
     print("=" * 70)
