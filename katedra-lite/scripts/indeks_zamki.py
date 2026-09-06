@@ -175,14 +175,24 @@ def main() -> int:
             return 0
         for x in pog:
             print(f"[{x['broj'] or '—'}] redak {x['redak']}  {'✅' if x['ograda'] else '  '}  {x['naslov']}")
-        print(f"\n{len(pog)} od {len(u)} unosa. Čitaj: sed -n 'REDAK,+40p' {ZAMKE}")
+        # Kvar 137: brojka mora značiti isto u SVAKOJ naredbi, ne samo u
+        # zaglavlju. Prije ovoga `--trazi` i `--bez-ograde` dijelili su
+        # brojem redaka indeksa (uključivo nenumerirani odjeljci), pa je
+        # ista datoteka davala 84 ondje gdje `kvar.py` javlja 79.
+        pog_odj = sum(1 for x in pog if not x["broj"])
+        print(f"\n{len(pog) - pog_odj} od {n_kat} unosa"
+              + (f" · uz njih {pog_odj} nenumeriranih odjeljaka" if pog_odj else "")
+              + f". Čitaj: sed -n 'REDAK,+40p' {ZAMKE}")
         return 0
 
     if a.bez_ograde:
         bez = [x for x in u if not x["ograda"]]
         for x in bez:
             print(f"[{x['broj'] or '—'}] redak {x['redak']}  {x['naslov']}")
-        print(f"\n{len(bez)} od {len(u)} unosa bez ograde.")
+        bez_odj = sum(1 for x in bez if not x["broj"])
+        print(f"\n{len(bez) - bez_odj} od {n_kat} unosa bez ograde"
+              + (f" · uz njih {bez_odj} nenumeriranih odjeljaka" if bez_odj else "")
+              + ".")
         return 0
 
     novi = renderiraj(u)

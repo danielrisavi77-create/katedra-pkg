@@ -4,7 +4,7 @@
 > **Ne uređuj ručno.** Nakon izmjene kataloga: `indeks_zamki.py --upisi`.
 > `bin/testovi.sh` pada ako je ovaj indeks zastario.
 
-Unosa: **79** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom (regresijski test): **49** · bez ograde: **35**
+Unosa: **81** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom (regresijski test): **50** · bez ograde: **36**
 
 Traži bez učitavanja cijelog kataloga:
 
@@ -99,6 +99,8 @@ sed -n '844,880p' katedra-lite/references/zamke.md   # unos po retku
 | 134 | doktrina je za Cowork ostavila otvorena vrata kojih nema | `SKILL.md` | ✅ | 3014 |
 | 135 | Provjera „broj kvara mora postojati” nije čitala kanonski raspon — treći put isti uzorak | `SKILL.md`, `test_zakrpa.py` | ✅ | 3046 |
 | 136 | Odziv 6/12 nije bio nalaz o opisu nego o praznoj mapi — mjereno na svih dvanaest upita | `rad.docx` | — | 3081 |
+| 137 | Popravljena je brojka u zaglavlju, a iste dvije naredbe nastavile su dijeliti brojem re… | `indeks_zamki.py`, `kvar.py`, `test_indeks.py` | ✅ | 3121 |
+| 138 | Mjerena je samo strana koja je mogla porasti; kad je izmjerena i druga, prag se nije po… | `rad.docx` | — | 3160 |
 
 ## Unosi bez ograde
 
@@ -141,3 +143,4 @@ bilješke o korpusu. Novi unos bez ograde je dug, ne stanje.
 - 125 — Broj testova u izvještaju bio je ukovana konstanta, pa je suite tvrdio 6/6 dok je pokretao sedam (redak 2562)
 - 130 — Predviđanje iz kvara 121 opovrgnuto mjerenjem: opis nije bio uzrok, prazna mapa jest (redak 2809)
 - 136 — Odziv 6/12 nije bio nalaz o opisu nego o praznoj mapi — mjereno na svih dvanaest upita (redak 3081)
+- 138 — Mjerena je samo strana koja je mogla porasti; kad je izmjerena i druga, prag se nije pomaknuo (redak 3160)
