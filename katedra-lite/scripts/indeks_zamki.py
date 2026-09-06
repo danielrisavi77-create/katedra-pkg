@@ -1,0 +1,186 @@
+#!/usr/bin/env python3
+"""Indeks kataloga zamki.
+
+Zašto postoji: `references/zamke.md` ima ~90 KB. Agent koji traži je li neka
+klasa pogreške već viđena mora ili učitati cijelu datoteku (skupo, pa to ne
+radi) ili pogađati grep pojam. Indeks je jedna stranica: broj, naslov, mjesto u
+kodu, ima li ogradu (regresijski test), redak. Generira se iz same datoteke, pa
+se ne može raziću — `--provjeri` pada ako je zastario.
+
+Naredbe:
+    indeks_zamki.py                 ispiši indeks na stdout
+    indeks_zamki.py --upisi         upiši references/zamke_indeks.md
+    indeks_zamki.py --provjeri      izlazni kod 1 ako je upisani indeks zastario
+    indeks_zamki.py --trazi POJAM   ispiši samo unose koji spominju POJAM
+    indeks_zamki.py --bez-ograde    ispiši unose bez regresijskog testa
+"""
+from __future__ import annotations
+
+import argparse
+import re
+import sys
+from pathlib import Path
+
+KORIJEN = Path(__file__).resolve().parent.parent
+ZAMKE = KORIJEN / "references" / "zamke.md"
+INDEKS = KORIJEN / "references" / "zamke_indeks.md"
+
+# "## 27. Naslov"  |  "## Kvar 58 — Naslov"  |  "## Kvarovi 80–86 — Naslov"
+BROJ_RE = re.compile(
+    r"^(?:(?P<n1>\d+)\.\s*|Kvar(?:ovi)?\s+(?P<n2>\d+(?:\s*[–—-]\s*\d+)?)\s*[–—-]\s*)(?P<naslov>.+)$"
+)
+# putanja tipa katedra-lite/scripts/gate.py ili gate.py:384
+PUTANJA_RE = re.compile(r"`([A-Za-zčćžšđ0-9_./-]+\.(?:py|md|json|sh|docx))(?::\d+)?`")
+# Ograda se broji samo kad je tvrdnja da ograda POSTOJI. "Ograda koje nema" i
+# "Ograda koja bi ga bila uhvatila" opisuju ogradu koja ne postoji — ne broje se.
+OGRADA_RE = re.compile(
+    r"(?:^|\n)\s*(?:\*\*)?Ograd[ae]:?(?:\*\*)?\s*(?P<rep>.{0,40})", re.S
+)
+NIJE_OGRADA_RE = re.compile(r"^\s*(?:koj[aei]|protiv\s+ponavljanja[,:]?\s*$)")
+
+
+def _ima_ogradu(tijelo: str) -> bool:
+    for m in OGRADA_RE.finditer(tijelo):
+        rep = m.group("rep").lstrip()
+        if NIJE_OGRADA_RE.match(rep):
+            continue
+        return True
+    return False
+
+
+def unosi() -> list[dict]:
+    tekst = ZAMKE.read_text(encoding="utf-8")
+    redci = tekst.split("\n")
+    granice = [i for i, r in enumerate(redci) if r.startswith("## ")]
+    granice.append(len(redci))
+    out = []
+    for k in range(len(granice) - 1):
+        poc = granice[k]
+        glava = redci[poc][3:].strip()
+        tijelo = "\n".join(redci[poc:granice[k + 1]])
+        m = BROJ_RE.match(glava)
+        if m:
+            broj = (m.group("n1") or m.group("n2") or "").replace(" ", "")
+            naslov = m.group("naslov").strip()
+        else:
+            broj = ""
+            naslov = glava
+        putanje = []
+        for p in PUTANJA_RE.findall(tijelo):
+            ime = p.split("/")[-1]
+            if ime not in putanje:
+                putanje.append(ime)
+        out.append({
+            "broj": broj,
+            "naslov": naslov,
+            "redak": poc + 1,
+            "putanje": putanje[:3],
+            "ograda": _ima_ogradu(tijelo),
+            "tijelo": tijelo,
+        })
+    return out
+
+
+def _sazmi(s: str, n: int = 88) -> str:
+    s = s.replace("|", "\\|").replace("\n", " ").strip()
+    return s if len(s) <= n else s[: n - 1] + "…"
+
+
+def renderiraj(u: list[dict]) -> str:
+    s_ogradom = sum(1 for x in u if x["ograda"])
+    r = [
+        "# Indeks kataloga zamki",
+        "",
+        "> Generirano iz `references/zamke.md` skriptom `scripts/indeks_zamki.py`.",
+        "> **Ne uređuj ručno.** Nakon izmjene kataloga: `indeks_zamki.py --upisi`.",
+        "> `bin/testovi.sh` pada ako je ovaj indeks zastario.",
+        "",
+        f"Unosa: **{len(u)}** · s ogradom (regresijski test): **{s_ogradom}** · "
+        f"bez ograde: **{len(u) - s_ogradom}**",
+        "",
+        "Traži bez učitavanja cijelog kataloga:",
+        "",
+        "```bash",
+        "python3 katedra-lite/scripts/indeks_zamki.py --trazi 'gate'",
+        "sed -n '844,880p' katedra-lite/references/zamke.md   # unos po retku",
+        "```",
+        "",
+        "| # | Naslov | Dodiruje | Ograda | Redak |",
+        "|---|--------|----------|--------|-------|",
+    ]
+    for x in u:
+        r.append(
+            f"| {x['broj'] or '—'} | {_sazmi(x['naslov'])} | "
+            f"{', '.join('`%s`' % p for p in x['putanje']) or '—'} | "
+            f"{'✅' if x['ograda'] else '—'} | {x['redak']} |"
+        )
+    bez = [x for x in u if not x["ograda"]]
+    if bez:
+        r += [
+            "",
+            "## Unosi bez ograde",
+            "",
+            "Nemaju izričit regresijski test naveden u unosu. Dio starijih (24–57)",
+            "pokriven je `rad-audit/scripts/tests/test_all.py`, dio su zbirni unosi i",
+            "bilješke o korpusu. Novi unos bez ograde je dug, ne stanje.",
+            "",
+        ]
+        for x in bez:
+            r.append(f"- {x['broj'] or '—'} — {_sazmi(x['naslov'], 100)} (redak {x['redak']})")
+    return "\n".join(r) + "\n"
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--upisi", action="store_true")
+    ap.add_argument("--provjeri", action="store_true")
+    ap.add_argument("--trazi", metavar="POJAM")
+    ap.add_argument("--bez-ograde", action="store_true")
+    a = ap.parse_args()
+
+    if not ZAMKE.exists():
+        print(f"nema {ZAMKE}", file=sys.stderr)
+        return 2
+    u = unosi()
+
+    if a.trazi:
+        p = a.trazi.lower()
+        pog = [x for x in u if p in x["tijelo"].lower()]
+        if not pog:
+            print(f"nema unosa za „{a.trazi}”")
+            return 0
+        for x in pog:
+            print(f"[{x['broj'] or '—'}] redak {x['redak']}  {'✅' if x['ograda'] else '  '}  {x['naslov']}")
+        print(f"\n{len(pog)} od {len(u)} unosa. Čitaj: sed -n 'REDAK,+40p' {ZAMKE}")
+        return 0
+
+    if a.bez_ograde:
+        bez = [x for x in u if not x["ograda"]]
+        for x in bez:
+            print(f"[{x['broj'] or '—'}] redak {x['redak']}  {x['naslov']}")
+        print(f"\n{len(bez)} od {len(u)} unosa bez ograde.")
+        return 0
+
+    novi = renderiraj(u)
+
+    if a.provjeri:
+        if not INDEKS.exists():
+            print("❌ zamke_indeks.md ne postoji — pokreni indeks_zamki.py --upisi")
+            return 1
+        if INDEKS.read_text(encoding="utf-8") != novi:
+            print("❌ zamke_indeks.md je zastario — pokreni indeks_zamki.py --upisi")
+            return 1
+        print(f"✓ indeks je usklađen s katalogom ({len(u)} unosa)")
+        return 0
+
+    if a.upisi:
+        INDEKS.write_text(novi, encoding="utf-8")
+        print(f"✓ upisano {INDEKS} ({len(u)} unosa)")
+        return 0
+
+    sys.stdout.write(novi)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

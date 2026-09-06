@@ -230,15 +230,25 @@ def provjeri_tvrdnje(korijen):
     #    njegovu SKILL.md-u. Radili su samo zato što ih agregat zove; tko skill
     #    otvori izravno, za njih ne zna. Nedokumentiran alat je alat koji se ne
     #    koristi, isto kao alat koji ne postoji.
+    #    v1.9.12: nalaz je bio ⚠, a ⚠ ne ruši `bin/testovi.sh`. Provjera koja
+    #    ne blokira je provjera koja se ne popravlja — isti oblik tihe nule zbog
+    #    kojega postoji pravilo 20. Sada je ❌. Izlaz za pomoćni alat koji doista
+    #    nije za čovjeka: u vlastitom docstringu napiši `interno: <razlog>`.
+    #    Izjava stoji u samoj skripti, pa ne može zaostati za njom kao popis izuzeća.
     ZANEMARI = {"__init__", "common", "conftest", "setup"}
     svi_tekstovi = md + "\n" + "\n".join(t for _g, t in tekstovi)
     for q in sorted(korijen.glob("scripts/*.py")):
         ime = q.stem
         if ime in ZANEMARI or ime.startswith("_"):
             continue
-        if q.name not in svi_tekstovi and ime not in svi_tekstovi:
-            nalazi.append(f"⚠ `scripts/{q.name}` postoji, a ne spominje ga ni "
-                          f"SKILL.md ni ijedna referenca")
+        if q.name in svi_tekstovi or ime in svi_tekstovi:
+            continue
+        glava = "\n".join(q.read_text(encoding="utf-8", errors="replace").split("\n")[:40])
+        if re.search(r"interno:\s*\S", glava):
+            continue
+        nalazi.append(f"❌ `scripts/{q.name}` postoji, a ne spominje ga ni SKILL.md "
+                      f"ni ijedna referenca — dokumentiraj ga ili u njegov docstring "
+                      f"upiši `interno: <razlog>`")
 
     # 6) brojka o veličini kataloga mora se slagati s katalogom.
     #    Kvar 118: `rad-docx/SKILL.md` je na dva mjesta tvrdio „31 stvarni kvar"
