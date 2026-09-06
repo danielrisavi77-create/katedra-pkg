@@ -140,6 +140,19 @@ def main():
     check("R72: nenumerirani odjeljak se izriče odvojeno",
           "1 nenumeriranih odjeljaka" in tekst, tekst.strip().splitlines()[-1:])
 
+    # R74: „bez ograde" je bio jedan pretinac za tri stanja (kvar 139).
+    #      Deklaracija bez razloga NE smije proći kao deklaracija — inače je
+    #      to način da se dug sakrije, isti mehanizam kao preskočena provjera.
+    check("R74: ograda koja postoji je „ima”",
+          indeks._stanje_ograde("tekst. Ograda: `test_x.py` pada bez toga.") == "ima")
+    check("R74: „Ograda: nema — razlog” je deklaracija",
+          indeks._stanje_ograde("Ograda: nema — unos je mjerenje, ne kvar.")
+          == "deklarirano")
+    check("R74: „Ograda: nema.” bez razloga ostaje dug",
+          indeks._stanje_ograde("Ograda: nema.") == "nema")
+    check("R74: proza o nedostatku ograde ostaje dug",
+          indeks._stanje_ograde("Nalaz bez ograde je bilješka.") == "nema")
+
     print("=" * 70)
     print("REZULTATI TESTOVA: %d/%d prošlo"
           % (len(SVE) - len(PALO), len(SVE)))
