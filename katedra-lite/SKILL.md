@@ -1,6 +1,6 @@
 ---
 name: katedra-lite
-description: "Kopilot za akademske radove na hrvatskom: novi rad, plan i program, pisanje, poboljšanje, audit, obrana, predaja, povratak iz Worda. Vodi stanje u .katedra/ i pokreće provjere kroz gate po fazama (plan, pisanje, audit, predaja): citati i literatura, brojke naspram izvora, hipoteze, statistika, aritmetika u tablicama, metapodaci, jezik, prikazi, Word polja. Aktiviraj kad korisnik piše ili dorađuje seminarski, završni, diplomski ili specijalistički rad, traži audit rada, provjeru citata, predajnu verziju ili pripremu obrane. Motori su sateliti: rad-audit (audit), rad-docx (izrada .docx-a), fpzg-diplomski i drugi profili (kućni stil), replikacija-pspp (neovisna provjera brojki). v1.9.18."
+description: "Kopilot za akademske radove na hrvatskom: novi rad, plan i program, pisanje, poboljšanje, audit, obrana, predaja, povratak iz Worda. Vodi stanje u .katedra/ i pokreće provjere kroz gate po fazama (plan, pisanje, audit, predaja): citati i literatura, brojke naspram izvora, hipoteze, statistika, aritmetika u tablicama, metapodaci, jezik, prikazi, Word polja. Aktiviraj kad korisnik piše ili dorađuje seminarski, završni, diplomski ili specijalistički rad, traži audit rada, provjeru citata, predajnu verziju ili pripremu obrane. Motori su sateliti: rad-audit (audit), rad-docx (izrada .docx-a), fpzg-diplomski i drugi profili (kućni stil), replikacija-pspp (neovisna provjera brojki). v1.9.19."
 ---
 
 # KATEDRA-LITE — kopilot za akademske radove
@@ -80,16 +80,21 @@ druga ruta i drugi remote su zaobilaženje iste odluke, ne rješenje. Rješenje 
 |---|---|---|
 | Claude chat / Projects — „Add from GitHub” | sinkronizira imena i sadržaj datoteka s odabrane grane | ❌ read-only; ne commita i ne gura |
 | Claude Code on the web (claude.ai/code) | repo se bira **za sesiju**, radi se u remote okruženju | ✅ gura granu i otvara PR |
-| Cowork zadatak | mape priključene s korisnikova računala | samo ako je repo odabran kao izvor zadatka; inače ruta ispod |
+| Cowork zadatak | mape priključene s korisnikova računala | ❌ nema repo pickera ni postavke izvora; ruta ispod |
 
 Zamka je što „GitHub konekcija u claude.ai” znači **dvije različite stvari**. Ona iz chata je
 sinkronizacija datoteka: sesija dobije sadržaj repoa, a `push` i dalje pada na isti 403. Sesija
 koja to pobrka pošalje korisnika u postavke koje ništa ne mijenjaju — krivi popravak skuplji je
 od nikakvog, jer izgleda kao da je posao gotov. Kad se git posao zna unaprijed, zadatak se
-otvara iz **Claude Code on the web** s odabranim repoom; **iz Cowork mobilne aplikacije popis
-izvora se ne može mijenjati** — ondje se ide rutom ispod, i to je zadano stanje, ne kvar.
-Provjereno u dokumentaciji 3. 9. 2026.; ako se ponašanje površina promijeni, mijenja se tablica,
-a ne zaključak da je 403 politika, ne konfiguracija.
+otvara iz **Claude Code on the web** s odabranim repoom.
+
+**U Coworku popis izvora ne postoji, ni na mobitelu ni na računalu.** Provjereno
+6. 9. 2026.: `anthropics/claude-code` issue #84581, otvoren. Poruka proxyja upućuje na alat
+`add_repo` kojega u registru sesije nema, a u Cowork površini nema ni repo pickera ni postavke
+izvora ni slash naredbe. Doslovno: „The user cannot fix this from the product, and neither can
+the agent." Zato se **na 403 ne traži postavka** — ni sesija je ne traži, ni korisnik se ne
+šalje da je nađe. Ide se rutom ispod, i to je zadano stanje, ne kvar. Ako se issue zatvori,
+mijenja se ovaj odlomak, a ne zaključak da je 403 politika, ne konfiguracija.
 
 **Kad push ne prođe, commit se isporučuje, ne gubi.** Kontejner je efemeran, pa lokalna grana
 nestaje sa sesijom; priložena datoteka ne:

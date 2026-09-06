@@ -4,7 +4,7 @@
 > **Ne uređuj ručno.** Nakon izmjene kataloga: `indeks_zamki.py --upisi`.
 > `bin/testovi.sh` pada ako je ovaj indeks zastario.
 
-Unosa: **75** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom (regresijski test): **46** · bez ograde: **34**
+Unosa: **79** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom (regresijski test): **49** · bez ograde: **35**
 
 Traži bez učitavanja cijelog kataloga:
 
@@ -95,6 +95,10 @@ sed -n '844,880p' katedra-lite/references/zamke.md   # unos po retku
 | 130 | Predviđanje iz kvara 121 opovrgnuto mjerenjem: opis nije bio uzrok, prazna mapa jest | `drift.py` | — | 2809 |
 | 131 | Prolaz koji je pukao brojio se kao prolaz u kojem skill nije okinuo | `test_trigger.py` | ✅ | 2853 |
 | 132 | Popis unosa „bez ograde” mjerio je oblikovanje, ne dug: 47 od 79 naspram izmjerenih 34 | `test_drift.py`, `test_indeks.py` | ✅ | 2884 |
+| 133 | kartica i repo razišle su se u jednoj brojci, i ta je brojka lokator | `SKILL.md`, `drift.py`, `zamke.md` | ✅ | 2930 |
+| 134 | doktrina je za Cowork ostavila otvorena vrata kojih nema | `SKILL.md` | ✅ | 3014 |
+| 135 | Provjera „broj kvara mora postojati” nije čitala kanonski raspon — treći put isti uzorak | `SKILL.md`, `test_zakrpa.py` | ✅ | 3046 |
+| 136 | Odziv 6/12 nije bio nalaz o opisu nego o praznoj mapi — mjereno na svih dvanaest upita | `rad.docx` | — | 3081 |
 
 ## Unosi bez ograde
 
@@ -136,3 +140,4 @@ bilješke o korpusu. Novi unos bez ograde je dug, ne stanje.
 - 118 — Opis skilla je površina odluke, ne changelog (redak 2207)
 - 125 — Broj testova u izvještaju bio je ukovana konstanta, pa je suite tvrdio 6/6 dok je pokretao sedam (redak 2562)
 - 130 — Predviđanje iz kvara 121 opovrgnuto mjerenjem: opis nije bio uzrok, prazna mapa jest (redak 2809)
+- 136 — Odziv 6/12 nije bio nalaz o opisu nego o praznoj mapi — mjereno na svih dvanaest upita (redak 3081)

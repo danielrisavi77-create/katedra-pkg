@@ -254,6 +254,57 @@ def provjeri_tvrdnje(korijen):
                       f"ni ijedna referenca — dokumentiraj ga ili u njegov docstring "
                       f"upiši `interno: <razlog>`")
 
+    # 5b) ZNAMENKA KVARA: SKILL.md se poziva na „kvar N", a N mora postojati u
+    #     katalogu. Kvar 116: kartica i repo razisli su se samo u jednoj brojci
+    #     („kvar 121" naspram „kvar 114"), pa je router upućivao na unos kojega
+    #     u katalogu nema. Broj kvara je lokator kao i broj stranice: ako ne
+    #     pogađa, uputa je gora od nikakve, jer izgleda provjerljivo.
+    zamke = korijen / "references" / "zamke.md"
+    if zamke.exists():
+        katalog = zamke.read_text(encoding="utf-8")
+        postojeci = set()
+        # Kvar 135: uzorak je čitao raspon SAMO u tuđem obliku
+        # (`## Kvarovi 80–86 — X`), a ne u kanonskom (`## 80–86. X`) koji
+        # `kvar.py --popravi-naslove` upravo proizvodi. Dok je zadnji unos
+        # pojedinačan, `max(postojeci)` to skriva; čim katalog završi
+        # rasponom, `najveci` je prenizak i svaki uredan lokator iznad njega
+        # postaje lažan nalaz. Treći put isti uzorak (kvarovi 116, 122).
+        UNOS = re.compile(
+            r"^##\s*(?:(\d+)(?:\s*[\u2013\u2014-]\s*(\d+))?\."
+            r"|Kvar(?:ovi)?\s+(\d+)(?:\s*[\u2013\u2014-]\s*(\d+))?)", re.M)
+        for m in UNOS.finditer(katalog):
+            prvi = m.group(1) or m.group(3)
+            zadnji = m.group(2) if m.group(1) else m.group(4)
+            if not prvi:
+                continue
+            a = int(prvi)
+            b = int(zadnji) if zadnji else a
+            postojeci.update(range(a, b + 1))
+        if postojeci:
+            # Dvije stvari koje bi inače proizvele lažni nalaz, obje mjerene na
+            # samom katedra-lite SKILL.md-u prije nego je provjera puštena:
+            #
+            #  (a) „rad-audit kvar 3" je kvar u TUĐEM katalogu, s vlastitom
+            #      numeracijom; ne traži se ovdje.
+            #  (b) zamke.md je fragment koji se nadovezuje na unos 23, pa brojevi
+            #      ispod prvog unosa NISU dokaz da unosa nema, nego da je raniji
+            #      dio kataloga drugdje. Prijavljuju se samo brojevi IZNAD
+            #      zadnjeg unosa: oni upućuju u budućnost i sigurno ne pogađaju.
+            najveci = max(postojeci)
+            trazeni = set()
+            for m in re.finditer(r"(?:(\S+)\s+)?kvar(?:ovi)?\s+(\d+)", md, re.I):
+                prije = (m.group(1) or "").strip("`*(,.").lower()
+                if prije in ("rad-audit", "rad-docx", "fpzg-diplomski",
+                             "replikacija-pspp", "rektorova", "katedra"):
+                    continue
+                trazeni.add(int(m.group(2)))
+            fantomski = sorted(n for n in trazeni if n > najveci)
+            if fantomski:
+                nalazi.append(
+                    "❌ SKILL.md se poziva na kvar(ove) kojih u references/zamke.md "
+                    f"nema: {', '.join(str(n) for n in fantomski)} "
+                    f"(zadnji unos u katalogu je {najveci})")
+
     # 6) brojka o veličini kataloga mora se slagati s katalogom.
     #    Kvar 118: `rad-docx/SKILL.md` je na dva mjesta tvrdio „31 stvarni kvar"
     #    nad katalogom koji ih nosi 26. Tvrdnja je stara pet unosa i nitko je
