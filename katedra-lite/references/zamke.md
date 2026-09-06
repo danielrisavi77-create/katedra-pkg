@@ -2451,3 +2451,63 @@ alata nad stvarnim katalogom** — `kvar.py` i `indeks_zamki.py` moraju dati ist
 broj, jer uzorak se da popraviti u jednom alatu i opet raziću. Kad se kartica
 instalira bez satelita, `kvar.py` nije uz nju; R53 se tada preskače **naglas**,
 ne prešuti kao prolaz. Mutacija (vraćen stari uzorak) obara 3 od 5.
+
+---
+
+## 123. „VERSION ne smije zaostajati” bila bi provjera crvena u 28 od 32 stanja, pa je mjerena prije nego je napisana
+
+Kvar 57 zapisao je da `VERSION` piše rukom onaj tko radi commit, i ostavio
+ogradu neispunjenom. `bin/env.sh` od tada ispisuje zaostatak
+(`❗ VERSION zaostaje 1 commit`), ali ništa ne pada. Očit sljedeći potez bio je
+pretvoriti taj ispis u tvrdi uvjet. Izmjeren je prije pisanja, po pravilu 35:
+
+```
+$ za svaki commit na main-u: koliko je bitnih datoteka (SKILL.md, scripts/, bin/)
+  promijenjeno nakon zadnje promjene VERSION-a
+
+commita (first-parent):                             32
+stanja s bitnim izmjenama nakon zadnje verzije:     28
+```
+
+**88 % povijesti bilo bi crveno.** To nije ograda nego alarm koji stalno zvoni,
+i završio bi kao svaki takav — preskočen. Kvar 91 je isti oblik s druge strane:
+lažni nalaz je skuplji od propuštenog. Prijedlog je odbačen mjerenjem, i to je
+ovdje zapisano da se ne predloži četvrti put.
+
+**Što se DA provjeriti.** Uža tvrdnja: oznaka verzije u opisu skilla mora biti
+ista kao `VERSION`. Ta oznaka nije ukras — ona je jedino mjesto na kojem
+*instalirana kartica* kaže iz koje je verzije, i kvar 121 se vidio upravo tako
+(kartica v1.9.5, repo v1.9.12, šest verzija doktrine izvan opticaja). Ako se
+oznaka piše rukom, laže i taj signal.
+
+Oznaka je **zadnje** što stoji u opisu, u obliku ` v1.9.12.` Uzorak je usidren
+na kraj namjerno: `rad-audit` u opisu nosi rečenicu „Od v1.9.10 i: metapodaci…",
+koja je povijesna, ne tvrdnja o verziji. Uzorak bez sidra pročitao bi je kao
+oznaku i dao lažan nalaz na svakom takvom opisu — mutacija to i pokazuje.
+
+```
+$ verzija.py --stanje
+  ✓      katedra           v1.9.13
+  ✓      katedra-lite      v1.9.13
+  ✓      rad-audit         v1.9.13
+  ✓      rad-docx          v1.9.13
+  —      rad-orchestrator  (nema oznaku; ne provjerava se)
+  —      fpzg-diplomski, replikacija-pspp  (isto)
+```
+
+`rad-orchestrator` broji vlastite verzije (`v1.2.1`) i nije dio ovog vlaka; skill
+bez oznake se jednostavno ne provjerava, a `--stanje` kaže tko je tko.
+
+Popravak ide dalje od provjere: `verzija.py --postavi X.Y.Z` upisuje `VERSION` i
+sve oznake **u istom potezu**, pa se ne mogu raziću rukom — to je ono što kvar
+57 traži. `--sljedeca` ispisuje sljedeći broj zakrpe, po istom pravilu po kojem
+`kvar.py --sljedeci` ispisuje sljedeći broj kvara: broj se pita, ne pretpostavlja.
+
+Ograda: `katedra/scripts/tests/test_verzija.py` (devet provjera) i skupina
+„katedra: oznaka verzije = VERSION" u `bin/testovi.sh` koja provjeru vrti nad
+stvarnim paketom. Mutacije: uzorak bez sidra na kraju obara 2 od 9, ugašena
+usporedba 1 od 9.
+
+Ostaje neriješeno i izrečeno: **koliko zaostajanje `VERSION`-a stvarno stoji, i
+dalje nitko ne mjeri.** Ispis u `env.sh` je jedini signal i namjerno je ostao
+mekan.

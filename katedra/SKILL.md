@@ -1,6 +1,6 @@
 ---
 name: katedra
-description: "Meta-skill za UČENJE iz sesija: kvar, lažni nalaz ili autorova izmjena postaje pravilo, alat ili zakrpa za katedra-lite, rad-audit i rad-docx. Aktiviraj na 'zapiši kvar', 'napravi zakrpu', 'alat je krivo javio', 'nauči iz ove sesije', 'zamke.md'. Ne aktiviraj za plan, pisanje, audit, obranu ili predaju — to je kopilot katedra-lite. (Zadnje: pravilo 8 i zakrpa.py --provjeri-tvrdnje — SKILL.md ne smije tvrditi ono što kod ne radi.)"
+description: "Meta-skill za UČENJE iz sesija: kvar, lažni nalaz ili autorova izmjena postaje pravilo, alat ili zakrpa za katedra-lite, rad-audit i rad-docx. Aktiviraj na 'zapiši kvar', 'napravi zakrpu', 'alat je krivo javio', 'nauči iz ove sesije', 'zamke.md'. Ne aktiviraj za plan, pisanje, audit, obranu ili predaju — to je kopilot katedra-lite. (Zadnje: pravilo 8 i zakrpa.py --provjeri-tvrdnje — SKILL.md ne smije tvrditi ono što kod ne radi.) v1.9.13."
 ---
 
 # KATEDRA — skill za učenje
@@ -174,6 +174,20 @@ kao alat koji ne postoji — samo tiše: radi, ali samo kad ga zove agregat, a t
 otvori izravno za njega ne zna. Na `rad-audit` ih je bilo devet odjednom. Nalaz je ⚠, ne
 ❌: nova skripta smije nakratko biti nedokumentirana, ali ne smije to biti neopaženo.
 
+**Broj verzije se ne piše rukom** (kvar 123). `VERSION` i oznaka na kraju opisa
+moraju biti isti broj, jer je ta oznaka jedino mjesto na kojem instalirana kartica
+kaže iz koje je verzije — kvar 121 se vidio upravo tako. Zato:
+
+```bash
+python3 <SKILL>/scripts/verzija.py --sljedeca          # koji broj zakrpa nosi
+python3 <SKILL>/scripts/verzija.py --postavi X.Y.Z    # VERSION i sve oznake odjednom
+python3 <SKILL>/scripts/verzija.py --provjeri          # u bin/testovi.sh
+```
+
+Tvrdi uvjet „`VERSION` ne smije zaostajati za kodom” izmjeren je i **odbačen**: bio
+bi crven u 28 od 32 stanja na `main`-u. Mjeri se ono što se da provjeriti bez
+lažnih nalaza.
+
 **Šesti gleda brojku o katalogu** (kvar 120): redak `SKILL.md`-a koji spominje
 `zamke.md` i broji kvarove uspoređuje se s brojem unosa u tom katalogu. Tvrdnja
 „31 stvarni kvar” stajala je nad katalogom od 26 iako ju je kvar 37 zapisao četiri
@@ -238,6 +252,9 @@ scripts/kvar.py            provjera i dodavanje unosa u zamke.md (`--sljedeci` p
                            `--nastavak-od N` za fragment, `--od N` filtar sadržaja)
 scripts/zakrpa.py          gradnja zakrpe iz razlike dviju verzija skilla (`--par`, ponovljivo)
 scripts/dokaz.py           prije/poslije trčanje; zadano pad→prolaz, `--dopusti-isto` kad je razlika u tekstu
-scripts/tests/             test_kvar.py (registar) i test_zakrpa.py (oba smjera provjere tvrdnji); oboje u bin/testovi.sh
+scripts/verzija.py         broj verzije paketa i oznaka koju kartica nosi (`--provjeri`, `--stanje`,
+                           `--sljedeca`, `--postavi X.Y.Z`, `--dodaj-oznaku SKILL`)
+scripts/tests/             test_kvar.py (registar), test_zakrpa.py (oba smjera provjere tvrdnji),
+                           test_verzija.py (oznake verzije); sve u bin/testovi.sh
 assets/                    fixtures koji reproduciraju kvarove (v. assets/README.md)
 ```
