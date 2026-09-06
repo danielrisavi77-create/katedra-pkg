@@ -2878,3 +2878,51 @@ poslije: 100 % [2/3 izmjereno]
 
 Ograda: `test_trigger.py` R69 — tri prolaza od kojih jedan timeout moraju dati
 stopu 1.0 uz `izmjereno: 2`. Mutacija (svi prolazi u nazivnik) obara je: 13/13 → 12/13.
+
+---
+
+## 132. Popis unosa „bez ograde” mjerio je oblikovanje, ne dug: 47 od 79 naspram izmjerenih 34
+
+`indeks_zamki.py --bez-ograde` postoji da pokaže koji kvarovi nemaju regresijski
+test — to je jedini popis po kojem se dug može raditi. Javljao je **47 od 79**.
+Provjera dvaju unosa s tog popisa pokazala je da oba ogradu **imaju**:
+
+```
+[114] Katalozi kvarova nisu bili u jedinom ulazu za testove
+      tekst: „12. Ograda po pravilu 34: `## 71.` prepisan u `## 75.` obara skupinu…"
+[127] drift.py je karticu optuživao da je ručno mijenjana
+      tekst: „…na krivca. Ograda: `katedra-lite/scripts/tests/test_drift.py` — fixture…"
+```
+
+Uzorak je tražio `Ograda` samo na **početku retka**:
+
+```python
+OGRADA_RE = re.compile(r"(?:^|\n)\s*(?:\*\*)?Ograd[ae]:?…")
+                        ^^^^^^^^^^^ sidro
+```
+
+Unos koji ogradu spominje usred rečenice ili u nabrojanoj stavci ispadao je iz
+brojke. Popis duga time nije mjerio dug nego **gdje u retku netko stavi riječ**.
+
+Popravak je maknuto sidro; veliko početno slovo i dalje razlikuje tvrdnju
+(`Ograda: X`) od proze (`nalaz bez ograde`), a `NIJE_OGRADA_RE` i dalje odbija
+`Ograda koje nema`.
+
+```
+prije:   47 od 79 unosa bez ograde
+poslije: 34 od 79
+maknuto s popisa: 36, 39, 43, 47, 49, 50, 53, 54, 55, 57, 80–86, 114, 127
+dodano na popis: 0
+```
+
+Trinaest unosa bilo je krivo optuženo, nijedan nije krivo oslobođen — provjereno
+usporedbom obaju popisa i čitanjem četiriju uzoraka (36, 43, 50, 55), svi nose
+`Ograda:` usred rečenice.
+
+Ostatak od 34 je sada brojka po kojoj se **da** raditi. Na njoj su i dva svježa
+unosa koja doista nemaju ogradu (125, 130) i to je istinit nalaz, ne artefakt.
+
+Ograda: `test_indeks.py` R70 — ograda usred rečenice i u nabrajanju mora se
+prepoznati, ograda na početku retka mora i dalje vrijediti, a `Ograda koje nema`
+i proza o nedostatku ograde ne smiju se brojati. Mutacija (vraćeno sidro) obara
+dvije od deset.

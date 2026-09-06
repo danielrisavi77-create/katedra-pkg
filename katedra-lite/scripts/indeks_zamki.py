@@ -41,8 +41,14 @@ BROJ_RE = re.compile(
 PUTANJA_RE = re.compile(r"`([A-Za-zčćžšđ0-9_./-]+\.(?:py|md|json|sh|docx))(?::\d+)?`")
 # Ograda se broji samo kad je tvrdnja da ograda POSTOJI. "Ograda koje nema" i
 # "Ograda koja bi ga bila uhvatila" opisuju ogradu koja ne postoji — ne broje se.
+# Kvar 132: uzorak je tražio „Ograda" samo na POČETKU RETKA, pa ju je
+# propuštao kad rečenica stoji prije nje („…na krivca. Ograda: test_drift.py")
+# ili kad unos ima nabrajanje („12. Ograda po pravilu 34: …"). Popis
+# `--bez-ograde` time nije mjerio dug nego oblikovanje. Sidro je maknuto;
+# veliko slovo i dalje razlikuje tvrdnju („Ograda: X") od proze („bez
+# ograde"), a NIJE_OGRADA_RE i dalje odbija „Ograda koje nema".
 OGRADA_RE = re.compile(
-    r"(?:^|\n)\s*(?:\*\*)?Ograd[ae]:?(?:\*\*)?\s*(?P<rep>.{0,40})", re.S
+    r"(?:\*\*)?Ograd[ae]\b:?(?:\*\*)?\s*(?P<rep>.{0,40})", re.S
 )
 NIJE_OGRADA_RE = re.compile(r"^\s*(?:koj[aei]|protiv\s+ponavljanja[,:]?\s*$)")
 
