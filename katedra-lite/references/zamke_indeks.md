@@ -4,7 +4,7 @@
 > **Ne uređuj ručno.** Nakon izmjene kataloga: `indeks_zamki.py --upisi`.
 > `bin/testovi.sh` pada ako je ovaj indeks zastario.
 
-Unosa: **69** · s ogradom (regresijski test): **25** · bez ograde: **44**
+Unosa: **65** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom (regresijski test): **26** · bez ograde: **44**
 
 Traži bez učitavanja cijelog kataloga:
 
@@ -52,27 +52,27 @@ sed -n '844,880p' katedra-lite/references/zamke.md   # unos po retku
 | 58 | gate je zeleno javljao fazu u kojoj se ništa nije pokrenulo | `gate.py`, `rad.docx`, `test_gate.py` | ✅ | 844 |
 | 59 | faza audit nije pokretala audit | `audit.md`, `test_gate.py` | ✅ | 872 |
 | 60 | `provjeri_predaju.py` nije bio korak nijednog gatea | `provjeri_predaju.py`, `predaja.md`, `rubrika.py` | ✅ | 886 |
-| — | 61–63. audit koji se smije ignorirati | `generate_report.py`, `audit_all.py` | — | 897 |
-| — | 64–66. klase pogrešaka koje nijedan alat nije gledao | `pipeline.md`, `test_all.py` | ✅ | 909 |
-| — | 67–70. lažni nalazi koji su gate činili neupotrebljivim | — | ✅ | 923 |
+| 61–63 | audit koji se smije ignorirati | `generate_report.py`, `audit_all.py` | — | 897 |
+| 64–66 | klase pogrešaka koje nijedan alat nije gledao | `pipeline.md`, `test_all.py` | ✅ | 909 |
+| 67–70 | lažni nalazi koji su gate činili neupotrebljivim | — | ✅ | 923 |
 | 71 | faza A bez izvršitelja | `SKILL.md`, `check_placeholders.py` | — | 943 |
-| — | 72–73. alat za provjeru tvrdnji bio je i sam tvrdnja bez pokrića | `engine_contract.json`, `test_all.py`, `SKILL.md` | — | 952 |
+| 72–73 | alat za provjeru tvrdnji bio je i sam tvrdnja bez pokrića | `engine_contract.json`, `test_all.py`, `SKILL.md` | — | 952 |
 | 74 | Trajna napomena o metodi nosila je znak ⚠, pa je svaki rad — i savršeno čist — imao bar… | `check_citations_authoryear.py`, `generate_report.py`, `kvar.py` | — | 963 |
-| — | 75–78. prvi prolaz kroz STVARNI rad | `test_all.py` | ✅ | 988 |
+| 75–78 | prvi prolaz kroz STVARNI rad | `test_all.py` | ✅ | 988 |
 | 79 | popis literature gutao je sve iza sebe | — | ✅ | 1018 |
-| — | 80–86. tri stavke koje su ostale nakon v1.9.5 | `izmjeri.py`, `prelomi.json`, `natpisi.json` | — | 1031 |
+| 80–86 | tri stavke koje su ostale nakon v1.9.5 | `izmjeri.py`, `prelomi.json`, `natpisi.json` | — | 1031 |
 | — | Nova faza D2 i B2 — dvije klase koje nijedan alat nije gledao | `check_tvrdnja_izvor.py`, `cross_check.py`, `mapa.json` | ✅ | 1071 |
-| — | 87–90. drugi stvarni rad, druga vrsta rada | — | ✅ | 1098 |
+| 87–90 | drugi stvarni rad, druga vrsta rada | — | ✅ | 1098 |
 | 91 | pravni rad: svaka jedinica iz popisa bila je siroče | `provjeri_fusnote.py` | ✅ | 1141 |
 | 92 | najveći izvor šuma u paketu, nađen tek na stvarnom empirijskom radu | `provjeri_fusnote.py` | ✅ | 1183 |
 | — | Korpus na kojem je lanac provjeren | — | — | 1227 |
-| — | 93–97. tehnički radovi: popis literature u tri neprepoznata oblika | — | ✅ | 1243 |
+| 93–97 | tehnički radovi: popis literature u tri neprepoznata oblika | — | ✅ | 1243 |
 | — | Korpus na kojem je lanac provjeren (šest radova, pet fakulteta, četiri stila) | — | — | 1286 |
-| — | 98–104. audit paketa nakon rada Znahor | `AUDITskillovanakonradaZnahor.md`, `check_paragraphs.py`, `verify_rewrite.py` | — | 1304 |
+| 98–104 | audit paketa nakon rada Znahor | `AUDITskillovanakonradaZnahor.md`, `check_paragraphs.py`, `verify_rewrite.py` | — | 1304 |
 | 105 | metapodaci: cijela razina dokumenta koju nitko nije gledao | `provjeri_metapodatke.py` | ✅ | 1385 |
-| — | 106–107. zatvaranje popisa iz prve dijagnoze | `parafraza.py`, `propagacija.py`, `brojke_iz_rasprave.py` | ✅ | 1852 |
+| 106–107 | zatvaranje popisa iz prve dijagnoze | `parafraza.py`, `propagacija.py`, `brojke_iz_rasprave.py` | ✅ | 1852 |
 | — | Što lanac i dalje NE provjerava | `check_argument.py`, `stil_pipeline.md` | — | 1889 |
-| — | 108–111. zatvaranje popisa „što lanac NE provjerava" | `check_statistika.py`, `check_tablice.py`, `check_hipoteze.py` | ✅ | 1911 |
+| 108–111 | zatvaranje popisa „što lanac NE provjerava" | `check_statistika.py`, `check_tablice.py`, `check_hipoteze.py` | ✅ | 1911 |
 | — | Što OSTAJE nepokriveno, i zašto | `faculty_scale_gate.py`, `v1_vs_v2_contract.json` | — | 1973 |
 | 112 | „nije se pokrenula" i „ne odnosi se na ovaj rad" bili su isto stanje | `check_tvrdnja_izvor.py`, `mapa.json` | ✅ | 1993 |
 | 113 | `kvar.py` je poznavao samo jedan broj po unosu, pa je grupirani unos bio ili nevidljiv … | `kvar.py` | ✅ | 2040 |
@@ -84,6 +84,7 @@ sed -n '844,880p' katedra-lite/references/zamke.md   # unos po retku
 | 119 | Provjera tvrdnji rušila se na hrvatskoj konzoli, pa je nalaz koji je NAŠLA izlazio kao … | `check_hipoteze.py`, `testovi.sh` | ✅ | 2238 |
 | 120 | Brojka „31 stvarni kvar” stajala je u opisu nad katalogom od 26, a kvar 37 ju je zapisa… | `SKILL.md`, `zamke.md`, `test_zakrpa.py` | ✅ | 2277 |
 | 121 | mjerilo je palo, a zaključak je htio pasti na opis | `pokreni_trigger.py`, `trigger_rezultat.json` | ✅ | 2315 |
+| 122 | Indeks kataloga čitao je tuđi oblik naslova, a ne svoj, pa je jedanaest unosa izgubilo … | `indeks_zamki.py`, `test_indeks.py`, `testovi.sh` | ✅ | 2413 |
 
 ## Unosi bez ograde
 
@@ -123,14 +124,14 @@ bilješke o korpusu. Novi unos bez ograde je dug, ne stanje.
 - 55 — `SKILL.md` spremljen kao dopuna gubi router; tri skilla su se tako okrnjila (redak 768)
 - 56 — Doktrina o gateovima postojala je u dva skilla i nikad nije prešla u `katedra-lite` (redak 792)
 - 57 — `VERSION` zaostaje za commitom, a § 0.0 taj broj ispisuje kao prvo što sesija kaže (redak 818)
-- — — 61–63. audit koji se smije ignorirati (redak 897)
+- 61–63 — audit koji se smije ignorirati (redak 897)
 - 71 — faza A bez izvršitelja (redak 943)
-- — — 72–73. alat za provjeru tvrdnji bio je i sam tvrdnja bez pokrića (redak 952)
+- 72–73 — alat za provjeru tvrdnji bio je i sam tvrdnja bez pokrića (redak 952)
 - 74 — Trajna napomena o metodi nosila je znak ⚠, pa je svaki rad — i savršeno čist — imao barem jedan „na… (redak 963)
-- — — 80–86. tri stavke koje su ostale nakon v1.9.5 (redak 1031)
+- 80–86 — tri stavke koje su ostale nakon v1.9.5 (redak 1031)
 - — — Korpus na kojem je lanac provjeren (redak 1227)
 - — — Korpus na kojem je lanac provjeren (šest radova, pet fakulteta, četiri stila) (redak 1286)
-- — — 98–104. audit paketa nakon rada Znahor (redak 1304)
+- 98–104 — audit paketa nakon rada Znahor (redak 1304)
 - — — Što lanac i dalje NE provjerava (redak 1889)
 - — — Što OSTAJE nepokriveno, i zašto (redak 1973)
 - 114 — Katalozi kvarova nisu bili u jedinom ulazu za testove, pa je suite bio zelen nad pokvarenim registr… (redak 2077)

@@ -2407,3 +2407,47 @@ s onim što sam mu poslao" u jednom je prolazu otišao u skill `docx`, ne u
 praznoj mapi, bez `.docx`-a. Model koji nema dokument često prvo traži dokument
 umjesto da učita skill, pa je 75 % **donja granica**, ne stvarni odziv. Idući
 korak mjerenja je isti skup uz fixture rad u mapi.
+
+---
+
+## 122. Indeks kataloga čitao je tuđi oblik naslova, a ne svoj, pa je jedanaest unosa izgubilo broj
+
+`indeks_zamki.py` (v1.9.12) postoji da se katalog od 90 kB ne mora učitavati.
+Njegov `BROJ_RE` prima `## 27. Naslov`, `## Kvar 58 — Naslov` i
+`## Kvarovi 80–86 — Naslov`, ali **ne** i `## 80–86. Naslov` — kanonski raspon,
+oblik koji `kvar.py --popravi-naslove` upravo proizvodi. Indeks je dakle čitao
+oblik koji registar odbija, a ne oblik koji registar piše.
+
+Posljedica je dvostruka i tiha:
+
+```
+kvar.py --provjeri     → unosa: 64 (od toga 11 s rasponom)
+indeks_zamki.py --upisi → ✓ upisano … (69 unosa)
+
+u indeksu: | — | 80–86. tri stavke koje su ostale nakon v1.9.5 | … |
+           ^ broj je ispao iz stupca i završio u naslovu
+```
+
+Razlika 69 naspram 64 je zbroj dvaju predznaka: **−11** rasponskih unosa koji su
+ostali bez broja i **+16** redaka koje indeks broji a katalog ne (11 istih
+rasponskih, prepoznatih kao bezimeni, plus 5 nenumeriranih odjeljaka poput
+„Korpus na kojem je lanac provjeren"). Nijedan alat nije pao: `--provjeri`
+uspoređuje indeks sam sa sobom, pa je zeleno bilo iskreno i beskorisno.
+
+Isti mehanizam kao kvar 116, samo obrnuto: ondje je zakrpa pisala oblik koji
+alat ne čita, ovdje alat ne čita oblik koji zakrpa piše. Zajednički uzrok je da
+gramatika naslova živi na dva mjesta.
+
+Popravak: `BROJ_RE` prima i kanonski raspon; zaglavlje indeksa broji numerirane
+unose odvojeno od nenumeriranih odjeljaka i to izriče:
+
+```
+Unosa: 64 (isti broj javlja kvar.py --provjeri) · uz njih 5 nenumeriranih odjeljaka
+```
+
+Ograda: `katedra-lite/scripts/tests/test_indeks.py`, skupina „katedra-lite:
+indeks zamki" u `bin/testovi.sh`. **R53 ne testira uzorak nego slaganje dvaju
+alata nad stvarnim katalogom** — `kvar.py` i `indeks_zamki.py` moraju dati isti
+broj, jer uzorak se da popraviti u jednom alatu i opet raziću. Kad se kartica
+instalira bez satelita, `kvar.py` nije uz nju; R53 se tada preskače **naglas**,
+ne prešuti kao prolaz. Mutacija (vraćen stari uzorak) obara 3 od 5.

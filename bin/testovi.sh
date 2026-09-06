@@ -35,6 +35,7 @@ pokreni "katedra-lite: gate" \
   python3 "$KORIJEN/katedra-lite/scripts/tests/test_gate.py"
 pokreni "katedra: registar kvarova" python3 "$KORIJEN/katedra/scripts/tests/test_kvar.py"
 pokreni "katedra: provjera tvrdnji" python3 "$KORIJEN/katedra/scripts/tests/test_zakrpa.py"
+pokreni "katedra-lite: indeks zamki" python3 "$KORIJEN/katedra-lite/scripts/tests/test_indeks.py"
 pokreni "katedra-lite: indeks zamki usklađen s katalogom" \
   python3 "$KORIJEN/katedra-lite/scripts/indeks_zamki.py" --provjeri
 

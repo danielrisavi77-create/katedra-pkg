@@ -25,9 +25,17 @@ KORIJEN = Path(__file__).resolve().parent.parent
 ZAMKE = KORIJEN / "references" / "zamke.md"
 INDEKS = KORIJEN / "references" / "zamke_indeks.md"
 
-# "## 27. Naslov"  |  "## Kvar 58 — Naslov"  |  "## Kvarovi 80–86 — Naslov"
+# Oblik koji registar propisuje i koji `kvar.py --popravi-naslove` proizvodi:
+#     "## 27. Naslov"   i   "## 80–86. Naslov"   (raspon je JEDAN unos)
+# Uz njega se i dalje prima tuđi oblik ("## Kvar 58 — Naslov"), jer zakrpe ga
+# stalno pišu i indeks nije mjesto na kojem se to kažnjava — to radi kvar.py.
+#
+# Kvar 122: raspon u KANONSKOM obliku ovdje je nedostajao, pa je jedanaest unosa
+# ostajalo bez broja upravo nakon što ih kvar.py normalizira. Indeks je čitao
+# tuđi oblik, a ne svoj.
 BROJ_RE = re.compile(
-    r"^(?:(?P<n1>\d+)\.\s*|Kvar(?:ovi)?\s+(?P<n2>\d+(?:\s*[–—-]\s*\d+)?)\s*[–—-]\s*)(?P<naslov>.+)$"
+    r"^(?:(?P<n1>\d+(?:\s*[–—-]\s*\d+)?)\.\s*"
+    r"|Kvar(?:ovi)?\s+(?P<n2>\d+(?:\s*[–—-]\s*\d+)?)\s*[–—-]\s*)(?P<naslov>.+)$"
 )
 # putanja tipa katedra-lite/scripts/gate.py ili gate.py:384
 PUTANJA_RE = re.compile(r"`([A-Za-zčćžšđ0-9_./-]+\.(?:py|md|json|sh|docx))(?::\d+)?`")
@@ -88,6 +96,12 @@ def _sazmi(s: str, n: int = 88) -> str:
 
 def renderiraj(u: list[dict]) -> str:
     s_ogradom = sum(1 for x in u if x["ograda"])
+    # Kvar 122: brojka mora značiti isto što i `kvar.py --provjeri`, inače dva
+    # alata nad istom datotekom daju dva broja i nijedan se ne da provjeriti.
+    # Numerirani unosi su katalog; nenumerirani odjeljci (bilješke o korpusu,
+    # „što lanac NE provjerava") jesu u indeksu, ali se broje odvojeno.
+    numerirani = sum(1 for x in u if x["broj"])
+    odjeljci = len(u) - numerirani
     r = [
         "# Indeks kataloga zamki",
         "",
@@ -95,7 +109,9 @@ def renderiraj(u: list[dict]) -> str:
         "> **Ne uređuj ručno.** Nakon izmjene kataloga: `indeks_zamki.py --upisi`.",
         "> `bin/testovi.sh` pada ako je ovaj indeks zastario.",
         "",
-        f"Unosa: **{len(u)}** · s ogradom (regresijski test): **{s_ogradom}** · "
+        f"Unosa: **{numerirani}** (isti broj javlja `kvar.py --provjeri`)"
+        + (f" · uz njih {odjeljci} nenumeriranih odjeljaka" if odjeljci else "")
+        + f" · s ogradom (regresijski test): **{s_ogradom}** · "
         f"bez ograde: **{len(u) - s_ogradom}**",
         "",
         "Traži bez učitavanja cijelog kataloga:",
@@ -142,6 +158,8 @@ def main() -> int:
         print(f"nema {ZAMKE}", file=sys.stderr)
         return 2
     u = unosi()
+    # Kvar 122: i poruke broje ono što broji kvar.py — numerirane unose.
+    n_kat = sum(1 for x in u if x["broj"])
 
     if a.trazi:
         p = a.trazi.lower()
@@ -170,12 +188,12 @@ def main() -> int:
         if INDEKS.read_text(encoding="utf-8") != novi:
             print("❌ zamke_indeks.md je zastario — pokreni indeks_zamki.py --upisi")
             return 1
-        print(f"✓ indeks je usklađen s katalogom ({len(u)} unosa)")
+        print(f"✓ indeks je usklađen s katalogom ({n_kat} unosa)")
         return 0
 
     if a.upisi:
         INDEKS.write_text(novi, encoding="utf-8")
-        print(f"✓ upisano {INDEKS} ({len(u)} unosa)")
+        print(f"✓ upisano {INDEKS} ({n_kat} unosa)")
         return 0
 
     sys.stdout.write(novi)
