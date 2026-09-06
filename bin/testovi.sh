@@ -40,6 +40,7 @@ pokreni "katedra: oznaka verzije = VERSION" python3 "$KORIJEN/katedra/scripts/ve
 pokreni "katedra-lite: indeks zamki" python3 "$KORIJEN/katedra-lite/scripts/tests/test_indeks.py"
 pokreni "katedra-lite: mjerilo usmjeravanja" python3 "$KORIJEN/katedra-lite/scripts/tests/test_trigger.py"
 pokreni "katedra-lite: pretraga ranijih verzija" python3 "$KORIJEN/katedra-lite/scripts/tests/test_drift.py"
+pokreni "katedra-lite: stari kvarovi" python3 "$KORIJEN/katedra-lite/scripts/tests/test_stari_kvarovi.py"
 pokreni "katedra-lite: indeks zamki usklađen s katalogom" \
   python3 "$KORIJEN/katedra-lite/scripts/indeks_zamki.py" --provjeri
 

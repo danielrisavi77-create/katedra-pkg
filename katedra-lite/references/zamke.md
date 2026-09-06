@@ -29,6 +29,7 @@ Popravak: makni `null` ključeve iz `fpzg.json`, dodaj `esej` u `tipovi_radova` 
 uhvatila i koje nema: test koji razriješi svaki profil iz `index.json` za svaki tip iz
 `tipovi_radova` (3 × 4 = 12 poziva) — čeka u `ideje.md` dok se ne napiše.
 
+Ograda: `test_stari_kvarovi.py` K24 — obje sheme moraju poznavati tip rada `esej`, a razriješena i `primjerci`. Gleda se **razriješena struktura**, ne tekst datoteke. Mutacija: `"esej"` → `"esejX"` obara test.
 ## 25. Satelit se traži u četiri putanje, a peta (`synced/<hash>/`) je ona u kojoj Cowork živi
 
 Vlasnik: `katedra-lite` (nalaz 2). `vjestine.py::kandidati()` traži `rad-audit`, `rad-docx`,
@@ -46,6 +47,7 @@ POSLIJE: ✅ izrada.docx  rad-docx  /root/.claude/skills/synced/<hash>/rad-docx 
 Popravak: dva glob uzorka `~/.claude/skills/synced/*/<slug>` i `/root/.claude/skills/synced/*/<slug>`
 u `kandidati()`; `<SLUG>_HOME` zadržava prednost (dokazi/nalaz2_vjestine.txt, 3 → 0).
 
+Ograda: `test_stari_kvarovi.py` K25 — u lažnom `HOME`-u satelit se postavi pod `~/.claude/skills/synced/<hash>/rad-docx` i `kandidati()` ga mora vratiti. Popravak je u međuvremenu preseljen iz `build_docx.py` u `vjestine.py` (`kandidati()`, r. 78–83); unos je pisan nad starim mjestom. Mutacija: brisanje tog uzorka obara test.
 ## 26. `meta` se koristi u `_renderiraj` koji ga nikad nije primio
 
 Vlasnik: `katedra-lite` (nalaz 3a). `build_docx.py --rukopis` s markdown tablicom pada s
@@ -155,6 +157,7 @@ Popravak: `hr_text.NASLOV_LIT` + lokalni `NASLOV_LIT_PROSIREN` (dvaput, u dva co
 bi bilo dosta). Fixture: `assets/fixture_popis_citirane_literature.docx`. Dokaz je otvorio
 kvar 36.
 
+Ograda: `test_stari_kvarovi.py` K31 — šest stvarnih naslova popisa mora proći, obična rečenica ne smije. **Ograda je slabija nego što izgleda:** popravak stoji na dva mjesta (`hr_text.NASLOV_LIT` i lokalni `NASLOV_LIT_PROSIREN`), a izmjereno je da prošireni uzorak ne hvata ništa što osnovni već ne hvata. Nijedna polovica sama nije nužna, pa test pada tek kad se obori sama funkcija `je_naslov_literature`. Redundancija je zapisana u ovom unosu od početka („dvaput, u dva commita — jedno mjesto bi bilo dosta”) i sada je i izmjerena.
 ## 32. Admisija profila traži datoteku koju isporučeni paket ne nosi, pa se hash ne može osvježiti
 
 Vlasnik: `katedra-lite` (nalaz 8). Nakon zakrpe `fpzg.json` (24) `profile_registry.py --write` odbija:
@@ -175,6 +178,7 @@ benchmarka"), ili `profile_registry.py --write --bez-admisije` koji hash osvjež
 `advisory`. Doktrina za `razvoj.md`/SKILL.md: zakrpa profila = ponovna admisija, u istom potezu.
 Zaobilaz koji radi: `profile_resolver.py --profil-datoteka <slug>.json` (ADVISORY).
 
+Ograda: nema — popravak nije napravljen, pa nema što ograđivati. Ovo je **otvoren kvar**, ne rupa u ogradama; razlikovanje je bitno jer se otvoren kvar zatvara popravkom, a rupa testom.
 ## 33. Shema opsega zna samo ukupni rad, pa se pravila po dijelovima ne mogu ni zapisati ni provjeriti
 
 Vlasnik: `katedra-lite` (nalaz 9, kvar u obliku provjere koja ne postoji). Upute HKS-FZS traže
@@ -192,6 +196,7 @@ Popravak: `dioOpsega` u obje sheme, 18 dijelova u `hks-fzs.json`, `provjeri_dije
 (generalizacija). Uz to je isporučen i `upute_u_profil.py` (812 redaka, PDF → skica profila) —
 to nije popravak kvara nego nova mogućnost bez druge pojave; po §2 pripada u `ideje.md`.
 
+Ograda: `test_stari_kvarovi.py` K33 — obje sheme moraju poznavati `dioOpsega`, a `provjeri_dijelove.py` postojati. Mutacija: `"dioOpsega"` → `"dioOpsegaX"` obara test.
 ## 34. Faza bez svog artefakta je „nezapočeta" i kad je rad došao gotov
 
 Vlasnik: `katedra-lite` (nalaz 10, lažni nalaz). `napredak.py` za audit tuđeg gotovog rada (mod 4/6)
@@ -225,6 +230,7 @@ Popravak (nije napravljen): za `stil` u `NUMERIC_DIALECTS` preskočiti „godina
 red, a provjeravati numeraciju popisa. Fixture: `assets/fixture_popis_citirane_literature.docx`
 (jedinica 2 daje isti lažni ❌).
 
+Ograda: nema — popravak nije napravljen (unos to i kaže), pa je i ovo **otvoren kvar**, ne rupa u ogradama.
 ## 36. Skill za učenje dokumentira dvije zastavice koje njegove skripte nemaju
 
 Vlasnik: `katedra` (pravilo 8). `SKILL.md` §1.3 propisuje `kvar.py … --provjeri --nastavak-od 23`, a
@@ -687,6 +693,7 @@ PRIJE:   prikaza s izvorom: 6 · vlastitih: 0 · prerađenih: 6
 POSLIJE: prikaza s izvorom: 6 · vlastitih: 6 · prerađenih: 0
 ```
 
+Ograda: `test_stari_kvarovi.py` K52 — „autor Kovačević” i „Autori Marić i Horvat” jesu tuđe autorstvo, „autor vlastita obrada” nije. Mutacija: `(?i:…)` prošireno na cijeli uzorak uz mala slova u razredu obara točno negativni slučaj.
 ## 53. Rep predaje pripada vrsti rada, a čitao se s razine fakulteta, pa svaki seminarski kasni
 
 `tempo.py` odbija `predaja.administrativni_rep_dana` od dana do roka. Ta brojka u
@@ -3300,3 +3307,62 @@ uzme popis duga opet krenuo grepati testove.
 Ograda: nema — unos je mjerenje stanja duga, ne kvar u kodu. Ono što se u njemu
 da izvršiti (da se dug uopće broji i razdvaja po stanju) ograđeno je u kvarovima
 137 i 139.
+
+---
+
+## 141. Prvih pet novih ograda bile su lažne, i to je pokazala mutacija, ne čitanje
+
+Kvar 140 je izmjerio da jedanaest unosa iz duga nema nijedan test koji dodiruje
+isti kod. Sljedeći korak bio je napisati ograde za one koji se daju provjeriti bez
+dokumenta. Napisano ih je pet i **svih pet je prošlo iz prve** — 13/13.
+
+Po pravilu 34 svaka je zatim mutirana. Rezultat:
+
+```
+kvar 25 → NIŠTA NIJE PALO
+kvar 31 → NIŠTA NIJE PALO
+kvar 52 → NIŠTA NIJE PALO
+kvar 24 → NIŠTA NIJE PALO
+kvar 33 → NIŠTA NIJE PALO
+```
+
+Nijedna od pet nije bila provjera. Razlozi, svaki drukčiji i svaki banalan:
+
+- **24 i 33** provjeravali su `"esej" in json.dumps(shema)` — podniska u tekstu
+  datoteke. Mutacija `"esej"` → `"esejX"` prolazi jer `"esejX"` i dalje sadrži
+  `esej`. Provjera nad tekstom datoteke nije provjera nad podatkom.
+- **25** je gledao `any("synced" in redak)` u izvoru `vjestine.py`. Tri retka
+  sadrže tu riječ, pa brisanje jednoga ništa ne mijenja.
+- **52** je kao negativni slučaj imao „autor: vlastita obrada", gdje iza „autor"
+  stoji dvotočka — uzorak ondje ne pogađa ni prije ni poslije popravka, pa slučaj
+  nije doticao ono što se popravlja.
+- **31** je mutiran na pogrešnom kraju: popravak stoji na dva mjesta i nijedno
+  samo za sebe nije nužno.
+
+Prepisano tako da svaka provjera dira ponašanje ili razriješenu strukturu:
+`kandidati()` se pušta nad **lažnim `HOME`-om** u kojem satelit stvarno leži pod
+`synced/<hash>/`; sheme se učitavaju i gleda se skup nizova, ne tekst; negativni
+slučaj za 52 je „autor vlastita obrada" (bez dvotočke), koji IGNORECASE doista
+pretvara u lažni nalaz.
+
+```
+kvar 25        → K25: satelit iz synced/<hash>/ je među kandidatima
+kvar 31 (oba)  → K31: šest naslova popisa
+kvar 52        → K52: „autor vlastita obrada” NIJE tuđe autorstvo
+kvar 24        → K24: shema poznaje tip rada „esej”
+kvar 33        → K33: obje sheme poznaju `dioOpsega`
+```
+
+**Pouka je uža od „piši bolje testove".** Sve četiri lažne provjere imale su isti
+oblik: mjerile su **tekst artefakta** umjesto **ponašanja ili podatka**. To je isti
+oblik kao kvar 33 („provjera koja ne može pasti"), samo se ovdje nemogućnost
+skrivala u podniski. Kad se provjera piše nad datotekom, prvo pitanje je može li
+je mutacija koja mijenja značenje ostaviti zelenom.
+
+Usput izmjereno: od jedanaest unosa bez ograde, **dva** (32 i 35) nemaju popravak
+uopće — u njihovim unosima piše „(nije napravljen)". Ondje ograde nema jer nema
+što ograđivati; to su otvoreni kvarovi, ne rupe u ogradama, i sada su tako i
+označeni.
+
+Ograda: `test_stari_kvarovi.py`, skupina „katedra-lite: stari kvarovi" u
+`bin/testovi.sh` (20 → 21 skupina). Mutacije svih pet zapisane su gore.

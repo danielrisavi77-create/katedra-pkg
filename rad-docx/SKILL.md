@@ -1,6 +1,6 @@
 ---
 name: rad-docx
-description: "Motor izrade predajnog .docx-a iz markdown rukopisa: petlja do fiksne točke paginacije, živa polja (TOC/SEQ/REF), nedjeljivi prikazi, sekcije i numeracija, provjera prije predaje. Aktiviraj na 'izgradi docx iz rukopisa', 'gradi.py', 'provjeri_predaju', 'sadržaj nema brojeve stranica'. Kućni stil daje satelit (fpzg-diplomski); plan, pisanje i audit vodi katedra-lite. (Zadnje: katalog zamki 23→26.) Od v1.9.10 i: mrtvi medijski dijelovi, težina paketa i priprema_slanja.py, parity popisa prikaza, provjeri_povratak.py za rad vraćen iz Worda. v1.9.22."
+description: "Motor izrade predajnog .docx-a iz markdown rukopisa: petlja do fiksne točke paginacije, živa polja (TOC/SEQ/REF), nedjeljivi prikazi, sekcije i numeracija, provjera prije predaje. Aktiviraj na 'izgradi docx iz rukopisa', 'gradi.py', 'provjeri_predaju', 'sadržaj nema brojeve stranica'. Kućni stil daje satelit (fpzg-diplomski); plan, pisanje i audit vodi katedra-lite. (Zadnje: katalog zamki 23→26.) Od v1.9.10 i: mrtvi medijski dijelovi, težina paketa i priprema_slanja.py, parity popisa prikaza, provjeri_povratak.py za rad vraćen iz Worda. v1.9.23."
 ---
 
 # RAD-DOCX — od rukopisa do predajnog dokumenta
