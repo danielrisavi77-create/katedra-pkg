@@ -2965,10 +2965,37 @@ zatvorena prije nego je nalaz proglašen kvarom:
   Prijavljuju se samo brojevi **iznad** zadnjeg unosa: oni upućuju u budućnost
   i sigurno ne pogađaju.
 
-**Šire od ovog kvara.** Paket sada ima dvije linije rada koje pišu u istu
-karticu. `drift.py` mjeri razliku, ali ne zna spojiti; provjera 5b hvata samo
-onu klasu razilaženja koja se da provjeriti brojkom. Ostalo i dalje traži
-čovjeka koji zna što je gdje nastalo.
+**ISPRAVAK, isti dan, nekoliko sati kasnije: gornja dijagnoza je bila
+prekratka, i to na način koji je ovaj katalog cijeli dan lovio.**
+
+Kartica je zatim doskočila na v1.9.17 i pokazala što je zapravo bilo posrijedi.
+Druga linija rada nastavila je **iz ovog istog rada** (nosi `pokreni_trigger.py`,
+`--ponavljanja`, pravilo 35) i otišla dalje: `--mapa` kao izbor uvjeta mjerenja,
+kvar 124 (CLI izvan PATH-a staje s izlazom 2, ne tracebackom), kvar 128 (CLI mora
+biti prijavljen; CLI ne vidi kartice desktop aplikacije), kontrolni upit s
+poznatim ishodom. Njihov katalog ima unose do najmanje 128.
+
+Dakle `kvar 121` **nije fantom.** Postoji, u njihovu katalogu. Fantom je bio
+samo u odnosu na ovaj katalog, a ja sam tuđi broj izmjerio vlastitim okvirom i
+nazvao ga pogreškom. To je isti oblik kao kvar 114: **mjerilo je bilo krivo, ne
+predmet.** Dva puta u jednom danu, drugi put u zapisu prvoga.
+
+Što stoji od gornjeg zapisa: provjera 5b je korisna i ostaje. Što se mijenja je
+kako se čita njezin nalaz. U paketu s **jednom** linijom rada „broj kojega u
+katalogu nema" znači kvar. S **dvije** linije znači razilaženje kataloga, i traži
+spajanje, ne ispravak broja.
+
+**Što ostaje nezatvoreno, i zašto ovdje.** Ova linija ima kvarove 115, 116, 117;
+ona druga ima 118 do 128. Numeracije se preklapaju za isti kvar (114 naspram
+121). Spajanje traži oba `zamke.md`, a ovdje postoji samo jedan, pa se ne radi
+naslijepo: pogađanje bi ovdje značilo izmišljanje brojeva unosa, što je točno ono
+protiv čega postoji provjera 5b.
+
+**Ograda protiv ponavljanja, i jedina koja ovdje radi:** kartica se mijenja iz
+**jedne** linije, druga ide kroz repo. `drift.py` mjeri razliku i to je sve što
+alat može; spajanje traži čovjeka koji zna što je gdje nastalo. Dok se to ne
+dogovori, svaka isporuka mora biti spoj, ne zamjena, jer zamjena tiho briše rad
+druge linije, a to se ne vidi ni na jednom izlaznom kodu.
 
 ---
 
