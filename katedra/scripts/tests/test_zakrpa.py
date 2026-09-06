@@ -9,6 +9,7 @@ Ovdje stoji ograda da oba smjera i dalje mogu pasti; provjera koja ne može
 pasti nije provjera (pravilo 34).
 """
 import importlib.util
+import re
 import os
 import sys
 import tempfile
@@ -156,6 +157,22 @@ def main():
               katalog_tekst=KAT))
     check("R71: lokator iznad zadnjeg unosa i dalje je fantom",
           any("poziva na kvar" in x for x in n), n)
+
+    # R73: ograda za kvar 125 — broj u izvještaju mora se brojati, ne tvrditi.
+    #      Ukovana konstanta se razmakne čim se doda provjera, a taj redak
+    #      čita `--provjeri-tvrdnje`, pa laž putuje dalje. Provjerava se nad
+    #      SVIM test-datotekama paketa, ne nad ovom.
+    import glob
+    PAKET = os.path.dirname(os.path.dirname(SCRIPTS))
+    UKOVANO = re.compile(r"len\(PALO\)\s*,\s*\d+\)")
+    krivci = []
+    for put in glob.glob(os.path.join(PAKET, "*", "scripts", "tests", "test_*.py")):
+        with open(put, encoding="utf-8") as f:
+            # komentar koji kvar OPISUJE nije kvar: gledaju se samo redci koda
+            kod = [x for x in f.read().splitlines() if not x.lstrip().startswith("#")]
+        if any(UKOVANO.search(x) for x in kod):
+            krivci.append(os.path.basename(put))
+    check("R73: nijedan test ne ukiva vlastiti zbroj", not krivci, krivci)
 
     print("=" * 70)
     print("REZULTATI TESTOVA: %d/%d prošlo"

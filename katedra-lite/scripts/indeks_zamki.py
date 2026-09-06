@@ -50,7 +50,26 @@ PUTANJA_RE = re.compile(r"`([A-Za-zčćžšđ0-9_./-]+\.(?:py|md|json|sh|docx))(
 OGRADA_RE = re.compile(
     r"(?:\*\*)?Ograd[ae]\b:?(?:\*\*)?\s*(?P<rep>.{0,40})", re.S
 )
-NIJE_OGRADA_RE = re.compile(r"^\s*(?:koj[aei]|protiv\s+ponavljanja[,:]?\s*$)")
+# „nema" bez razloga nije ograda ni deklaracija — ostaje dug (kvar 139).
+NIJE_OGRADA_RE = re.compile(r"^\s*(?:koj[aei]|nema\b|protiv\s+ponavljanja[,:]?\s*$)")
+
+
+# Kvar 139: „nema ogradu" spajalo je tri stanja u jedno — unos kojemu ograda
+# nedostaje, unos kojemu ne pripada (mjerenje, bilješka o korpusu) i unos koji
+# je već pokriven tuđim testom. Popis duga time nije bio popis posla. Unos
+# sada smije REĆI da ograde nema i zašto: „Ograda: nema — <razlog>". Rečenica
+# je obavezna; „Ograda: nema." bez razloga i dalje je dug, jer bi inače
+# deklaracija bila način da se dug sakrije.
+OGRADA_NEMA_RE = re.compile(
+    r"(?:\*\*)?Ograd[ae]\b:?(?:\*\*)?\s*nema\b\s*[\u2014\u2013-]\s*(\S[^\n]{9,})"
+)
+
+
+def _stanje_ograde(tijelo: str) -> str:
+    """„ima" | „deklarirano" | „nema"."""
+    if OGRADA_NEMA_RE.search(tijelo):
+        return "deklarirano"
+    return "ima" if _ima_ogradu(tijelo) else "nema"
 
 
 def _ima_ogradu(tijelo: str) -> bool:
@@ -90,6 +109,7 @@ def unosi() -> list[dict]:
             "redak": poc + 1,
             "putanje": putanje[:3],
             "ograda": _ima_ogradu(tijelo),
+            "stanje": _stanje_ograde(tijelo),
             "tijelo": tijelo,
         })
     return out
@@ -101,7 +121,9 @@ def _sazmi(s: str, n: int = 88) -> str:
 
 
 def renderiraj(u: list[dict]) -> str:
-    s_ogradom = sum(1 for x in u if x["ograda"])
+    s_ogradom = sum(1 for x in u if x["stanje"] == "ima")
+    deklarirano = sum(1 for x in u if x["stanje"] == "deklarirano")
+    duguje = sum(1 for x in u if x["stanje"] == "nema")
     # Kvar 122: brojka mora značiti isto što i `kvar.py --provjeri`, inače dva
     # alata nad istom datotekom daju dva broja i nijedan se ne da provjeriti.
     # Numerirani unosi su katalog; nenumerirani odjeljci (bilješke o korpusu,
@@ -117,8 +139,8 @@ def renderiraj(u: list[dict]) -> str:
         "",
         f"Unosa: **{numerirani}** (isti broj javlja `kvar.py --provjeri`)"
         + (f" · uz njih {odjeljci} nenumeriranih odjeljaka" if odjeljci else "")
-        + f" · s ogradom (regresijski test): **{s_ogradom}** · "
-        f"bez ograde: **{len(u) - s_ogradom}**",
+        + f" · s ogradom: **{s_ogradom}** · ograda ne pripada (deklarirano): "
+        f"**{deklarirano}** · **duguje ogradu: {duguje}**",
         "",
         "Traži bez učitavanja cijelog kataloga:",
         "",
@@ -134,17 +156,19 @@ def renderiraj(u: list[dict]) -> str:
         r.append(
             f"| {x['broj'] or '—'} | {_sazmi(x['naslov'])} | "
             f"{', '.join('`%s`' % p for p in x['putanje']) or '—'} | "
-            f"{'✅' if x['ograda'] else '—'} | {x['redak']} |"
+            f"{ {'ima': '✅', 'deklarirano': '⚪'}.get(x['stanje'], '—') } | {x['redak']} |"
         )
-    bez = [x for x in u if not x["ograda"]]
+    bez = [x for x in u if x["stanje"] == "nema"]
     if bez:
         r += [
             "",
             "## Unosi bez ograde",
             "",
-            "Nemaju izričit regresijski test naveden u unosu. Dio starijih (24–57)",
-            "pokriven je `rad-audit/scripts/tests/test_all.py`, dio su zbirni unosi i",
-            "bilješke o korpusu. Novi unos bez ograde je dug, ne stanje.",
+            "Nemaju regresijski test i **nisu rekli zašto**. Unos kojemu ograda ne",
+            "pripada (mjerenje, bilješka o korpusu) to smije reći rečenicom",
+            "„Ograda: nema — <razlog>” i tada ovdje ne stoji; razlog je obavezan,",
+            "jer bi inače deklaracija bila način da se dug sakrije. Ovaj popis je",
+            "posao, ne stanje.",
             "",
         ]
         for x in bez:
@@ -186,7 +210,7 @@ def main() -> int:
         return 0
 
     if a.bez_ograde:
-        bez = [x for x in u if not x["ograda"]]
+        bez = [x for x in u if x["stanje"] == "nema"]
         for x in bez:
             print(f"[{x['broj'] or '—'}] redak {x['redak']}  {x['naslov']}")
         bez_odj = sum(1 for x in bez if not x["broj"])

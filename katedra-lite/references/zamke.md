@@ -263,6 +263,7 @@ $ ls rad-docx/scripts/provjeri_povratak.py katedra-lite/scripts/provjeri_zamke_p
 Popravak: `inventar_paketa.py`-tip provjere koja svaki `scripts/<ime>.py` spomenut u `SKILL.md` i
 `references/*.md` traži na disku i pada ako ga nema; sljedeća zakrpa `rad-docx` nosi `zamke.md` 24–31.
 
+Ograda: `zakrpa.py --provjeri-tvrdnje`, provjera 6 (kvar 120) — brojka o veličini kataloga u `SKILL.md`-u uspoređuje se s brojem unosa, i provjera 5b (kvar 133) za lokatore `kvar N`. Skripte koje unos spominje pokriva provjera 4.
 ## 38. Nepotvrđen izvor dobiva simbol i obrazloženje, ali nijednu naredbu čovjeku, pa se nalaz preskače
 
 Vlasnik: `katedra-lite`. `verify_sources.py` za ⚠️ `unverified` i ⏸ `unavailable` ispisuje
@@ -1238,8 +1239,9 @@ vrijednosti uz sadržajni pojam jest).
 Četiri stvarna rada iz četiri različita fakulteta i tri različita stila
 citiranja. Svaki od njih otkrio je barem jedan kvar koji ostali nisu.
 
----
+Ograda: nema — bilješka o korpusu, ne kvar.
 
+---
 ## 93–97. tehnički radovi: popis literature u tri neprepoznata oblika
 
 **Radovi:** `Uvod i teorija` (čelične konstrukcije, S235/S355, IEEE `[N]`, 3 749
@@ -1299,8 +1301,9 @@ To više nije dojam nego mjerenje: teorijski rad dao je posvojne pridjeve,
 empirijski veličine podskupina i raspodjele postotaka, pravni fusnotni aparat,
 tehnički tri oblika bibliografske jedinice.
 
----
+Ograda: nema — bilješka o korpusu, ne kvar.
 
+---
 ## 98–104. audit paketa nakon rada Znahor
 
 Izvor: `AUDITskillovanakonradaZnahor.md`, napisan poslije stvarne sesije na
@@ -1908,6 +1911,7 @@ se ne tvrdi da je pokriveno „otprilike".
 6. **Mršavljenje routera** (SKILL.md 550+ redaka), jedina promjena bez ograde
    koja bi je uhvatila.
 
+Ograda: nema — popis deklariranih granica; svaka stavka na njemu JEST izostanak ograde i tako je i zapisana.
 ## 108–111. zatvaranje popisa „što lanac NE provjerava"
 Popis od šest stavki iz v1.9.8 obrađen je redom. Četiri su zatvorene, dvije su
 ostale i za obje postoji razlog koji nije „nismo stigli".
@@ -1990,6 +1994,7 @@ pitanje odgovoreno), ne sadržajni (je li odgovor točan). Za to postoji željez
 pravilo 31 i obavezan korak `citanje_tijela`, i to je pošten odgovor, ne rupa
 koju treba zatvoriti skriptom.
 
+Ograda: nema — popis deklariranih granica, isto kao odjeljak iznad.
 ## 112. „nije se pokrenula" i „ne odnosi se na ovaj rad" bili su isto stanje
 **Kad:** 5. 9. 2026., nađen na pitanje „jesmo li gotovi", provjerom umjesto
 procjene. **Uzrok: moja vlastita zakrpa iz istoga dana.**
@@ -2233,8 +2238,9 @@ od deset provjera dodanih u v1.9.5–v1.9.10, pa se za te zadatke skill nije ima
 razloga aktivirati. Opis smije rasti kad opisuje površinu, i mora se kratiti kad
 opisuje prošlost.
 
----
+Ograda: nema — unos je doktrina i mjerenje opisa, a opis se ne provjerava testom nego evalom usmjeravanja (kvarovi 136 i 138). Jedino strojno provjerljivo u njemu — da oznaka verzije odgovara `VERSION` — pokriva `verzija.py --provjeri` (kvar 123).
 
+---
 ## 119. Provjera tvrdnji rušila se na hrvatskoj konzoli, pa je nalaz koji je NAŠLA izlazio kao traceback
 
 Novi zrcalni smjer (kvar 117) nije se dao izmjeriti jer `zakrpa.py
@@ -2594,6 +2600,8 @@ poslije: test_kvar.py 7/7 · test_zakrpa.py 9/9 · test_verzija.py 9/9
          test_indeks.py 5/5 · test_trigger.py 8/8
 ```
 
+Ograda: `test_zakrpa.py` R73 — nijedna test-datoteka paketa ne smije ukovati vlastiti zbroj. Provjera se vrti nad **svim** `*/scripts/tests/test_*.py`, gleda samo redak koda (komentar koji kvar opisuje nije kvar), i imenuje datoteku. Mutacija: vraćen ukovani zbroj u `test_kvar.py` → 14/14 pada na 13/14 uz `detalj: ['test_kvar.py']`.
+
 Ispravljena je i tvrdnja „šest provjera" uz kvar 116 na izmjerenih sedam.
 
 ---
@@ -2848,8 +2856,9 @@ model ustraje bez datoteke.
 ova dva upita — mjerenje koje bi to razlučilo je isti skup u mapi s radom, na
 starom i novom opisu. Zapisano kao otvoreno, ne kao zaključak.
 
----
+Ograda: nema — unos je mjerenje koje je oborilo predviđanje, ne kvar u kodu. Ponovljivost mu čuva `evals/trigger_evals.json` uz zapisan uvjet, ne regresijski test.
 
+---
 ## 131. Prolaz koji je pukao brojio se kao prolaz u kojem skill nije okinuo
 
 U istom mjerenju oba sporna upita javila su **67 %**, uz `greska: timeout`. Stopa
@@ -3116,8 +3125,9 @@ Dva retka nose `[2/3 izmjereno]` — po jedan prolaz je istekao. Bez popravka iz
 kvara 131 oba bi javila 67 % i tablica bi izgledala kao da dva upita još „okidaju
 nepouzdano".
 
----
+Ograda: nema — unos je mjerenje. Ono što se u njemu DA provjeriti strojno (da prolaz koji je pukao ne ulazi u stopu) ograđeno je u kvaru 131.
 
+---
 ## 137. Popravljena je brojka u zaglavlju, a iste dvije naredbe nastavile su dijeliti brojem redaka
 
 Kvar 122 je uskladio ono što `indeks_zamki.py` javlja s onim što javlja `kvar.py`
@@ -3202,3 +3212,44 @@ Granice, izrečene da brojka ne bi putovala dalje nego što nosi:
 Pravilo koje iz ovoga slijedi, i nije bilo zapisano: **kad se uvjet mjerenja
 promijeni, ponavljaju se OBJE strane skupa.** Nova vrijednost izmjerena samo ondje
 gdje se očekivao napredak nije mjerenje nego potvrda očekivanja.
+
+Ograda: nema — unos je mjerenje i pravilo o postupku mjerenja. Pravilo se ne da izvršiti kodom: da su obje strane skupa ponovljene u istom uvjetu vidi se iz izvještaja, ne iz izlaznog koda.
+
+---
+
+## 139. „Bez ograde” je bio jedan pretinac za tri stanja, pa popis duga nije bio popis posla
+
+Poslije kvara 137 popis `--bez-ograde` konačno je davao istinitu brojku: 36 unosa
+bez regresijskog testa. Ali brojka je i dalje spajala tri različite stvari:
+
+1. unos kojemu ograda **nedostaje** (pravi dug);
+2. unos kojemu ograda **ne pripada** — mjerenje, bilješka o korpusu, popis
+   deklariranih granica;
+3. unos koji je **već pokriven**, samo to nigdje ne piše.
+
+Popis od 36 stavki u kojem se ne zna koje su od kojih nije popis posla nego hrpa.
+Alat je mjerio točno; kategorija je bila prekrupna.
+
+Unos sada smije reći da ograde nema i zašto:
+
+```
+Ograda: nema — unos je mjerenje koje je oborilo predviđanje, ne kvar u kodu.
+```
+
+**Razlog je obavezan.** `Ograda: nema.` bez rečenice i dalje se broji kao dug —
+inače bi deklaracija bila način da se dug sakrije, a to je isti mehanizam kao
+preskočena provjera iz kvara 58.
+
+```
+prije:   s ogradom 50 · duguje 36
+poslije: s ogradom 51 · ograda ne pripada (deklarirano) 8 · duguje 27
+```
+
+Osam deklariranih: četiri unosa koja su mjerenja (118, 130, 136, 138) i četiri
+odjeljka o korpusu i granicama. Jedan je prešao iz duga u pokrivene: kvar 37 ima
+ogradu od kvara 120 (`--provjeri-tvrdnje`, provjera 6), samo je nitko nije
+imenovao. Uz to je kvar 125 dobio pravu ogradu (R73), pa dug pada na **26**.
+
+Ograda: `test_indeks.py` R74 — tri stanja moraju se razlikovati, a `Ograda: nema`
+bez razloga mora ostati dug. Mutacija (deklaracija bez razloga prihvaćena kao
+valjana) obara je.
