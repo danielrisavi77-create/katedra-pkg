@@ -25,6 +25,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -37,7 +38,19 @@ OBITELJ = {
 }
 
 
-def prvi_skill(upit: str, timeout: int, model: str | None) -> dict:
+def nadji_claude() -> str | None:
+    """Put do `claude` CLI-ja, ili None.
+
+    Kvar 124: bez ovoga `subprocess.run` baci FileNotFoundError [WinError 2] i
+    mjerilo završi u tracebacku koji ne kaže što nedostaje. Desktop aplikacija
+    (`AnthropicClaude/claude.exe`) NIJE ovaj alat — harness traži CLI koji zna
+    `-p --output-format stream-json`.
+    """
+    return shutil.which("claude")
+
+
+def prvi_skill(upit: str, timeout: int, model: str | None,
+               mapa: str | None = None) -> dict:
     """Vrati {'skill': ime ili None, 'pozicija': int ili None, 'greska': str ili None}.
 
     Traži se PRVI Skill poziv u cijelom prijepisu, ne prvi alat uopće. Prva
@@ -53,10 +66,13 @@ def prvi_skill(upit: str, timeout: int, model: str | None) -> dict:
     try:
         p = subprocess.run(
             cmd, capture_output=True, timeout=timeout, env=env,
-            cwd=str(OVDJE), text=True, errors="replace",
+            cwd=str(mapa or OVDJE), text=True, errors="replace",
         )
     except subprocess.TimeoutExpired:
-        return {"skill": None, "greska": "timeout"}
+        return {"skill": None, "pozicija": None, "greska": "timeout"}
+    except FileNotFoundError:
+        # Alat koji je pukao nije mjerenje koje je palo (pravilo 20).
+        return {"skill": None, "pozicija": None, "greska": "nema `claude` CLI-ja"}
     n = 0
     for redak in p.stdout.splitlines():
         redak = redak.strip()
@@ -96,14 +112,32 @@ def main() -> int:
                     help="pokretanja po upitu; okidanje se broji većinom. "
                          "Jedno pokretanje je bučno — isti upit zna okinuti u "
                          "jednom prolazu, a u drugom ne.")
+    ap.add_argument("--mapa", default=None,
+                    help="radna mapa u kojoj se upiti pokreću. Zadano: evals/. "
+                         "Mjeri se drugi uvjet kad u mapi STOJI rad — model koji "
+                         "nema dokument često prvo traži dokument umjesto da "
+                         "učita skill, pa je odziv u praznoj mapi donja granica.")
     ap.add_argument("--tiho", action="store_true")
     a = ap.parse_args()
+
+    # Prije nego se pošalje ijedan upit: alat mora postojati. Bez ovoga se
+    # 24 × --ponavljanja poslova rasprši u tracebacke iz kojih se ne vidi
+    # da uopće nije bilo mjerenja (kvar 124).
+    if not nadji_claude():
+        print("❌ `claude` CLI nije pronađen u PATH-u — mjerenje se ne može izvesti.",
+              file=sys.stderr)
+        print("   Ovo NIJE nalaz o opisu skilla, nego o okolini.", file=sys.stderr)
+        print("   Desktop aplikacija nije taj alat; treba CLI koji zna", file=sys.stderr)
+        print("   `claude -p --output-format stream-json`.", file=sys.stderr)
+        return 2
+
+    mapa = a.mapa or str(OVDJE)
 
     skup = json.loads(Path(a.skup).read_text(encoding="utf-8"))
     poslovi = [(i, s) for i, s in enumerate(skup) for _ in range(a.ponavljanja)]
     with ThreadPoolExecutor(max_workers=a.radnika) as ex:
         odgovori = list(ex.map(
-            lambda t: (t[0], prvi_skill(t[1]["query"], a.timeout, a.model)), poslovi
+            lambda t: (t[0], prvi_skill(t[1]["query"], a.timeout, a.model, mapa)), poslovi
         ))
 
     po_upitu: dict[int, list[dict]] = {}
@@ -139,12 +173,19 @@ def main() -> int:
             "Mjeri opis KARTICE koja je instalirana u sesiji, ne onaj u repou. "
             "Ako se verzije razlikuju, broj vrijedi za karticu."
         ),
+        "mapa": mapa,
+        "radova_u_mapi": len(list(Path(mapa).glob("*.docx"))),
         "ograničenje": (
-            "Upiti se pokreću u praznoj radnoj mapi, bez priloženog .docx-a. Model "
-            "koji nema dokument često prvo traži dokument umjesto da učita skill, "
-            "pa je odziv ovdje donja granica, ne stvarni. Redak s 33 % nije "
-            "„ne okida”, nego „okida nepouzdano”; sud o opisu nose "
-            "samo retci s 0 %."
+            ("Upiti se pokreću u mapi bez .docx-a (%s). Model koji nema dokument "
+             "često prvo traži dokument umjesto da učita skill, pa je odziv ovdje "
+             "DONJA GRANICA, ne stvarni." % mapa)
+            if not list(Path(mapa).glob("*.docx")) else
+            ("U radnoj mapi (%s) stoji %d .docx — mjeri se uvjet u kojem rad postoji, "
+             "pa je odziv usporediv sa stvarnim radom, ne donja granica."
+             % (mapa, len(list(Path(mapa).glob("*.docx")))))
+        ) + (
+            " Redak s 33 % nije „ne okida”, nego „okida nepouzdano”; sud o opisu "
+            "nose samo retci s 0 %."
         ),
         "redci": redci,
     }

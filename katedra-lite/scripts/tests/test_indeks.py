@@ -25,9 +25,15 @@ sys.path.insert(0, SCRIPTS)
 _spec.loader.exec_module(indeks)
 
 PALO = []
+SVE = []
 
 
 def check(naziv, uvjet, detalj=""):
+    # Kvar 125: broj u izvještaju mora se BROJATI, ne tvrditi. Ukovana
+    # konstanta („%d/%d" % (6 - len(PALO), 6)) razmakne se čim se doda
+    # provjera, i onda suite javlja 6/6 dok ih je pokrenuo sedam. Taj broj
+    # čita `zakrpa.py --provjeri-tvrdnje`, pa laž putuje dalje.
+    SVE.append(naziv)
     print("  %-8s %s" % ("✓" if uvjet else "✗ FAIL", naziv))
     if not uvjet:
         PALO.append(naziv)
@@ -91,7 +97,8 @@ def main():
 
     print("=" * 70)
     ukupno = 5 if os.path.exists(kvar_py) else 4
-    print("REZULTATI TESTOVA: %d/%d prošlo" % (ukupno - len(PALO), ukupno))
+    print("REZULTATI TESTOVA: %d/%d prošlo"
+          % (len(SVE) - len(PALO), len(SVE)))
     print("=" * 70)
     return 1 if PALO else 0
 

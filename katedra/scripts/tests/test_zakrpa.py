@@ -22,9 +22,15 @@ sys.path.insert(0, SCRIPTS)
 _spec.loader.exec_module(zakrpa)
 
 PALO = []
+SVE = []
 
 
 def check(naziv, uvjet, detalj=""):
+    # Kvar 125: broj u izvještaju mora se BROJATI, ne tvrditi. Ukovana
+    # konstanta („%d/%d" % (6 - len(PALO), 6)) razmakne se čim se doda
+    # provjera, i onda suite javlja 6/6 dok ih je pokrenuo sedam. Taj broj
+    # čita `zakrpa.py --provjeri-tvrdnje`, pa laž putuje dalje.
+    SVE.append(naziv)
     print("  %-8s %s" % ("✓" if uvjet else "✗ FAIL", naziv))
     if not uvjet:
         PALO.append(naziv)
@@ -32,7 +38,7 @@ def check(naziv, uvjet, detalj=""):
             print("           detalj: %r" % (detalj,))
 
 
-def skill(skripte, md="# Skill\n", reference=None, katalog=None):
+def skill(skripte, md="# Skill\n", reference=None, katalog=None, drugdje=None):
     """Napravi minimalan korijen skilla i vrati mu put."""
     korijen = os.path.join(tempfile.mkdtemp(), "proba-skill")
     os.makedirs(os.path.join(korijen, "scripts"))
@@ -40,6 +46,11 @@ def skill(skripte, md="# Skill\n", reference=None, katalog=None):
         f.write(md)
     for ime in skripte:
         with open(os.path.join(korijen, "scripts", ime), "w", encoding="utf-8", newline="\n") as f:
+            f.write("# proba\n")
+    for staza in (drugdje or []):
+        q = os.path.join(korijen, *staza.split("/"))
+        os.makedirs(os.path.dirname(q), exist_ok=True)
+        with open(q, "w", encoding="utf-8", newline="\n") as f:
             f.write("# proba\n")
     if reference or katalog is not None:
         os.makedirs(os.path.join(korijen, "references"))
@@ -111,8 +122,22 @@ def main():
     check("R49: citat u referenci se ne broji kao tvrdnja",
           not any("katalog nosi" in x for x in n), n)
 
+    # R63: alat koji živi izvan scripts/ (npr. evals/) postoji jednako kao
+    #      onaj u scripts/ — inače alat koji lovi lažne tvrdnje sam daje
+    #      lažan nalaz (kvar 126).
+    n = zakrpa.provjeri_tvrdnje(
+        skill([], md="# Skill\n\n`python3 pokreni_trigger.py`\n",
+              drugdje=["evals/pokreni_trigger.py"]))
+    check("R63: skripta izvan scripts/ postoji za provjeru",
+          not any("nema ni u paketu" in x for x in n), n)
+
+    n = zakrpa.provjeri_tvrdnje(skill([], md="# Skill\n\n`python3 nema_me.py`\n"))
+    check("R63: skripte koje doista nema i dalje pada",
+          any("nema ni u paketu" in x for x in n), n)
+
     print("=" * 70)
-    print("REZULTATI TESTOVA: %d/%d prošlo" % (9 - len(PALO), 9))
+    print("REZULTATI TESTOVA: %d/%d prošlo"
+          % (len(SVE) - len(PALO), len(SVE)))
     print("=" * 70)
     return 1 if PALO else 0
 

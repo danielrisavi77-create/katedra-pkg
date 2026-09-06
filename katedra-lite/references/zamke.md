@@ -2157,7 +2157,7 @@ koji unos ide. Sudari su nastali tako što su dvije grane brojile od istog mjest
 jedna za drugu; zakrpa koja pita cilj ne može promašiti. Oboje zapisano u
 `katedra/references/kvar.md`.
 
-Ograda: `katedra/scripts/tests/test_kvar.py` (šest provjera, skupina „katedra: registar
+Ograda: `katedra/scripts/tests/test_kvar.py` (sedam provjera, skupina „katedra: registar
 kvarova” u `bin/testovi.sh`) traži da se tuđi oblik prepozna, da katalog s njim **ne prođe**,
 da ga `--popravi-naslove` prevede i da ispravan katalog ostane nepromijenjen. Skill `katedra`
 do sada nije imao nijedan test, a drži registar na koji se pozivaju svi ostali skillovi.
@@ -2511,3 +2511,119 @@ usporedba 1 od 9.
 Ostaje neriješeno i izrečeno: **koliko zaostajanje `VERSION`-a stvarno stoji, i
 dalje nitko ne mjeri.** Ispis u `env.sh` je jedini signal i namjerno je ostao
 mekan.
+
+---
+
+## 124. Mjerilo usmjeravanja nije znalo reći da nije moglo mjeriti, i mjerilo je samo jedan uvjet
+
+Kartica je učitana i `drift.py` javlja da su kartica i repo iste (`SKILL.md` i
+73 skripte). Time je predviđanje iz kvara 121 postalo provjerljivo — ali se
+`pokreni_trigger.py` na ovom računalu ne može pokrenuti, a način na koji to kaže
+bio je kvar:
+
+```
+$ python3 katedra-lite/evals/pokreni_trigger.py --skup <skup>
+  File "…/subprocess.py", line 1552, in _execute_child
+FileNotFoundError: [WinError 2] The system cannot find the file specified
+```
+
+Traceback ne imenuje ni alat koji nedostaje ni to da mjerenja nije bilo. Hvata
+se samo `TimeoutExpired`; `FileNotFoundError` prolazi kroz. Pravilo 20 opet:
+alat koji je pukao nije mjerenje koje je palo. Ovdje je razlika presudna jer bi
+sljedeći potez bio sud o **opisu skilla**, a ni jedan upit nije poslan.
+
+Uzrok nije opremljenost stroja nego zamjena pojmova: na disku **jest**
+`AnthropicClaude/claude.exe`, ali to je desktop aplikacija, ne CLI koji zna
+`claude -p --output-format stream-json`.
+
+**Drugi kvar iste skripte:** radna mapa bila je ukovana (`cwd=OVDJE`). Vlastito
+ograničenje u izvještaju kaže da je odziv u praznoj mapi *donja granica* i da je
+idući korak isti skup uz rad u mapi — a taj se korak nije dao izvesti bez
+izmjene koda. Ograničenje koje se ne da ukloniti nije ograničenje, nego zid.
+
+Popravak:
+
+```
+$ python3 pokreni_trigger.py --skup <skup>
+❌ `claude` CLI nije pronađen u PATH-u — mjerenje se ne može izvesti.
+   Ovo NIJE nalaz o opisu skilla, nego o okolini.                      (izlaz 2)
+```
+
+Alat se traži **prije** nego se pošalje ijedan upit; `--mapa` bira radnu mapu; a
+rečenica o ograničenju se sada **mjeri**, ne prepisuje — izvještaj nosi
+`radova_u_mapi` i tekst koji odgovara stvarnom uvjetu.
+
+Ograda: `katedra-lite/scripts/tests/test_trigger.py`, skupina „katedra-lite:
+mjerilo usmjeravanja". Odziv modela se ne testira — to traži živi model —
+nego to da harness kaže istinu o tome je li mogao mjeriti i gdje je mjerio.
+
+---
+
+## 125. Broj testova u izvještaju bio je ukovana konstanta, pa je suite tvrdio 6/6 dok je pokretao sedam
+
+Svih pet test-datoteka pisalo je zbroj rukom:
+
+```python
+print("REZULTATI TESTOVA: %d/%d prošlo" % (6 - len(PALO), 6))
+```
+
+Konstanta se razmakne čim se doda provjera. Izmjereno nad `main`-om:
+
+```
+datoteka            poziva check()   tvrdi
+test_kvar.py               7           6      ← laž od PR-a #17
+test_zakrpa.py             9           9
+test_verzija.py            9           9
+test_indeks.py             5           (računa)
+test_trigger.py            8           9      ← laž nastala dok se pisala
+```
+
+Nijedan test nije pao zbog toga — laž je bila u **izvještaju**, ne u ishodu. Zato
+je i preživjela: zeleno je bilo točno, brojka uz njega nije. Cijena je dvostruka:
+`zakrpa.py --provjeri-tvrdnje` čita upravo taj redak i uspoređuje ga s tvrdnjama
+u `SKILL.md`-u, pa kriva brojka putuje dalje; a unos kvara 116 u ovom katalogu
+tvrdio je „šest provjera" i time je i katalog nosio istu laž.
+
+Popravak nije ispraviti brojke — one bi se opet razmakle — nego ih maknuti:
+`check()` broji sam (`SVE.append(naziv)`), a izvještaj ispisuje `len(SVE)`.
+Isti oblik kao `kvar.py --sljedeci` i `verzija.py --postavi`: broj se ne piše
+rukom ondje gdje ga stroj može prebrojati.
+
+```
+poslije: test_kvar.py 7/7 · test_zakrpa.py 9/9 · test_verzija.py 9/9
+         test_indeks.py 5/5 · test_trigger.py 8/8
+```
+
+Ispravljena je i tvrdnja „šest provjera" uz kvar 116 na izmjerenih sedam.
+
+---
+
+## 126. Provjera tvrdnji tražila je skripte samo u `scripts/`, pa je alat koji postoji prijavila kao nepostojeći
+
+Unos kvara 124 spominje `pokreni_trigger.py`. Suite je odmah pao:
+
+```
+❌ references/zamke.md zove `pokreni_trigger.py`, a te skripte nema ni u paketu
+   ni kod satelita
+                                            ↑ a datoteka postoji:
+$ ls katedra-lite/evals/pokreni_trigger.py  → katedra-lite/evals/pokreni_trigger.py
+```
+
+Popis postojećih skripti gradio se s `korijen.glob("scripts/**/*.py")`. Harness
+iz v1.9.12 živi u `evals/`, dakle izvan tog stabla, pa za provjeru nije postojao.
+**Lažan ❌ iz alata koji lovi lažne tvrdnje** — kvar 91 primijenjen na samog
+sebe, i najgori mogući oblik: nalaz je izgledao točno onako kako izgleda pravi.
+
+Zašto nije puklo ranije: `katedra-lite/SKILL.md` harness spominje punom stazom
+(`katedra-lite/evals/pokreni_trigger.py`), a uzorak hvata golo ime datoteke.
+Tek ga je unos u katalogu napisao golo, i tvrdnja je postala vidljiva.
+
+Popravak je jedan znak manje u uzorku: postojanje se traži nad **cijelim**
+skillom (`korijen.glob("**/*.py")`), isto i kod satelita. Zrcalni smjer (kvar
+117) namjerno ostaje na `scripts/*.py`: „alat koji nitko ne spominje" je tvrdnja
+o **alatima skilla**, a `evals/` je pribor za mjerenje, ne alat koji korisnik
+zove.
+
+Ograda: `test_zakrpa.py` R63 — skripta u `evals/` ne smije dati nalaz, a
+skripta koje doista nema i dalje mora pasti. Mutacija (vraćen uski uzorak) obara
+prvu: 11/11 → 10/11.
