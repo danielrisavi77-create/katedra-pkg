@@ -138,6 +138,7 @@ filtar decimala i tabličnih `n (%)`; rad-audit `check_citations.py` + `common.p
 `pisanje.md` (pravilo pisanja). Dokaz: dokazi/nalaz6_check_citations.txt (1 → 0). Srodno, ali drugi
 mehanizam od ideje „lažni CITAT BEZ REFERENCE" (institucionalni izvori) — ta ideja ostaje čekati.
 
+Ograda: `rad-audit/scripts/tests/test_all.py`, `test_r16_vancouver` — tekst „(1) … (12,40) … (5)” mora se detektirati kao `vancouver`, a `[N]` i dalje kao `ieee`. Provjereno mutacijom: `van_n = 0` u `common.detect_citation_style` obara 185/185 na 183/185, i pada točno `R16: (N) tekst se detektira kao vancouver`. Ograda je postojala od v1.9.x, ali nije bila imenovana u ovom unosu.
 ## 31. Popis naslova popisa literature je zatvoren, pa nepoznat naslov ruši gate umjesto da javi
 
 Vlasnik: `katedra-lite` (nalaz 7). Gate korak „popis literature protiv kućnog stila" puca (💥) na
@@ -3253,3 +3254,49 @@ imenovao. Uz to je kvar 125 dobio pravu ogradu (R73), pa dug pada na **26**.
 Ograda: `test_indeks.py` R74 — tri stanja moraju se razlikovati, a `Ograda: nema`
 bez razloga mora ostati dug. Mutacija (deklaracija bez razloga prihvaćena kao
 valjana) obara je.
+
+---
+
+## 140. Dvadeset šest unosa duguje ogradu; izmjereno je koliko ih uopće ima test koji ih dodiruje
+
+Kvar 139 je popis duga sveo s 36 na 26 razdvajanjem stanja. Ostalo je pitanje koje
+se do sada nije postavljalo: **za koje od tih 26 uopće postoji test koji dodiruje
+isti kod?** Mjereno mehanički — za svaki unos uzete su datoteke iz stupca
+„Dodiruje" u indeksu i potraženo ih ijedna test-datoteka paketa spominje:
+
+```
+nijedan test ne spominje nijednu dodirnutu datoteku   11 unosa
+                                                      (24, 25, 26, 31, 32, 33,
+                                                       34, 35, 41, 48, 52)
+neki test spominje bar jednu datoteku                 15 unosa
+```
+
+**Signal je namjerno grub i tako se i čita.** „Test spominje datoteku" nije „test
+čuva ovaj kvar": `kvar.md` i `SKILL.md` spominju se u gotovo svakoj test-datoteci
+i ne dokazuju ništa. Zato su tri unosa iz druge skupine provjerena ručno, do
+mehanizma:
+
+```
+kvar 27  check_placeholders.py u test_all.py   → R14 gleda naslov popisa u
+                                                 check_citations_authoryear,
+                                                 ne granu `startswith('popis')`
+                                                 u generatoru rukopisa.   NIJE ograda
+kvar 28  check_rules.py u test_gate.py         → G9 provjerava da korak dobiva
+                                                 `--strogo`, ne kako se računa
+                                                 izlazni kod.             NIJE ograda
+kvar 30  check_citations.py u test_all.py      → R16 je točno taj mehanizam.
+                                                 Mutacija: 185/185 → 183/185.  JEST
+```
+
+**Jedan od tri.** Grubi signal dakle precjenjuje pokrivenost otprilike trostruko,
+i brojka „15 ima nešto" ne smije se čitati kao „15 je pokriveno". Ono što se iz
+mjerenja DA zaključiti je uže i korisnije: jedanaest unosa nema ni teoretskog
+kandidata za ogradu, i posao ondje počinje od nule, dok petnaest ima kandidata
+kojega treba provjeriti kao što su provjerena ova tri.
+
+Zapisano jer je sljedeći korak inače isti posao ispočetka: bez ovoga bi tko god
+uzme popis duga opet krenuo grepati testove.
+
+Ograda: nema — unos je mjerenje stanja duga, ne kvar u kodu. Ono što se u njemu
+da izvršiti (da se dug uopće broji i razdvaja po stanju) ograđeno je u kvarovima
+137 i 139.
