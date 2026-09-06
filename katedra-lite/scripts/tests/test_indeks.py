@@ -8,6 +8,7 @@ toga je jedanaest unosa ostajalo bez broja, a zaglavlje je javljalo 69 unosa
 ondje gdje `kvar.py` javlja 64. Dva alata, ista datoteka, dva broja.
 """
 import importlib.util
+import io
 import os
 import sys
 import tempfile
@@ -23,6 +24,8 @@ _spec = importlib.util.spec_from_file_location(
 indeks = importlib.util.module_from_spec(_spec)
 sys.path.insert(0, SCRIPTS)
 _spec.loader.exec_module(indeks)
+
+NLZ = chr(10)
 
 PALO = []
 SVE = []
@@ -112,6 +115,30 @@ def main():
           not ograda("Popravak stoji. Ograda koje nema: nitko to ne mjeri."))
     check("R70: proza o nedostatku ograde nije ograda",
           not ograda("Nalaz bez ograde je bilješka, i tako je ostalo."))
+
+    # R72: brojka mora značiti isto u svakoj naredbi (kvar 137). Katalog s
+    #      dva numerirana unosa i jednim nenumeriranim odjeljkom mora u
+    #      --bez-ograde dijeliti s 2, ne s 3.
+    import contextlib
+    KAT = ("# Katalog" + NLZ + NLZ + "## 1. prvi" + NLZ + NLZ + "tekst 5" + NLZ + NLZ
+           + "## 2. drugi" + NLZ + NLZ + "tekst 5" + NLZ + NLZ
+           + "## Korpus na kojem je mjereno" + NLZ + NLZ + "tekst 5" + NLZ)
+    p = Path(tempfile.mkdtemp()) / "zamke.md"
+    p.write_text(KAT, encoding="utf-8")
+    stari_z, stari_argv = indeks.ZAMKE, sys.argv
+    indeks.ZAMKE = p
+    izlaz = io.StringIO()
+    try:
+        sys.argv = ["indeks_zamki.py", "--bez-ograde"]
+        with contextlib.redirect_stdout(izlaz):
+            indeks.main()
+    finally:
+        indeks.ZAMKE, sys.argv = stari_z, stari_argv
+    tekst = izlaz.getvalue()
+    check("R72: --bez-ograde dijeli brojem UNOSA, ne redaka",
+          "od 2 unosa bez ograde" in tekst, tekst.strip().splitlines()[-1:])
+    check("R72: nenumerirani odjeljak se izriče odvojeno",
+          "1 nenumeriranih odjeljaka" in tekst, tekst.strip().splitlines()[-1:])
 
     print("=" * 70)
     print("REZULTATI TESTOVA: %d/%d prošlo"

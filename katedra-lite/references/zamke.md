@@ -3115,3 +3115,90 @@ ne poziva na dokument, pa ovo mjerenje govori o odzivu, ne o cijeloj točnosti.
 Dva retka nose `[2/3 izmjereno]` — po jedan prolaz je istekao. Bez popravka iz
 kvara 131 oba bi javila 67 % i tablica bi izgledala kao da dva upita još „okidaju
 nepouzdano".
+
+---
+
+## 137. Popravljena je brojka u zaglavlju, a iste dvije naredbe nastavile su dijeliti brojem redaka
+
+Kvar 122 je uskladio ono što `indeks_zamki.py` javlja s onim što javlja `kvar.py`
+— ali samo u zaglavlju indeksa i u porukama `--upisi` / `--provjeri`. Dvije
+naredbe kojima se katalog zapravo pretražuje ostale su na starom nazivniku:
+
+```
+kvar.py --provjeri            → unosa: 79
+indeks_zamki.py --bez-ograde  → „35 od 84 unosa bez ograde"
+indeks_zamki.py --trazi gate  → „22 od 84 unosa"
+```
+
+Razlika je pet nenumeriranih odjeljaka („Korpus na kojem je lanac provjeren" i
+slično), koje indeks nabraja, a katalog ne broji kao unose. Ista datoteka, dva
+broja, u alatu popravljenom točno zato da to više ne radi — **popravak je stao na
+prvom mjestu na kojem se brojka pojavljivala.**
+
+Poslije:
+
+```
+indeks_zamki.py --bez-ograde  → „31 od 79 unosa bez ograde · uz njih 4 nenumeriranih odjeljaka."
+indeks_zamki.py --trazi gate  → „20 od 79 unosa · uz njih 2 nenumeriranih odjeljaka."
+```
+
+Brojka nije samo usklađena nego i **razložena**: unosi i odjeljci se broje
+odvojeno, pa se ne mogu opet stopiti. Usput se vidi da je dug manji nego što je
+popis tvrdio — 31, ne 35.
+
+Pouka koja se ne odnosi na ovaj alat: kad se popravlja brojka koja se pojavljuje
+na više mjesta, popravlja se **svako** mjesto, ili se izvor brojke svede na jedno.
+Ovdje je izabrano prvo, jer su nazivnici različiti po namjeri (zaglavlje govori o
+katalogu, pretraga o pogocima).
+
+Ograda: `test_indeks.py` R72 — katalog s dva unosa i jednim nenumeriranim
+odjeljkom mora u `--bez-ograde` dijeliti s 2, a odjeljak izreći odvojeno.
+Mutacija (nazivnik natrag na `len(u)`) obara je: 12/12 → 11/12.
+
+---
+
+## 138. Mjerena je samo strana koja je mogla porasti; kad je izmjerena i druga, prag se nije pomaknuo
+
+Kvar 136 je pokazao da odziv skače sa 6/12 na 12/12 čim u radnoj mapi stoji
+dokument. To je mjerenje **samo pozitivne strane**. Skup ima i dvanaest upita koji
+NE smiju okinuti, a oni su bili mjereni isključivo u praznoj mapi — dakle u uvjetu
+za koji je istim mjerenjem upravo dokazano da mijenja ishod.
+
+Rizik nije bio teoretski: dva negativna upita nose dokument u samoj formulaciji
+(„Sredi mi **ovu** Excel tablicu", „Prevedi mi **ovaj** ugovor"). S `rad.docx` u
+mapi model ima što otvoriti, pa je 12/12 na pozitivnoj strani moglo biti pomak
+praga, a ne poboljšanje — i to se ne bi vidjelo ni na jednoj brojci koja je tada
+postojala.
+
+Izmjereno, isti uvjet kao za pozitivce (mapa s radom, 3 prolaza po upitu):
+
+```
+dva upita s dokumentom u formulaciji     2/2 točno, oba 0 %
+preostalih deset negativaca             10/10 točno, svi 0 %
+                                        ─────
+negativna strana                        12/12, nijedno okidanje
+```
+
+Zajedno s kvarom 136, cijeli skup u istom uvjetu:
+
+```
+pozitivni  12/12 (svi 100 %)      negativni  12/12 (svi 0 %)      ukupno 24/24
+```
+
+Prisutnost dokumenta diže odziv na upitima o **radu**, a ne pomiče prag prema
+svemu što je datoteka. Opis razlikuje predmet, ne format ulaza.
+
+Granice, izrečene da brojka ne bi putovala dalje nego što nosi:
+
+- Jedan uvjet: jedna mapa, jedan `.docx` (empirijski rad s greškama). Drugi
+  dokument i druga mapa nisu mjereni.
+- Pozitivci su mjereni na opisu v1.9.17, negativci na v1.9.19. Provjereno: opis
+  se u tom rasponu razlikuje **samo u oznaci verzije** (693 znaka oba puta),
+  dakle isti predmet mjerenja.
+- 24/24 je točnost usmjeravanja u ovom uvjetu, ne tvrdnja da je opis dovršen.
+  Kvar 130 i dalje stoji: za deset od dvanaest pozitivaca nije razdvojeno koliko
+  nosi uvjet, a koliko opis.
+
+Pravilo koje iz ovoga slijedi, i nije bilo zapisano: **kad se uvjet mjerenja
+promijeni, ponavljaju se OBJE strane skupa.** Nova vrijednost izmjerena samo ondje
+gdje se očekivao napredak nije mjerenje nego potvrda očekivanja.
