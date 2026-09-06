@@ -172,9 +172,17 @@ def provjeri_tvrdnje(korijen):
     testovi = korijen / "scripts" / "tests" / "test_all.py"
     stvarno = None
     if testovi.exists():
+        # Kvar 117: `text=True` bez `encoding` dekodira izlaz djeteta kodnom
+        # stranicom konzole. Na hrvatskom Windowsu (cp1250) suite koji ispisuje
+        # ✓/⚠ obori dretvu čitača, `r.stdout` ostane None, i cijela provjera
+        # tvrdnji padne u traceback — alat koji lovi tvrdnje bez pokrića srušio
+        # bi se prije nego išta provjeri. Pravilo 20: alat koji je pukao nije
+        # provjera koja je prošla.
         r = subprocess.run([sys.executable, str(testovi)], capture_output=True,
-                           text=True, cwd=str(testovi.parent), timeout=600)
-        m = re.search(r"REZULTATI TESTOVA:\s*(\d+)\s*/\s*(\d+)", r.stdout)
+                           text=True, encoding="utf-8", errors="replace",
+                           cwd=str(testovi.parent), timeout=600,
+                           env={**os.environ, "PYTHONIOENCODING": "utf-8"})
+        m = re.search(r"REZULTATI TESTOVA:\s*(\d+)\s*/\s*(\d+)", r.stdout or "")
         if m:
             stvarno = (int(m.group(1)), int(m.group(2)))
             if stvarno[0] != stvarno[1]:
@@ -214,12 +222,66 @@ def provjeri_tvrdnje(korijen):
             nalazi.append(f"❌ {gdje} zove `{ime}`, a te skripte nema ni u paketu "
                           f"ni kod satelita")
 
-    # 5) skill koji propisuje testove mora ih i imati
+    # 5) ZRCALNI SMJER: alat koji postoji, a dokumentacija ga nikad ne spominje.
+    #    Kvar 113: provjera tvrdnji dotad je gledala samo jedan smjer („SKILL.md
+    #    zove skriptu koje nema"). Obrnuto se nije gledalo, pa je rad-audit dobio
+    #    OSAM novih alata (metapodaci, uputnice, tablice, statistika, hipoteze,
+    #    tvrdnja↔izvor, postojanje reference, mapa izvora) i nijedan nije bio u
+    #    njegovu SKILL.md-u. Radili su samo zato što ih agregat zove; tko skill
+    #    otvori izravno, za njih ne zna. Nedokumentiran alat je alat koji se ne
+    #    koristi, isto kao alat koji ne postoji.
+    ZANEMARI = {"__init__", "common", "conftest", "setup"}
+    svi_tekstovi = md + "\n" + "\n".join(t for _g, t in tekstovi)
+    for q in sorted(korijen.glob("scripts/*.py")):
+        ime = q.stem
+        if ime in ZANEMARI or ime.startswith("_"):
+            continue
+        if q.name not in svi_tekstovi and ime not in svi_tekstovi:
+            nalazi.append(f"⚠ `scripts/{q.name}` postoji, a ne spominje ga ni "
+                          f"SKILL.md ni ijedna referenca")
+
+    # 6) brojka o veličini kataloga mora se slagati s katalogom.
+    #    Kvar 118: `rad-docx/SKILL.md` je na dva mjesta tvrdio „31 stvarni kvar"
+    #    nad katalogom koji ih nosi 26. Tvrdnja je stara pet unosa i nitko je
+    #    nije mjerio jer je nitko nije ni mogao mjeriti — brojka u prozi nije
+    #    bila vezana ni za što. Vezana je sada.
+    katalog = korijen / "references" / "zamke.md"
+    if katalog.exists():
+        stvarnih = len(re.findall(r"^##\s+(\d+)(?:\s*[–—-]\s*\d+)?\.\s",
+                                  katalog.read_text(encoding="utf-8"), re.M))
+        # Samo SKILL.md: katalozi jedni druge citiraju (kvar 37 u
+        # katedra-liteu doslovno nosi tuđi `31 stvarni kvar` kao dokaz), pa bi
+        # skeniranje referenci prijavljivalo citat kao tvrdnju. Lažan nalaz iz
+        # alata koji lovi lažne tvrdnje skuplji je od tvrdnje koju propusti.
+        for gdje, tekst in [("SKILL.md", md)]:
+            for red in tekst.splitlines():
+                if "zamke.md" not in red:
+                    continue
+                for m in re.finditer(r"(\d+)\s+(?:stvarn\w+\s+)?kvar\w*", red):
+                    tvrdi = int(m.group(1))
+                    if tvrdi != stvarnih:
+                        nalazi.append(f"❌ {gdje} tvrdi „{m.group(0)}\" o references/"
+                                      f"zamke.md, a katalog nosi {stvarnih} unosa")
+
+    # 7) skill koji propisuje testove mora ih i imati
     if not testovi.exists() and "test_all.py" in md:
         nalazi.append("❌ SKILL.md spominje test_all.py, a scripts/tests/test_all.py "
                       "ne postoji — tvrdnje o testovima nisu provjerive")
 
     return nalazi
+
+
+# Kvar 117, drugi kraj: alat ispisuje ⚠ i ❌, a hrvatska konzola je cp1250.
+# Bez ovoga prvi nalaz obori ispis u UnicodeEncodeError, pa provjera koja je
+# NAŠLA nalaz javi traceback umjesto nalaza. Kodna stranica se ne mijenja
+# (č, ć, ž, š, đ postoje u cp1250) — mijenja se samo to što znak koji
+# u njoj ne postoji više ne ruši alat. PYTHONIOENCODING, ako je postavljen,
+# i dalje odlučuje o kodiranju.
+for _tok in (sys.stdout, sys.stderr):
+    try:
+        _tok.reconfigure(errors="replace")
+    except (AttributeError, ValueError):
+        pass
 
 
 def main():

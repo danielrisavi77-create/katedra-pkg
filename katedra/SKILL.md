@@ -163,10 +163,22 @@ python3 <SKILL>/scripts/zakrpa.py --provjeri-tvrdnje /put/rad/rad-audit
 # ✓ SKILL.md i kod se slažu     ← tek tada zakrpa smije u §1.5
 ```
 
-Ovo se pokreće nad **izmijenjenim** stablom, ne nad baselineom, i hvata tri stvari koje
+Ovo se pokreće nad **izmijenjenim** stablom, ne nad baselineom, i hvata četiri stvari koje
 su na `rad-audit` prošle neopaženo tri verzije zaredom: sposobnost koju SKILL.md navodi
-a manifest nema, tvrdnju o broju testova veću od stvarnog broja, i oznaku kvara bez
-ijednog testa.
+a manifest nema, tvrdnju o broju testova veću od stvarnog broja, oznaku kvara bez
+ijednog testa, i skriptu koju SKILL.md zove a koje nema.
+
+**Peti nalaz gleda u drugu stranu** (kvar 117): alat koji **postoji**, a ne spominje ga
+ni SKILL.md ni ijedna referenca. Nedokumentiran alat je alat koji se ne koristi, isto
+kao alat koji ne postoji — samo tiše: radi, ali samo kad ga zove agregat, a tko skill
+otvori izravno za njega ne zna. Na `rad-audit` ih je bilo devet odjednom. Nalaz je ⚠, ne
+❌: nova skripta smije nakratko biti nedokumentirana, ali ne smije to biti neopaženo.
+
+**Šesti gleda brojku o katalogu** (kvar 120): redak `SKILL.md`-a koji spominje
+`zamke.md` i broji kvarove uspoređuje se s brojem unosa u tom katalogu. Tvrdnja
+„31 stvarni kvar” stajala je nad katalogom od 26 iako ju je kvar 37 zapisao četiri
+dana ranije — unos u katalogu opisuje kvar, ali ništa ne pada dok netko ne pogleda.
+Provjera gleda samo `SKILL.md`: katalozi citiraju tuđe brojke kao dokaz.
 
 Za kvarove koji ovise o sadržaju rada napravi **fixture**: najmanji dokument koji ga izaziva,
 u `assets/`. Fixture je jeftiniji od cijelog rada i preživljava.
@@ -222,8 +234,10 @@ references/kvar.md         format unosa u katalog kvarova + primjeri dobrog i lo
 references/ladice.md       razvrstavanje nalaza, granični slučajevi
 references/zakrpa.md       pakiranje, imenovanje, što ide u puni paket a što u zakrpu
 references/ideje.md        nalazi bez dokaza — čekaonica, ne katalog
-scripts/kvar.py            provjera i dodavanje unosa u zamke.md (`--nastavak-od N` za fragment, `--od N` filtar sadržaja)
+scripts/kvar.py            provjera i dodavanje unosa u zamke.md (`--sljedeci` prvi slobodan broj, `--popravi-naslove`,
+                           `--nastavak-od N` za fragment, `--od N` filtar sadržaja)
 scripts/zakrpa.py          gradnja zakrpe iz razlike dviju verzija skilla (`--par`, ponovljivo)
 scripts/dokaz.py           prije/poslije trčanje; zadano pad→prolaz, `--dopusti-isto` kad je razlika u tekstu
+scripts/tests/             test_kvar.py (registar) i test_zakrpa.py (oba smjera provjere tvrdnji); oboje u bin/testovi.sh
 assets/                    fixtures koji reproduciraju kvarove (v. assets/README.md)
 ```

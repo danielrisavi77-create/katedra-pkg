@@ -1,6 +1,6 @@
 ---
 name: rad-audit
-description: "Motor audita akademskog rada u .docx-u, faze A–G: integritet, citati, brojke, cross-check s izvornom građom, jezik, Word polja, ispravci. Aktiviraj na 'audit rada', 'provjeri citate/literaturu', 'usporedi rad s izvorima', 'zašto je tablica zaključana'. Ne aktiviraj kao kopilot: u projektu s .katedra/ zove ga katedra-lite mod 4 kroz engine.py. (Zadnje: R14/R15/R16 stvarno implementirani nakon što je provjera tvrdnji pokazala da su bili samo opisani; parafraza.py, brojke_iz_rasprave.py, faza E2 lektura.)"
+description: "Motor audita akademskog rada u .docx-u, faze A–G: integritet, citati, brojke, cross-check s izvornom građom, jezik, Word polja, ispravci. Aktiviraj na 'audit rada', 'provjeri citate/literaturu', 'usporedi rad s izvorima', 'zašto je tablica zaključana'. Ne aktiviraj kao kopilot: u projektu s .katedra/ zove ga katedra-lite mod 4 kroz engine.py. (Zadnje: R14/R15/R16 stvarno implementirani nakon što je provjera tvrdnji pokazala da su bili samo opisani; parafraza.py, brojke_iz_rasprave.py, faza E2 lektura.) Od v1.9.10 i: metapodaci (docProps/), uputnice na prikaze, aritmetika u tablicama, statističko izvještavanje (p naspram opisa), hipoteze i presude, tvrdnja naspram izvora koji je citiran, postojanje bibliografske jedinice."
 ---
 
 # Rad-audit — pipeline za provjeru akademskih radova
@@ -180,6 +180,34 @@ python3 check_citations.py rad.docx vancouver   # B: Vancouver (N) — brojanje,
 python3 check_placeholders.py rad.docx     # A2: [TREBA IZVOR], [DOPUNITI], [PROVJERI STR.] u tijelu,
                                           #     ćelijama, FUSNOTAMA, endnotama, zaglavljima i podnožjima
 python3 osvjezi_contract.py [--upisi]     # uskladi engine_contract.json s otiskom koda (zove ga test_all)
+
+# ── faze dodane u v1.9.5–1.9.10; sve ih zove generate_report.py, ali se
+#    pokreću i pojedinačno kad želiš samo jednu ────────────────────────────
+python3 provjeri_metapodatke.py rad.docx  # A4: docProps/ — ostavljeni predlošci („Student", „PC"),
+                                          #     tragovi alata, app.Company, lokalne putanje, autori
+                                          #     praćenih izmjena, dc:creator naspram naslovnice.
+                                          #     --postavi upisuje u NOVU datoteku; rsid i povijest
+                                          #     izmjena NE dira (v. docstring)
+python3 check_uputnice.py rad.docx        # F2: „prikazano u Tablici 3" mora pogađati prikaz koji
+                                          #     postoji, i svaki prikaz mora biti uveden rečenicom
+python3 check_tablice.py rad.docx         # C4: redak Ukupno naspram zbroja, postoci koji ne daju
+                                          #     100, n iz natpisa naspram zbroja stupca
+python3 check_statistika.py rad.docx      # C3: p ≥ α opisan kao značajan i obrnuto, p = 0,000,
+                                          #     p izvan [0,1], test koji se nigdje ne imenuje
+python3 check_hipoteze.py rad.docx        # G1: dobiva li svaka postavljena hipoteza izričitu
+                                          #     presudu; NE presuđuje je li presuda točna
+python3 mapa_izvora.py rad.docx --izvori izvori/ --izgradi izvori/mapa.json
+                                          #     prijedlog mape ključ citata → datoteka izvora
+python3 check_tvrdnja_izvor.py rad.docx --izvori izvori/
+                                          # D2: brojka mora biti u izvoru koji TA rečenica citira;
+                                          #     „pripisano krivom izvoru" je najteži nalaz ovdje
+python3 check_reference_exists.py rad.docx --izvori izvori/ [--strogo]
+                                          # B2: građa / identifikator (DOI, ISBN, URL) / službena
+                                          #     oznaka / NEPOTVRĐENA jedinica
+python3 propagacija.py --rukopis .katedra/poglavlja --docx rad.docx
+                                          # E3: je li izmijenjena vrijednost stigla u sve tablice i
+                                          #     grafikone; traži rukopis, pa NIJE dio audita gotova
+                                          #     .docx-a nego moda 3
 python3 tests/test_bolesni.py             # rad S POGREŠKAMA mora pasti + negativna kontrola
 python3 check_citations_authoryear.py rad.docx  # B: autor-godina (Prezime, 2020) — HEURISTIKA, čitaj docstring;
                                                  #    fusnote/endnote uključene u "citirano"
