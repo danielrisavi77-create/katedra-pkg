@@ -1,6 +1,6 @@
 ---
 name: katedra-lite
-description: "Kopilot za akademske radove na hrvatskom: novi rad, plan i program, pisanje, poboljšanje, audit, obrana, predaja, povratak iz Worda. Vodi stanje u .katedra/ i pokreće provjere kroz gate po fazama (plan, pisanje, audit, predaja): citati i literatura, brojke naspram izvora, hipoteze, statistika, aritmetika u tablicama, metapodaci, jezik, prikazi, Word polja. Aktiviraj kad korisnik piše ili dorađuje seminarski, završni, diplomski ili specijalistički rad, traži audit rada, provjeru citata, predajnu verziju ili pripremu obrane. Motori su sateliti: rad-audit (audit), rad-docx (izrada .docx-a), fpzg-diplomski i drugi profili (kućni stil), replikacija-pspp (neovisna provjera brojki). v1.9.16."
+description: "Kopilot za akademske radove na hrvatskom: novi rad, plan i program, pisanje, poboljšanje, audit, obrana, predaja, povratak iz Worda. Vodi stanje u .katedra/ i pokreće provjere kroz gate po fazama (plan, pisanje, audit, predaja): citati i literatura, brojke naspram izvora, hipoteze, statistika, aritmetika u tablicama, metapodaci, jezik, prikazi, Word polja. Aktiviraj kad korisnik piše ili dorađuje seminarski, završni, diplomski ili specijalistički rad, traži audit rada, provjeru citata, predajnu verziju ili pripremu obrane. Motori su sateliti: rad-audit (audit), rad-docx (izrada .docx-a), fpzg-diplomski i drugi profili (kućni stil), replikacija-pspp (neovisna provjera brojki). v1.9.17."
 ---
 
 # KATEDRA-LITE — kopilot za akademske radove
@@ -518,6 +518,22 @@ korak.
 
 *Zašto je koje pravilo nastalo — stvarni radovi, brojke i kvarovi iza pravila 11–20:*
 **`references/zasto.md`**. Router se učitava u svakoj poruci; obrazloženja se čitaju jednom.
+
+*Što jedan rad kroz lanac košta?* Ne procjenjuje se, mjeri se. `gate.py` bilježi
+trajanje svakog koraka i oznaku traži li korak čovjeka; `mjera.py` to slaže po fazi:
+
+```bash
+python3 "$KATEDRA_PKG/katedra-lite/scripts/mjera.py" --zabiljezi audit \
+    --gate .katedra/gate_audit.json --kat .katedra
+python3 "$KATEDRA_PKG/katedra-lite/scripts/mjera.py" --izvjestaj --kat .katedra
+```
+
+Tri brojke, i samo je prva izmjerena: **sekunde** (zbroj koraka), **ulazni kontekst**
+(procjena iz znakova, izrijekom označena kao procjena), **ljudski koraci** podijeljeni
+na `nesmanjivo` (traže čovjeka i kad je sve zeleno, npr. `citanje_tijela`) i `ovaj_put`
+(blokirajući koraci koji su pali na ovom radu). `nesmanjivo` je brojka koja kaže koliko
+je lanac daleko od toga da ga korisnik vozi sam; ne smije se gurati na nulu, jer bi to
+značilo ukidanje pravila 31.
 
 *Je li ova klasa pogreške već viđena?* `references/zamke.md` ima ~90 KB i ne učitava se.
 Ulaz je indeks — jedna stranica, broj → naslov → dodirnuta datoteka → ima li ogradu → redak:

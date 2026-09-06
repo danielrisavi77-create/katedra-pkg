@@ -4,7 +4,7 @@
 > **Ne uređuj ručno.** Nakon izmjene kataloga: `indeks_zamki.py --upisi`.
 > `bin/testovi.sh` pada ako je ovaj indeks zastario.
 
-Unosa: **71** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom (regresijski test): **30** · bez ograde: **46**
+Unosa: **74** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom (regresijski test): **32** · bez ograde: **47**
 
 Traži bez učitavanja cijelog kataloga:
 
@@ -91,6 +91,9 @@ sed -n '844,880p' katedra-lite/references/zamke.md   # unos po retku
 | 126 | Provjera tvrdnji tražila je skripte samo u `scripts/`, pa je alat koji postoji prijavil… | `pokreni_trigger.py`, `SKILL.md`, `test_zakrpa.py` | ✅ | 2601 |
 | 127 | `drift.py` je karticu koja je uredno jednu verziju iza optuživao da je ručno mijenjana | `drift.py`, `test_drift.py` | — | 2633 |
 | 128 | Provjera je potvrdila alat koji se onda nije dao pokrenuti, a neuspjeh je izgledao kao … | `test_trigger.py` | ✅ | 2703 |
+| 129 | zbroj po fazama nije trošak jednog rada | `mjera.py`, `SKILL.md` | ✅ | 2769 |
+| 130 | Predviđanje iz kvara 121 opovrgnuto mjerenjem: opis nije bio uzrok, prazna mapa jest | `drift.py` | — | 2809 |
+| 131 | Prolaz koji je pukao brojio se kao prolaz u kojem skill nije okinuo | `test_trigger.py` | ✅ | 2853 |
 
 ## Unosi bez ograde
 
@@ -144,3 +147,4 @@ bilješke o korpusu. Novi unos bez ograde je dug, ne stanje.
 - 118 — Opis skilla je površina odluke, ne changelog (redak 2207)
 - 125 — Broj testova u izvještaju bio je ukovana konstanta, pa je suite tvrdio 6/6 dok je pokretao sedam (redak 2562)
 - 127 — `drift.py` je karticu koja je uredno jednu verziju iza optuživao da je ručno mijenjana (redak 2633)
+- 130 — Predviđanje iz kvara 121 opovrgnuto mjerenjem: opis nije bio uzrok, prazna mapa jest (redak 2809)

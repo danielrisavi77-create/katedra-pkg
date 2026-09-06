@@ -14,6 +14,7 @@ import importlib.util
 import os
 import sys
 import tempfile
+import threading
 
 TU = os.path.dirname(os.path.abspath(__file__))
 KORIJEN = os.path.dirname(os.path.dirname(TU))
@@ -59,6 +60,21 @@ class LazniIzlaz:
         self.stdout = stdout
         self.stderr = stderr
         self.returncode = returncode
+
+
+class LazniNiz:
+    """Vraća zadane ishode redom; isti upit, različiti prolazi."""
+
+    def __init__(self, ishodi):
+        self.ishodi = list(ishodi)
+        self.brava = threading.Lock()
+
+    def __call__(self, cmd, **kw):
+        with self.brava:
+            ishod = self.ishodi.pop(0)
+        if isinstance(ishod, Exception):
+            raise ishod
+        return ishod
 
 
 def main():
@@ -143,6 +159,36 @@ def main():
     rg2 = pt.prvi_skill("upit", 5, None)
     check("R68: bez razloga ostaje stara poruka",
           rg2["greska"] == "nema odgovora", rg2)
+
+    # R69: prolaz koji je pukao (timeout) nije prolaz u kojem skill nije
+    #      okinuo. U nazivnik ulaze samo izmjereni prolazi (kvar 131).
+    import json as _js
+    pogodak = _js.dumps({"type": "assistant", "message": {"content": [
+        {"type": "tool_use", "name": "Skill", "input": {"skill": "katedra-lite"}}]}})
+    mapa = tempfile.mkdtemp()
+    skup = os.path.join(mapa, "skup.json")
+    izlaz = os.path.join(mapa, "rez.json")
+    with open(skup, "w", encoding="utf-8", newline="\n") as f:
+        f.write(_js.dumps([{"query": "u", "should_trigger": True}]))
+
+    stara_which3 = pt.shutil.which
+    stari_argv = sys.argv
+    pt.shutil.which = lambda ime: "/put/do/claude"
+    pt.subprocess.run = LazniNiz([
+        pt.subprocess.TimeoutExpired("claude", 5),
+        LazniIzlaz(pogodak), LazniIzlaz(pogodak)])
+    sys.argv = ["pokreni_trigger.py", "--skup", skup, "--izlaz", izlaz,
+                "--mapa", mapa, "--ponavljanja", "3", "--radnika", "1", "--tiho"]
+    try:
+        pt.main()
+    finally:
+        sys.argv = stari_argv
+        pt.shutil.which = stara_which3
+    with open(izlaz, encoding="utf-8") as f:
+        rez = _js.load(f)["redci"][0]
+    check("R69: timeout ne ulazi u nazivnik (2 od 3 prolaza mjerena)",
+          rez["stopa"] == 1.0 and rez["izmjereno"] == 2 and rez["prolaza"] == 3, rez)
+    check("R69: takav red se broji kao okinuo", rez["okinuo"] is True, rez)
 
     pt.subprocess.run = stari
     print("=" * 70)
