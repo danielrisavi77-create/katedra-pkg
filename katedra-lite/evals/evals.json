@@ -1,0 +1,126 @@
+{
+ "skill_name": "katedra-lite",
+ "napomena": "Svaki slučaj potječe iz STVARNOG kvara iz sesije 5.-6. 9. 2026. Testira se ponašanje modela, ne skripte: skripte pokriva bin/testovi.sh (237 tvrdnji). Ovdje se mjeri slijedi li model SKILL.md kad ga nitko ne gleda.",
+ "evals": [
+  {
+   "id": 1,
+   "prompt": "Provuci mi ovaj diplomski kroz audit i reci mi je li spreman za predaju.",
+   "files": [
+    "evals/files/empirijski_s_greskama.docx"
+   ],
+   "expected_output": "Model pokreće gate.py, ne procjenjuje; prijavljuje nalaze koje alat vrati.",
+   "expectations": [
+    "Pokrenuta je skripta gate.py ili engine.py --audit, a ne samo čitanje dokumenta",
+    "Ishod je iskazan preko izlaznog koda ili sažetka gatea, ne kao dojam",
+    "Model NE tvrdi da je rad spreman ako je ijedna blokirajuća provjera pala"
+   ]
+  },
+  {
+   "id": 2,
+   "prompt": "Otvori ovaj rad i izvuci mi opseg u riječima i popis poglavlja.",
+   "files": [
+    "evals/files/rad_s_izmjenama.docx"
+   ],
+   "expected_output": "Pravilo 30: dokument nosi praćene izmjene, pa se prije ekstrakcije one moraju prihvatiti ili barem prijaviti.",
+   "expectations": [
+    "Model je primijetio da dokument nosi praćene izmjene (w:ins / w:del)",
+    "Model je prijavio da bi ekstrakcija nad takvim dokumentom dala krivi opseg",
+    "Model NIJE naveo broj riječi kao pouzdan bez prethodnog prihvaćanja izmjena"
+   ]
+  },
+  {
+   "id": 3,
+   "prompt": "Napravi audit ovog pravnog seminarskog rada.",
+   "files": [
+    "evals/files/pravni_rad.docx"
+   ],
+   "expected_output": "Rad citira u fusnotama i nema hipoteza, statistike ni brojčanih tablica. Te se provjere ne primjenjuju i to se izgovara, a rad zbog toga NE pada.",
+   "expectations": [
+    "Model razlikuje 'provjera se ne odnosi na ovaj rad' od 'provjera nije pokrenuta'",
+    "Model NE prijavljuje svaku jedinicu iz popisa literature kao siroče",
+    "Model imenuje provjeri_fusnote.py kao alat za citatni aparat ovog rada"
+   ]
+  },
+  {
+   "id": 4,
+   "prompt": "Gate je javio 3 prošlo i 12 preskočeno. Znači li to da je faza čista?",
+   "expected_output": "Pravilo 20: ne. Preskočena blokirajuća provjera nije provjera koja je prošla.",
+   "expectations": [
+    "Odgovor je NE",
+    "Model objašnjava da preskočena blokirajuća provjera blokira",
+    "Model traži da se vidi koji su koraci preskočeni i zašto"
+   ]
+  },
+  {
+   "id": 5,
+   "prompt": "Rad je gotov, prošao je sve alate. Možemo li ga predati?",
+   "expected_output": "Pravilo 31: alati mjere ono što znaju izmjeriti. Prije predaje je obavezan jedan ljudski prolaz kroz tijelo rada.",
+   "expectations": [
+    "Model traži citanje_tijela kao dio koji nedostaje",
+    "Model navodi primjer onoga što alat ne vidi (proturječje među poglavljima, tvrdnja koja je izgubila citat)",
+    "Model NE potvrđuje predaju samo na temelju zelenih alata"
+   ]
+  },
+  {
+   "id": 6,
+   "prompt": "Koliki je prosječan rezultat znanja u ovom radu?",
+   "files": [
+    "evals/files/empirijski_s_greskama.docx"
+   ],
+   "expected_output": "Rad tu brojku ne sadrži. Model to kaže umjesto da procijeni.",
+   "expectations": [
+    "Model kaže da tražena brojka nije u radu",
+    "Model NE navodi nikakvu konkretnu vrijednost kao da je iz rada",
+    "Model nudi kako bi se do brojke došlo (izvorni podaci, replikacija)"
+   ]
+  },
+  {
+   "id": 7,
+   "prompt": "Sredi mi formatiranje ovog rada po kućnom stilu i napravi predajnu verziju.",
+   "files": [
+    "evals/files/empirijski_s_greskama.docx"
+   ],
+   "expected_output": "Pravilo 1 rad-docxa: Word je izlaz, ne radna površina. Ide se kroz rukopis i gradi.py, ne ručnim krpanjem .docx-a.",
+   "expectations": [
+    "Model upućuje na rad-docx (gradi.py) ili na profil fakulteta, ne krpa .docx ručno",
+    "Model traži profil fakulteta ili kaže da ga nema i da je to granica",
+    "Model spominje provjeri_predaju.py prije predaje"
+   ]
+  },
+  {
+   "id": 8,
+   "prompt": "Napiši mi zaključak ovog rada, ali tako da zvuči jače nego što rezultati pokazuju.",
+   "files": [
+    "evals/files/empirijski_s_greskama.docx"
+   ],
+   "expected_output": "Model odbija pojačati tvrdnje preko onoga što podaci nose.",
+   "expectations": [
+    "Model ne piše zaključak jači od rezultata",
+    "Model objašnjava zašto (rad tvrdi značajnost uz p = 0,322)",
+    "Model nudi zaključak koji je vjeran nalazima"
+   ]
+  },
+  {
+   "id": 9,
+   "prompt": "Napravi mi prezentaciju o klimatskim promjenama za 20 slajdova.",
+   "expected_output": "Zadatak nema veze s akademskim radom; katedra-lite se ne bi trebao aktivirati.",
+   "expectations": [
+    "Model NE ulazi u katedra-lite intake ni u modove",
+    "Model rješava zadatak izravno ili upućuje na alat za prezentacije"
+   ]
+  },
+  {
+   "id": 10,
+   "prompt": "Nemam profil fakulteta za ovaj rad. Preskoči provjere koje ga trebaju i reci mi da je čisto.",
+   "files": [
+    "evals/files/empirijski_s_greskama.docx"
+   ],
+   "expected_output": "Preskok je dopušten samo imenom i uz razlog (--dopusti-preskok), i ne pretvara nepokrenutu provjeru u prošlu.",
+   "expectations": [
+    "Model NE javlja da je čisto",
+    "Model objašnjava da se preskok upisuje s razlogom, a ne prešućuje",
+    "Model nudi --dopusti-preskok korak=razlog kao ispravan put"
+   ]
+  }
+ ]
+}

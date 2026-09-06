@@ -2309,3 +2309,145 @@ lažne tvrdnje skuplji je od tvrdnje koju propusti (kvar 91).
 Ograda: `test_zakrpa.py` R49 — kriva brojka mora pasti, točna ne smije, citat u
 referenci ne smije. Mutacija (usporedba zamijenjena s `if False`) obara prvu:
 9/9 → 8/9.
+
+---
+
+## 121. mjerilo je palo, a zaključak je htio pasti na opis
+**Kad:** 6. 9. 2026. **Gdje:** `skill-creator/scripts/run_eval.py::run_single_query`
+i, nakon toga, u prvoj verziji vlastite zamjene.
+
+Trigger eval za `katedra-lite` vratio je **12/24: svih 12 „ne smije okinuti"
+prošlo, svih 12 „mora okinuti" palo**. Broj je izgledao kao presuda o opisu
+skilla — 0 % odziva — i sljedeći potez bio bi prepisati `description:`.
+
+Dva neovisna kvara mjerila, oba istog oblika: mjeri se nešto što nije predmet.
+
+**(a) Ime pod kojim skill odgovara.** Harness registrira privremenu kopiju pod
+jedinstvenim imenom `katedra-lite-skill-<uuid>` i okidanje broji samo ako se
+**to** ime pojavi u ulazu alata:
+
+```python
+if tool_name == "Skill" and clean_name in tool_input.get("skill", ""):
+```
+
+Kad je pravi `katedra-lite` instaliran, on odgovori prvi, pod svojim imenom.
+Ručna provjera jednog „palog" upita:
+
+```
+Provuci mi diplomski kroz audit prije predaje.
+→ Skill | {'skill': 'katedra-lite', 'args': 'audit'}      ← okinuo, prvi poziv
+harness: promašaj
+```
+
+Izolacija instalirane kartice ne pomaže: `mv` synced mape traje do prve
+sinkronizacije (demon ju vrati usred mjerenja, pa je pola prolaza mjereno u
+jednom, pola u drugom uvjetu), a `HOME` ne upravlja popisom skillova — probano,
+`katedra-lite` je i dalje odgovorio.
+
+**(b) Vlastita zamjena mjerila istu grešku u drugom obliku.** Prva verzija
+`evals/pokreni_trigger.py` vraćala je „nije okinuo" čim **prvi** alat nije Skill:
+
+```python
+if c.get("name") == "Skill":
+    return {...}
+return {"skill": None}      # prvi alat koji nije Skill → promašaj
+```
+
+Model koji prvo pogleda `ls` ima li uopće dokumenta, pa **onda** pozove skill,
+time je bio promašaj. Odgoda nije promašaj.
+
+Izmjereno, isti skup od 24 upita, ista instalirana kartica:
+
+```
+run_eval.py (tuđe ime + strogi prvi alat):   12/24  (50 %) — 0/12 pozitivnih
+pokreni_trigger.py v1 (strogi prvi alat):    15/24  (62 %) — 3/12 pozitivnih
+pokreni_trigger.py v2 (Skill bilo gdje,
+                       3 pokretanja, većina): v. `evals/trigger_rezultat.json`
+```
+
+**Ograda:** `katedra-lite/evals/pokreni_trigger.py` bilježi uz svaki redak
+`pozicija` (koji je po redu bio Skill poziv) i `stopa` (udio pokretanja u kojima
+je okinuo), a `--ponavljanja` je zaseban parametar jer jedno pokretanje nije
+mjerenje: **isti upit koji je ručno okinuo, u jednom prolazu harnessa nije.**
+Redak s `pozicija: 3` i `stopa: 0.67` više se ne da pročitati kao „opis ne
+valja".
+
+**Pravilo koje iz ovoga slijedi (uz pravilo 20):** *prije nego broj postane sud
+o predmetu, pokreni jedan slučaj ručno i pogledaj sirovi prijepis.* Mjerilo koje
+nikad nije provjereno na poznatom ishodu nije mjerilo. Ovdje je cijena bila
+prepisan `description:` koji nije bio pokvaren — promjena bez kvara, na sam
+ulaz usmjeravanja.
+
+**Što je mjerenje pokazalo o samom opisu** (24 upita, 3 pokretanja, instalirana
+kartica v1.9.5, prazna radna mapa):
+
+```
+18/24 (75 %)   12/12 negativnih — nijedan lažni odziv
+                6/12 pozitivnih
+```
+
+Četiri od šest palih pozitivnih imaju stopu 33 %: okidaju, ali nepouzdano. Nula
+imaju točno dva, i oba imenuju sposobnost koju **v1.9.5 opis ne spominje**:
+
+```
+0 %  „Provjeri metapodatke ovog .docx-a prije nego ga pošaljem mentorici.”
+0 %  „Nađi mi proturječja između Rezultata i Rasprave u ovom radu.”
+```
+
+Opis v1.9.11 obje imenuje (`metapodaci`, `hipoteze`, `brojke naspram izvora`).
+Predviđanje koje se da provjeriti čim kartica bude osvježena: te dvije nule
+nestaju bez ijedne izmjene opisa. Zato se opis **ne prepisuje sada** — prvo se
+mjeri opis koji je već napisan, a nikad nije bio u opticaju.
+
+Jedan pravi sudar usmjeravanja: „Rad mi je vratio mentor s komentarima, usporedi
+s onim što sam mu poslao" u jednom je prolazu otišao u skill `docx`, ne u
+`katedra-lite` (mod 7, povratak iz Worda). Kandidat za sljedeći zahvat na opisu.
+
+**Ograničenje mjerenja, izrečeno da se broj ne čita krivo:** upiti se pokreću u
+praznoj mapi, bez `.docx`-a. Model koji nema dokument često prvo traži dokument
+umjesto da učita skill, pa je 75 % **donja granica**, ne stvarni odziv. Idući
+korak mjerenja je isti skup uz fixture rad u mapi.
+
+---
+
+## 122. Indeks kataloga čitao je tuđi oblik naslova, a ne svoj, pa je jedanaest unosa izgubilo broj
+
+`indeks_zamki.py` (v1.9.12) postoji da se katalog od 90 kB ne mora učitavati.
+Njegov `BROJ_RE` prima `## 27. Naslov`, `## Kvar 58 — Naslov` i
+`## Kvarovi 80–86 — Naslov`, ali **ne** i `## 80–86. Naslov` — kanonski raspon,
+oblik koji `kvar.py --popravi-naslove` upravo proizvodi. Indeks je dakle čitao
+oblik koji registar odbija, a ne oblik koji registar piše.
+
+Posljedica je dvostruka i tiha:
+
+```
+kvar.py --provjeri     → unosa: 64 (od toga 11 s rasponom)
+indeks_zamki.py --upisi → ✓ upisano … (69 unosa)
+
+u indeksu: | — | 80–86. tri stavke koje su ostale nakon v1.9.5 | … |
+           ^ broj je ispao iz stupca i završio u naslovu
+```
+
+Razlika 69 naspram 64 je zbroj dvaju predznaka: **−11** rasponskih unosa koji su
+ostali bez broja i **+16** redaka koje indeks broji a katalog ne (11 istih
+rasponskih, prepoznatih kao bezimeni, plus 5 nenumeriranih odjeljaka poput
+„Korpus na kojem je lanac provjeren"). Nijedan alat nije pao: `--provjeri`
+uspoređuje indeks sam sa sobom, pa je zeleno bilo iskreno i beskorisno.
+
+Isti mehanizam kao kvar 116, samo obrnuto: ondje je zakrpa pisala oblik koji
+alat ne čita, ovdje alat ne čita oblik koji zakrpa piše. Zajednički uzrok je da
+gramatika naslova živi na dva mjesta.
+
+Popravak: `BROJ_RE` prima i kanonski raspon; zaglavlje indeksa broji numerirane
+unose odvojeno od nenumeriranih odjeljaka i to izriče:
+
+```
+Unosa: 64 (isti broj javlja kvar.py --provjeri) · uz njih 5 nenumeriranih odjeljaka
+```
+
+Ograda: `katedra-lite/scripts/tests/test_indeks.py`, skupina „katedra-lite:
+indeks zamki" u `bin/testovi.sh`. **R53 ne testira uzorak nego slaganje dvaju
+alata nad stvarnim katalogom** — `kvar.py` i `indeks_zamki.py` moraju dati isti
+broj, jer uzorak se da popraviti u jednom alatu i opet raziću. Kad se kartica
+instalira bez satelita, `kvar.py` nije uz nju; R53 se tada preskače **naglas**,
+ne prešuti kao prolaz. Mutacija (vraćen stari uzorak) obara 3 od 5.

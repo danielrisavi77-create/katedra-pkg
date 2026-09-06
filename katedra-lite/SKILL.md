@@ -1,6 +1,6 @@
 ---
 name: katedra-lite
-description: "Kopilot za akademske radove na hrvatskom: novi rad, plan i program, pisanje, poboljšanje, audit, obrana, predaja, povratak iz Worda. Vodi stanje u .katedra/ i pokreće provjere kroz gate po fazama (plan, pisanje, audit, predaja): citati i literatura, brojke naspram izvora, hipoteze, statistika, aritmetika u tablicama, metapodaci, jezik, prikazi, Word polja. Aktiviraj kad korisnik piše ili dorađuje seminarski, završni, diplomski ili specijalistički rad, traži audit rada, provjeru citata, predajnu verziju ili pripremu obrane. Motori su sateliti: rad-audit (audit), rad-docx (izrada .docx-a), fpzg-diplomski i drugi profili (kućni stil), replikacija-pspp (neovisna provjera brojki). v1.9.11."
+description: "Kopilot za akademske radove na hrvatskom: novi rad, plan i program, pisanje, poboljšanje, audit, obrana, predaja, povratak iz Worda. Vodi stanje u .katedra/ i pokreće provjere kroz gate po fazama (plan, pisanje, audit, predaja): citati i literatura, brojke naspram izvora, hipoteze, statistika, aritmetika u tablicama, metapodaci, jezik, prikazi, Word polja. Aktiviraj kad korisnik piše ili dorađuje seminarski, završni, diplomski ili specijalistički rad, traži audit rada, provjeru citata, predajnu verziju ili pripremu obrane. Motori su sateliti: rad-audit (audit), rad-docx (izrada .docx-a), fpzg-diplomski i drugi profili (kućni stil), replikacija-pspp (neovisna provjera brojki). v1.9.12."
 ---
 
 # KATEDRA-LITE — kopilot za akademske radove
@@ -502,8 +502,34 @@ korak.
     svi njezin oblik (v. kvar 56). Pravilo je platilo odmah: mutacijski test zakrpe uz kvar
     54 našao je dva kvara u vlastitom kodu te zakrpe prije nego je isporučena.
 
+35. **Mjerilo se provjeri prije nego broj postane sud.** Kad evaluacija, test ili
+    skripta vrati broj koji bi trebao presuditi predmetu (opis skilla, kvaliteta rada,
+    prolaznost), prvo pokreni **jedan slučaj ručno i pogledaj sirovi prijepis**. Mjerilo
+    koje nikad nije provjereno na poznatom ishodu nije mjerilo. Mjereno 6. 9. 2026.:
+    trigger eval vratio je 0/12 odziva za `katedra-lite`, a skill je okidao svaki put —
+    harness je brojio okidanje samo pod privremenim imenom kopije, a odgovarala je
+    instalirana kartica pod svojim (kvar 121). Sljedeći potez bio bi prepisati
+    `description:`, dakle promjena bez kvara, i to na samom ulazu usmjeravanja. Isti
+    oblik pogreške ponovio se i u zamjenskom harnessu: „prvi alat nije Skill" nije
+    „skill nije okinuo" — model koji prvo provjeri ima li dokumenta pa onda pozove skill
+    jest okinuo. **Jedno pokretanje nije mjerenje** kad se mjeri ponašanje modela: isti
+    upit okine u jednom prolazu, a u drugom ne, pa se traži udio (`--ponavljanja`), ne
+    ishod.
+
 *Zašto je koje pravilo nastalo — stvarni radovi, brojke i kvarovi iza pravila 11–20:*
 **`references/zasto.md`**. Router se učitava u svakoj poruci; obrazloženja se čitaju jednom.
+
+*Je li ova klasa pogreške već viđena?* `references/zamke.md` ima ~90 KB i ne učitava se.
+Ulaz je indeks — jedna stranica, broj → naslov → dodirnuta datoteka → ima li ogradu → redak:
+
+```bash
+python3 "$KATEDRA_PKG/katedra-lite/scripts/indeks_zamki.py" --trazi 'gate'   # unosi za pojam
+python3 "$KATEDRA_PKG/katedra-lite/scripts/indeks_zamki.py" --bez-ograde     # bez regresijskog testa
+sed -n '844,884p' "$KATEDRA_PKG/katedra-lite/references/zamke.md"            # čitaj unos po retku
+```
+
+Indeks (`references/zamke_indeks.md`) generira se, ne uređuje: nakon novog kvara
+`indeks_zamki.py --upisi`. `bin/testovi.sh` pada ako je zastario.
 
 ## 2. TIJEK PO MODOVIMA
 
