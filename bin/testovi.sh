@@ -38,6 +38,7 @@ pokreni "katedra: provjera tvrdnji" python3 "$KORIJEN/katedra/scripts/tests/test
 pokreni "katedra: verzija i oznake" python3 "$KORIJEN/katedra/scripts/tests/test_verzija.py"
 pokreni "katedra: oznaka verzije = VERSION" python3 "$KORIJEN/katedra/scripts/verzija.py" --provjeri
 pokreni "katedra-lite: indeks zamki" python3 "$KORIJEN/katedra-lite/scripts/tests/test_indeks.py"
+pokreni "katedra-lite: mjerilo usmjeravanja" python3 "$KORIJEN/katedra-lite/scripts/tests/test_trigger.py"
 pokreni "katedra-lite: indeks zamki usklađen s katalogom" \
   python3 "$KORIJEN/katedra-lite/scripts/indeks_zamki.py" --provjeri
 

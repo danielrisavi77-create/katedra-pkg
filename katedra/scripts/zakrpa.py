@@ -205,10 +205,14 @@ def provjeri_tvrdnje(korijen):
     #    (naredba koju model pokuša pozvati, a ne postoji, tiho se preskoči i
     #    korak se prijavi gotovim)
     # rekurzivno: tests/, domains/ i druge podmape su i dalje dio paketa
-    dostupne = {q.name for q in korijen.glob("scripts/**/*.py")}
+    # Kvar 126: tražilo se samo u `scripts/`, pa je alat koji živi drugdje u
+    # skillu (`katedra-lite/evals/pokreni_trigger.py`) prijavljen kao „skripte
+    # nema ni u paketu ni kod satelita" — lazan ❌ iz alata koji lovi lazne
+    # tvrdnje. Postojanje se provjerava nad cijelim skillom.
+    dostupne = {q.name for q in korijen.glob("**/*.py")}
     for satelit in ("rad-audit", "rad-docx", "fpzg-diplomski", "replikacija-pspp",
                     "katedra-lite", "katedra", "rad-orchestrator"):
-        dostupne |= {q.name for q in (korijen.parent / satelit).glob("scripts/**/*.py")}
+        dostupne |= {q.name for q in (korijen.parent / satelit).glob("**/*.py")}
     tekstovi = [("SKILL.md", md)]
     for ref in sorted(korijen.glob("references/*.md")):
         tekstovi.append((f"references/{ref.name}", ref.read_text(encoding="utf-8")))

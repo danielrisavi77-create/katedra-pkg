@@ -1,6 +1,6 @@
 ---
 name: katedra-lite
-description: "Kopilot za akademske radove na hrvatskom: novi rad, plan i program, pisanje, poboljšanje, audit, obrana, predaja, povratak iz Worda. Vodi stanje u .katedra/ i pokreće provjere kroz gate po fazama (plan, pisanje, audit, predaja): citati i literatura, brojke naspram izvora, hipoteze, statistika, aritmetika u tablicama, metapodaci, jezik, prikazi, Word polja. Aktiviraj kad korisnik piše ili dorađuje seminarski, završni, diplomski ili specijalistički rad, traži audit rada, provjeru citata, predajnu verziju ili pripremu obrane. Motori su sateliti: rad-audit (audit), rad-docx (izrada .docx-a), fpzg-diplomski i drugi profili (kućni stil), replikacija-pspp (neovisna provjera brojki). v1.9.13."
+description: "Kopilot za akademske radove na hrvatskom: novi rad, plan i program, pisanje, poboljšanje, audit, obrana, predaja, povratak iz Worda. Vodi stanje u .katedra/ i pokreće provjere kroz gate po fazama (plan, pisanje, audit, predaja): citati i literatura, brojke naspram izvora, hipoteze, statistika, aritmetika u tablicama, metapodaci, jezik, prikazi, Word polja. Aktiviraj kad korisnik piše ili dorađuje seminarski, završni, diplomski ili specijalistički rad, traži audit rada, provjeru citata, predajnu verziju ili pripremu obrane. Motori su sateliti: rad-audit (audit), rad-docx (izrada .docx-a), fpzg-diplomski i drugi profili (kućni stil), replikacija-pspp (neovisna provjera brojki). v1.9.14."
 ---
 
 # KATEDRA-LITE — kopilot za akademske radove
@@ -530,6 +530,23 @@ sed -n '844,884p' "$KATEDRA_PKG/katedra-lite/references/zamke.md"            # �
 
 Indeks (`references/zamke_indeks.md`) generira se, ne uređuje: nakon novog kvara
 `indeks_zamki.py --upisi`. `bin/testovi.sh` pada ako je zastario.
+
+*Okida li opis uopće?* Usmjeravanje se mjeri, ne procjenjuje (pravilo 35):
+
+```bash
+python3 "$KATEDRA_PKG/katedra-lite/evals/pokreni_trigger.py" --ponavljanja 3
+python3 "$KATEDRA_PKG/katedra-lite/evals/pokreni_trigger.py" --mapa /put/do/rada
+```
+
+Traži `claude` CLI u PATH-u; bez njega alat to kaže i staje s izlazom 2 umjesto da
+padne u traceback (kvar 124). Desktop aplikacija nije taj alat. `--ponavljanja` je
+obavezan za sud: isti upit okine u jednom prolazu, a u drugom ne, pa se traži udio.
+`--mapa` bira uvjet — u praznoj mapi model često prvo traži dokument umjesto da
+učita skill, pa je odziv ondje **donja granica**; s radom u mapi mjeri se stvarni
+uvjet. Izvještaj tu razliku sam izriče.
+
+Mjeri se opis **kartice koja je instalirana**, ne onaj u repou. Ako se razlikuju,
+broj vrijedi za karticu — `drift.py` kaže razlikuju li se.
 
 ## 2. TIJEK PO MODOVIMA
 
