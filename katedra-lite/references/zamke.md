@@ -2927,8 +2927,7 @@ prepoznati, ograda na početku retka mora i dalje vrijediti, a `Ograda koje nema
 i proza o nedostatku ograde ne smiju se brojati. Mutacija (vraćeno sidro) obara
 dvije od deset.
 
-## Kvar 116 — kartica i repo razišle su se u jednoj brojci, i ta je brojka lokator
-
+## 133. kartica i repo razišle su se u jednoj brojci, i ta je brojka lokator
 **Kad:** 6. 9. 2026. **Gdje:** `katedra-lite/SKILL.md:511` (pravilo 35).
 
 Kartica je osvježena na v1.9.13 iz druge linije rada. `drift.py` je javio
@@ -2997,10 +2996,22 @@ alat može; spajanje traži čovjeka koji zna što je gdje nastalo. Dok se to ne
 dogovori, svaka isporuka mora biti spoj, ne zamjena, jer zamjena tiho briše rad
 druge linije, a to se ne vidi ni na jednom izlaznom kodu.
 
+**Preslikavanje brojeva dviju linija** (druga linija rada broji iz svog kataloga;
+ovdje su unosi dobili sljedeće slobodne brojeve):
+
+| ondje | ovdje | o čemu |
+|---|---|---|
+| kvar 114 | **121** | mjerilo prije suda, trigger eval |
+| kvar 115 | **129** | zbroj po fazama nije trošak jednog rada |
+| kvar 116 | **133** | broj kvara u SKILL.md-u je lokator (ovaj unos) |
+| kvar 117 | **134** | Cowork doktrina, otvorena vrata kojih nema |
+
+Broj se ne prevodi u tekstu unosa — ondje ostaje kako je zapisan u liniji koja ga
+je našla. Prevodi se samo naslov, i to ovom tablicom.
+
 ---
 
-## Kvar 117 — doktrina je za Cowork ostavila otvorena vrata kojih nema
-
+## 134. doktrina je za Cowork ostavila otvorena vrata kojih nema
 **Kad:** 6. 9. 2026. **Gdje:** `katedra-lite/SKILL.md` § 0.0, tablica površina.
 
 Kvar 43 popravio je krivu uputu („klikni Add repository") tablicom triju površina.
@@ -3029,3 +3040,78 @@ nigdje, uvjet se briše, ne ublažava.
 **Što ostaje otvoreno.** Isporuka bundleom je jedina ruta iz Cowork sesije i
 ostaje dok se issue ne zatvori. To nije zaobilaženje politike nego jedina ruta
 koju politika ostavlja.
+
+---
+
+## 135. Provjera „broj kvara mora postojati” nije čitala kanonski raspon — treći put isti uzorak
+
+Provjera 5b iz druge linije rada (unos 133) traži da svaki `kvar N` iz `SKILL.md`-a
+postoji u katalogu. Popis postojećih brojeva gradila je uzorkom koji raspon čita
+**samo u tuđem obliku**:
+
+```python
+r"^##\s*(?:(\d+)\.|Kvar(?:ovi)?\s+(\d+)(?:\s*[–—-]\s*(\d+))?)"
+              ^^^^^ samo pojedinačan      ^^^^^^^^^^^^ raspon, ali tuđi oblik
+```
+
+Kanonski `## 80–86. naslov` — oblik koji `kvar.py --popravi-naslove` upravo
+proizvodi — ne pogađa nijednu granu. Jedanaest unosa ovog kataloga su rasponi.
+
+Zašto nije puklo odmah: prijavljuju se samo brojevi **iznad** `max(postojeci)`, a
+zadnji unos je trenutno pojedinačan, pa `max` slučajno ispada točan. Čim katalog
+završi rasponom, `najveci` je prenizak i svaki uredan lokator iznad njega postaje
+lažan nalaz — u alatu koji lovi lokatore koji ne pogađaju.
+
+**Treći put isti uzorak.** Kvar 116: zakrpa piše oblik koji registar ne čita.
+Kvar 122: indeks ne čita oblik koji registar piše. Ovdje: provjera ne čita oblik
+koji registar piše. Gramatika naslova živi na tri mjesta i sva tri su je jednom
+promašila.
+
+Popravak: uzorak prima obje grane u oba oblika.
+
+```
+prije:  „## 80–86. b" → 0 brojeva u popisu
+poslije: 80, 81, 82, 83, 84, 85, 86
+```
+
+Ograda: `test_zakrpa.py` R71.
+
+---
+
+## 136. Odziv 6/12 nije bio nalaz o opisu nego o praznoj mapi — mjereno na svih dvanaest upita
+
+Kvar 130 je pokazao da dva upita s odzivom 0 % ne diže novi opis nego prisutnost
+dokumenta, i ostavio otvorenim vrijedi li to i za ostale. Izmjereno na cijelom
+pozitivnom skupu, 12 upita × 3 prolaza, mapa s `rad.docx`, opis v1.9.17:
+
+```
+                          prazna mapa (v1.9.5)      mapa s radom (v1.9.17)
+Provuci mi diplomski…               67 %                    100 %
+Napiši mi plan i program…          100 %                    100 %
+Provjeri jesu li svi citati…        33 %                    100 %  [2/3 izmjereno]
+Rad mi je vratio mentor…            33 %                    100 %
+Trebam predajnu verziju…           100 %                    100 %
+Pripremi me za obranu…             100 %                    100 %
+Provjeri brojke u radu…            100 %                    100 %
+Ovaj završni ima 79 stranica…       33 %                    100 %
+Jesu li hipoteze presuđene?         33 %                    100 %
+Provjeri metapodatke…                0 %                    100 %
+Trebam pomoć oko strukture…        100 %                    100 %
+Nađi mi proturječja…                 0 %                    100 %  [2/3 izmjereno]
+                                  ─────                    ─────
+                                   6/12                    12/12
+```
+
+Nijedan upit ne ostaje ispod 100 %. Četiri retka koja su stajala na 33 % i za koje
+je zapisano da su „stvarni posao na opisu" nisu bili posao na opisu nego artefakt
+uvjeta. Prazna mapa spuštala je odziv na **svakom** upitu koji je uopće varirao.
+
+Granica ovog mjerenja, izrečena: dvije varijable pomaknule su se zajedno (uvjet i
+opis). Za dva upita kvar 130 ih je razdvojio — novi opis u praznoj mapi i dalje
+daje 0 % — pa uvjet objašnjava porast, a opis ne. Za preostalih deset razdvajanje
+nije mjereno. Negativni skup nije ponovljen: bio je 12/12 točan i nijedan upit se
+ne poziva na dokument, pa ovo mjerenje govori o odzivu, ne o cijeloj točnosti.
+
+Dva retka nose `[2/3 izmjereno]` — po jedan prolaz je istekao. Bez popravka iz
+kvara 131 oba bi javila 67 % i tablica bi izgledala kao da dva upita još „okidaju
+nepouzdano".

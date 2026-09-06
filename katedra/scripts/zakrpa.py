@@ -263,14 +263,23 @@ def provjeri_tvrdnje(korijen):
     if zamke.exists():
         katalog = zamke.read_text(encoding="utf-8")
         postojeci = set()
-        for m in re.finditer(r"^##\s*(?:(\d+)\.|Kvar(?:ovi)?\s+(\d+)(?:\s*[\u2013\u2014-]\s*(\d+))?)",
-                             katalog, re.M):
-            if m.group(1):
-                postojeci.add(int(m.group(1)))
-            elif m.group(2):
-                a = int(m.group(2))
-                b = int(m.group(3)) if m.group(3) else a
-                postojeci.update(range(a, b + 1))
+        # Kvar 135: uzorak je čitao raspon SAMO u tuđem obliku
+        # (`## Kvarovi 80–86 — X`), a ne u kanonskom (`## 80–86. X`) koji
+        # `kvar.py --popravi-naslove` upravo proizvodi. Dok je zadnji unos
+        # pojedinačan, `max(postojeci)` to skriva; čim katalog završi
+        # rasponom, `najveci` je prenizak i svaki uredan lokator iznad njega
+        # postaje lažan nalaz. Treći put isti uzorak (kvarovi 116, 122).
+        UNOS = re.compile(
+            r"^##\s*(?:(\d+)(?:\s*[\u2013\u2014-]\s*(\d+))?\."
+            r"|Kvar(?:ovi)?\s+(\d+)(?:\s*[\u2013\u2014-]\s*(\d+))?)", re.M)
+        for m in UNOS.finditer(katalog):
+            prvi = m.group(1) or m.group(3)
+            zadnji = m.group(2) if m.group(1) else m.group(4)
+            if not prvi:
+                continue
+            a = int(prvi)
+            b = int(zadnji) if zadnji else a
+            postojeci.update(range(a, b + 1))
         if postojeci:
             # Dvije stvari koje bi inače proizvele lažni nalaz, obje mjerene na
             # samom katedra-lite SKILL.md-u prije nego je provjera puštena:

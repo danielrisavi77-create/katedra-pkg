@@ -38,7 +38,7 @@ def check(naziv, uvjet, detalj=""):
             print("           detalj: %r" % (detalj,))
 
 
-def skill(skripte, md="# Skill\n", reference=None, katalog=None, drugdje=None):
+def skill(skripte, md="# Skill\n", reference=None, katalog=None, drugdje=None, katalog_tekst=None):
     """Napravi minimalan korijen skilla i vrati mu put."""
     korijen = os.path.join(tempfile.mkdtemp(), "proba-skill")
     os.makedirs(os.path.join(korijen, "scripts"))
@@ -58,6 +58,11 @@ def skill(skripte, md="# Skill\n", reference=None, katalog=None, drugdje=None):
             with open(os.path.join(korijen, "references", ime), "w",
                       encoding="utf-8", newline="\n") as f:
                 f.write(tekst)
+    if katalog_tekst is not None:
+        os.makedirs(os.path.join(korijen, "references"), exist_ok=True)
+        with open(os.path.join(korijen, "references", "zamke.md"), "w",
+                  encoding="utf-8", newline="\n") as f:
+            f.write(katalog_tekst)
     if katalog is not None:
         tijelo = "".join("\n## %d. unos %d\n\ntekst\n" % (i, i)
                          for i in range(1, katalog + 1))
@@ -134,6 +139,23 @@ def main():
     n = zakrpa.provjeri_tvrdnje(skill([], md="# Skill\n\n`python3 nema_me.py`\n"))
     check("R63: skripte koje doista nema i dalje pada",
           any("nema ni u paketu" in x for x in n), n)
+
+    # R71: katalog koji ZAVRŠAVA kanonskim rasponom. Uzorak koji raspon čita
+    #      samo u tuđem obliku ovdje daje premali max, pa uredan lokator
+    #      postaje fantom — u alatu koji lovi lokatore koji ne pogađaju
+    #      (kvar 135).
+    KAT = "# Katalog\n\n## 1. prvi\n\ntekst\n\n## 80–86. rasponski\n\ntekst\n"
+    n = zakrpa.provjeri_tvrdnje(
+        skill([], md="# Skill\n\nv. kvar 85 u katalogu.\n",
+              katalog_tekst=KAT))
+    check("R71: lokator unutar kanonskog raspona nije fantom",
+          not any("poziva na kvar" in x for x in n), n)
+
+    n = zakrpa.provjeri_tvrdnje(
+        skill([], md="# Skill\n\nv. kvar 99 u katalogu.\n",
+              katalog_tekst=KAT))
+    check("R71: lokator iznad zadnjeg unosa i dalje je fantom",
+          any("poziva na kvar" in x for x in n), n)
 
     print("=" * 70)
     print("REZULTATI TESTOVA: %d/%d prošlo"
