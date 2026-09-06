@@ -2627,3 +2627,73 @@ zove.
 Ograda: `test_zakrpa.py` R63 — skripta u `evals/` ne smije dati nalaz, a
 skripta koje doista nema i dalje mora pasti. Mutacija (vraćen uski uzorak) obara
 prvu: 11/11 → 10/11.
+
+---
+
+## 127. `drift.py` je karticu koja je uredno jednu verziju iza optuživao da je ručno mijenjana
+
+Prva provjera nakon učitavanja kartica bila je zelena. Nakon sljedeće zakrpe
+`drift.py` je javio:
+
+```
+❌ SKILL.md drift: kartica 41347 B / repo 42203 B — kartica ima 1 redaka kojih repo
+   nema, repo ima 18 kojih kartica nema; sadržaj kartice NIJE nijedna ranija
+   verzija iz repoa
+```
+
+Zadnja rečenica nije opis razlike nego **optužba**: znači „netko je karticu
+mijenjao rukom". Kartica je bila točno prethodna verzija — izmjereno ručno:
+
+```
+$ sha256 (uz normalizirane prijelome retka)
+kartica            → cb97c5eb1662
+repo @ 98e6bfc     → cb97c5eb1662     ← ista, dakle POSTOJI ranija verzija
+repo @ 91c9491     → c1f732343e79
+```
+
+Dva neovisna uzroka, oba vidljiva samo na Windowsu i samo na hrvatskom tekstu.
+
+**(a) Razdjelnik puta.** `os.path.relpath` daje `katedra-lite\SKILL.md`, a
+`git show <rev>:<put>` prima samo kosu crtu:
+
+```
+$ git show "98e6bfc:katedra-lite/SKILL.md"   → ---\nname: katedra-lite…
+$ git show "98e6bfc:katedra-lite\SKILL.md"   → fatal: path '…' exists on disk,
+                                                but not in '98e6bfc'
+```
+
+Svaki `show` u petlji je padao, `continue` ga je preskakao, petlja nije našla
+ništa i alat je zaključio da ranije verzije nema.
+
+**(b) Dekodiranje.** I da putovi prođu, `subprocess.run(text=True)` bez
+`encoding` dekodira git-ov izlaz kodnom stranicom konzole:
+
+```
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x83 in position 11206
+```
+
+a `except Exception: return None` to pretvara u istu rečenicu. **Prvo se
+pogrešno postavila i moja dijagnoza:** popravio sam dekodiranje i poruka je
+ostala ista, pa je uzrok morao biti drugdje — tek je mjerenje `git show`-a s
+oba razdjelnika pokazalo (a). Oba popravka su nužna: mutacija bilo kojega
+obara iste dvije provjere.
+
+Popravak: put se normalizira na kosu crtu, git-ov izlaz se dekodira kao UTF-8, a
+neuspjela pretraga više se ne predstavlja kao nalaz — dobiva svoj ishod:
+
+```
+razlika je 1/18 redaka; pretraga ranijih verzija NIJE USPJELA (…) — smjer se ne tvrdi
+```
+
+Poslije popravka, nad istom karticom:
+
+```
+❌ SKILL.md drift: kartica zaostaje za repoom — njezin sadržaj je verzija iz
+   commita 98e6bfc (2026-09-06)
+```
+
+Isto ❌, ali rečenica koja upućuje na postupak (učitaj noviju karticu) umjesto
+na krivca. Ograda: `katedra-lite/scripts/tests/test_drift.py` — fixture ima
+hrvatske navodnike i dijakritiku, bez kojih uzrok (b) ne bi ni pao, i put se
+gradi s `os.sep` kako ga alat doista gradi. Mutacije: vraćen razdjelnik 2 od 4,
+vraćeno dekodiranje 2 od 4.
