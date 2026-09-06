@@ -2969,3 +2969,36 @@ zatvorena prije nego je nalaz proglašen kvarom:
 karticu. `drift.py` mjeri razliku, ali ne zna spojiti; provjera 5b hvata samo
 onu klasu razilaženja koja se da provjeriti brojkom. Ostalo i dalje traži
 čovjeka koji zna što je gdje nastalo.
+
+---
+
+## Kvar 117 — doktrina je za Cowork ostavila otvorena vrata kojih nema
+
+**Kad:** 6. 9. 2026. **Gdje:** `katedra-lite/SKILL.md` § 0.0, tablica površina.
+
+Kvar 43 popravio je krivu uputu („klikni Add repository") tablicom triju površina.
+Red za Cowork ostao je pola koraka prekratak:
+
+```
+prije:   samo ako je repo odabran kao izvor zadatka; inače ruta ispod
+```
+
+To i dalje tvrdi da postoji način da se repo odabere kao izvor zadatka. Nema ga.
+Provjereno 6. 9. 2026. u `anthropics/claude-code` issue #84581, **otvoren**: poruka
+proxyja upućuje na alat `add_repo` kojega u registru sesije nema, a u Cowork
+površini nema ni repo pickera ni postavke izvora ni slash naredbe. Iz izvještaja:
+„The user cannot fix this from the product, and neither can the agent."
+
+Cijena u ovoj sesiji: nakon 403 sam korisniku rekao da doda repo u sources sesije.
+Poslao sam ga u postavku koja ne postoji. Isti oblik kao kvar 43, jedan stupanj
+tiši: uputa nije bila kriva nego **prazna**, i to se ne vidi dok je netko ne
+pokuša izvršiti.
+
+**Ograda:** red tablice sada kaže ❌ bez uvjeta, a odlomak ispod imenuje issue,
+datum provjere i pravilo koje iz toga slijedi: **na 403 se ne traži postavka.**
+Uvjet u doktrini uvijek treba imenovati gdje se ispunjava; kad se ne ispunjava
+nigdje, uvjet se briše, ne ublažava.
+
+**Što ostaje otvoreno.** Isporuka bundleom je jedina ruta iz Cowork sesije i
+ostaje dok se issue ne zatvori. To nije zaobilaženje politike nego jedina ruta
+koju politika ostavlja.
