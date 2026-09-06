@@ -289,3 +289,23 @@ B07 workflowa iznad; flat poziv ne smije se koristiti zaobilaženjem resolvera.
 > Tijek jednog moda ne treba biti u datoteci koja se učitava u svakoj poruci.
 
 `audit.md`. `gate.py --faza audit` vodi redoslijed. Motor je skill **`rad-audit`**, ne Katedra: iz project cwd-a prvo `python3 <KATEDRA_SKILL>/scripts/engine.py --provjeri`, pa isti apsolutno adresirani `engine.py --audit …`. Redoslijed: `check_rules.py` (usklađenost s fakultetom) → faze A–F preko motora → `check_argument.py --profil ./.katedra/resolved_profile.json`, `check_ai_style.py`, `check_paragraphs.py` (razina argumenta i stil). Ako postoji `.katedra/evidence.jsonl`, dodaj **advisory** `originality_check.py rad.docx` (v1.1, read-only heuristika preklapanja s ingestiranim izvorima — nije plagijat-detekcija protiv interneta, v. `docs/v1_1_dodaci.md`). Dijagnostika kreće bez čekanja (sve je read-only); odobrenje samo za izmjene dokumenta (faza G). Nema motora → smanjeni opseg, deklariran, nikad prešućen.
+
+---
+
+## Dva alata koja se zovu izravno, ne kroz gate
+
+```bash
+python3 <KATEDRA_SKILL>/scripts/provjeri_brojke_u_tekstu.py rad.docx --json .katedra/brojke_teksta.json
+```
+
+Brojke koje rad SAM izvodi iz vlastitih prikaza („šest od sedam koraka") i koje
+nikad nisu uspoređene sa samim prikazom. Pita, ne presuđuje: dva ciklusa smiju
+imati različite brojke.
+
+```bash
+python3 <KATEDRA_SKILL>/scripts/sigurni_popravci_hr.py rad.docx --izlaz rad-ispravljeno.docx
+```
+
+Samo popravci koji ne mogu promijeniti značenje (razmaci, navodnici, nedjeljivi
+razmak uz mjerne jedinice). Piše u novu datoteku. Granica popisa literature mu je
+bila kvar (v. `zamke.md`), pa ga se pokreće nakon što je popis omeđen.

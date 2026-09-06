@@ -214,7 +214,25 @@ def provjeri_tvrdnje(korijen):
             nalazi.append(f"❌ {gdje} zove `{ime}`, a te skripte nema ni u paketu "
                           f"ni kod satelita")
 
-    # 5) skill koji propisuje testove mora ih i imati
+    # 5) ZRCALNI SMJER: alat koji postoji, a dokumentacija ga nikad ne spominje.
+    #    Kvar 113: provjera tvrdnji dotad je gledala samo jedan smjer („SKILL.md
+    #    zove skriptu koje nema"). Obrnuto se nije gledalo, pa je rad-audit dobio
+    #    OSAM novih alata (metapodaci, uputnice, tablice, statistika, hipoteze,
+    #    tvrdnja↔izvor, postojanje reference, mapa izvora) i nijedan nije bio u
+    #    njegovu SKILL.md-u. Radili su samo zato što ih agregat zove; tko skill
+    #    otvori izravno, za njih ne zna. Nedokumentiran alat je alat koji se ne
+    #    koristi, isto kao alat koji ne postoji.
+    ZANEMARI = {"__init__", "common", "conftest", "setup"}
+    svi_tekstovi = md + "\n" + "\n".join(t for _g, t in tekstovi)
+    for q in sorted(korijen.glob("scripts/*.py")):
+        ime = q.stem
+        if ime in ZANEMARI or ime.startswith("_"):
+            continue
+        if q.name not in svi_tekstovi and ime not in svi_tekstovi:
+            nalazi.append(f"⚠ `scripts/{q.name}` postoji, a ne spominje ga ni "
+                          f"SKILL.md ni ijedna referenca")
+
+    # 6) skill koji propisuje testove mora ih i imati
     if not testovi.exists() and "test_all.py" in md:
         nalazi.append("❌ SKILL.md spominje test_all.py, a scripts/tests/test_all.py "
                       "ne postoji — tvrdnje o testovima nisu provjerive")
