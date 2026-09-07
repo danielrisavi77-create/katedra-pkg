@@ -67,6 +67,19 @@ pokreni "katedra-lite: stari kvarovi" python3 "$KORIJEN/katedra-lite/scripts/tes
 # Kvar 32: registry je bio stale od v1.9.3 i nitko nije primijetio, jer --check nije
 # bio u suiti. Zakrpa profila bez ponovne admisije od sada je crvena skupina.
 pokreni "katedra-lite: registar fakulteta" python3 "$KORIJEN/katedra-lite/scripts/profile_registry.py" --check
+# Kvar 149: tri .diff datoteke iz cloud sesije (1. 9.) bile su u paketu i u svakoj
+# gradnji kartica; nitko ih nije vidio jer ih ništa ne traži. Ostatak zakrpe među
+# praćenim datotekama je crvena skupina koja ga imenuje.
+ostaci_zakrpa() {
+  local nadjeno
+  nadjeno=$(git -C "$KORIJEN" ls-files | grep -E '\.(diff|bak|orig|rej)$')
+  if [ -n "$nadjeno" ]; then
+    echo "$nadjeno"
+    return 1
+  fi
+  echo "nema ostataka zakrpa među praćenim datotekama"
+}
+pokreni "paket: nema ostataka zakrpa" ostaci_zakrpa
 pokreni "katedra-lite: indeks zamki usklađen s katalogom" \
   python3 "$KORIJEN/katedra-lite/scripts/indeks_zamki.py" --provjeri
 
