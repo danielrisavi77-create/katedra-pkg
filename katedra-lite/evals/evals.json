@@ -128,14 +128,14 @@
    "files": [
     "evals/files/fzsri--final--prijediplomski--uskladjen.docx"
    ],
-   "expected_output": "Rad citira numericki (Vancouver), pa `verify_sources.py --pokrivenost` ne prepozna nijedan citat i ispise \"na popisu, a nigdje citirano (20)\", dakle SVE jedinice. Popis koji obuhvaca cijelu literaturu je nalaz o CITACU, ne o radu, i model ga ne smije prenijeti kao nalaz o radu.",
+   "expected_output": "Rad citira numerički (Vancouver, „(1)”, „(2)”…). `verify_sources.py --pokrivenost` od v1.9.39 to prepozna: ispiše „stil numericki, 20 različitih citata” i „✅ svaki izvor je citiran i svaki citat ima izvor”, a u JSON-u `pokrivenost.stil = numericki`, `izmjereno = true`. Model prenosi taj nalaz i imenuje stil; ne izmišlja necitirane jedinice i ne nudi popis kojeg alat nije dao.",
    "expectations": [
-    "Model primijeti da su prijavljene SVE jedinice popisa i da to nije vjerojatan nalaz o radu",
-    "Model pogleda kako rad zapravo citira prije nego prenese popis",
-    "Model imenuje stil citiranja (numericki, Vancouver) kao razlog zasto mjera ne vrijedi",
-    "Model NE tvrdi da nijedan izvor nije citiran",
-    "Model kaze da pokrivenost na ovom radu NIJE izmjerena, umjesto da ponudi popis od 20 nalaza"
-   ]
+    "Model kaže da je pokrivenost izmjerena numerički (Vancouver) i da su sve jedinice citirane",
+    "Model imenuje stil citiranja kao razlog zašto se mjeri po brojevima, ne po prezimenima",
+    "Model NE tvrdi da je ijedna jedinica necitirana",
+    "Ako alat ikad ispiše „POKRIVENOST NIJE IZMJERENA”, model to prenese kao neizmjereno, ne kao čisto ni kao popis nalaza"
+   ],
+   "napomena": "Povijest (kvar 156): do v1.9.38 alat je znao samo autor-godinu i za ovaj rad ispisivao „na popisu, a nigdje citirano (20)” — sve jedinice. Slučaj je tada mjerio hoće li model prenijeti nalaz o čitaču kao nalaz o radu."
   },
   {
    "id": 12,
@@ -143,13 +143,14 @@
    "files": [
     "evals/files/fpzg--final--prijediplomski--uskladjen.docx"
    ],
-   "expected_output": "Alat prijavi dva citata bez izvora, `(Galtungu, 1965.)` i `(Wallacea, 2018.)`, i to s oznakom `❌`, iako u zaglavlju istog odjeljka sam pise da sklonidba prezimena moze dati lazne nalaze. Oba su sklonjeni oblici jedinica koje u literaturi stoje u nominativu; nijedna strana nije pogrijesila. Model mora citati zaglavlje kao dio nalaza, ne samo oznaku.",
+   "expected_output": "Rad citira autor-godinom, a hrvatski sklanja prezimena: „(Galtungu, 1965.)”, „(Wallacea, 2018.)”. `verify_sources.py --pokrivenost` od v1.9.39 svodi ključeve na korijen na obje strane, pa ispiše „18 različitih citata · ✅ svaki izvor je citiran i svaki citat ima izvor” — bez ❌. Model prenosi da svaki citat ima jedinicu; ne traži od autora da mijenja gramatički ispravan tekst.",
    "expectations": [
-    "Model prepozna da su `Galtungu` i `Wallacea` sklonjeni oblici prezimena iz popisa literature",
-    "Model NE trazi od autora da promijeni tekst koji je gramaticki ispravan",
-    "Model povezuje \"citat bez izvora\" i \"necitirana jedinica\" kao JEDAN uzrok, ne dva nalaza",
-    "Model ne prenosi `❌` kao sigurnost kad zaglavlje istog odjeljka deklarira mogucnost laznog nalaza"
-   ]
+    "Model kaže da nema citata bez jedinice u popisu",
+    "Model NE traži od autora da promijeni sklonjene oblike prezimena u tekstu",
+    "Model NE prenosi ❌ kojeg alat nije dao",
+    "Ako model sam nabraja citate, „Galtungu” i „Wallacea” veže uz „Galtung” i „Wallace” iz popisa, kao jedan uzrok (sklonidba), ne dva nalaza"
+   ],
+   "napomena": "Povijest (kvar 157): do v1.9.38 alat je ista dva citata označavao ❌ „citirano u tekstu, a nema ga na popisu” i jedinicu „Galtung i Ruge 1965” kao necitiranu, dok je zaglavlje istog odjeljka priznavalo da sklonidba može dati lažne nalaze."
   },
   {
    "id": 13,
@@ -157,13 +158,14 @@
    "files": [
     "evals/files/effectus--seminar--diplomski--uskladjen.docx"
    ],
-   "expected_output": "Alat ispise \"0 krsenja\", a iznad toga da popis literature nije nadjen i da razrjesavanje fusnota nije provjereno. Rad ima naslov `Literatura` (stil Heading1) i 18 jedinica, pa je razlog netocan, a \"0 krsenja\" ne znaci cisto nego neizvedeno. Model ne smije prenijeti taj zbroj kao prolaz.",
+   "expected_output": "Rad ima 12 fusnota (Chicago, ime ispred prezimena) i numerirani popis literature s 18 jedinica. `provjeri_fusnote.py` od v1.9.39 pročita popis i fusnote i ispiše „0 kršenja · sve 4 provjere izvedene (10 fusnota razriješeno u popisu)”. Model prenosi da je razrješavanje IZVEDENO i čisto; kad bi alat ispisao „N kršenja u k od 4 provjera — m NIJE izvedena”, model to ne smije prenijeti kao prolaz.",
    "expectations": [
-    "Model NE prenosi \"0 krsenja\" kao da je rad na tom mjestu cist",
-    "Model izricito kaze da provjera razrjesavanja NIJE izvedena",
-    "Model provjeri postoji li popis literature prije nego prenese poruku da ga nema",
-    "Model razlikuje \"popis ne postoji\" od \"popis postoji ali nijedna jedinica nije procitana\""
-   ]
+    "Model kaže da su fusnote razriješene u popisu literature i da je provjera izvedena",
+    "Model razlikuje „provjera izvedena, 0 kršenja” od „provjera nije izvedena” i prenosi ono što alat kaže",
+    "Model ne tvrdi da popis literature ne postoji",
+    "Ako alat javi da neka provjera NIJE izvedena, model to izrijekom kaže umjesto da prenese zbroj kršenja kao prolaz"
+   ],
+   "napomena": "Povijest (kvar 158): do v1.9.38 alat je nad numeriranim popisom ispisivao „popis literature nije nađen — razrješavanje fusnota nije provjereno” i odmah ispod „0 kršenja”, iako je popis postojao (naslov „Literatura”, 18 jedinica)."
   }
  ]
 }

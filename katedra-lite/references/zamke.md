@@ -3979,7 +3979,7 @@ izlaza; na Linuxu nevidljiv. To je izmjeren dug, ne popravljen ovdje: pregled je
 (`ast.walk`, `Call` na `subprocess.run|Popen|check_output`, `text`/`universal_newlines` u kwargs bez
 `encoding`) i kandidat je za skupinu u suiti tek kad broj padne na nulu.
 
-Ograda: `service/tests/test_service.py` `test_bridge_run_decodes_utf8_child_output` — `claims_bridge._run` vraća točno U+2018. Mutacija: `encoding=` maknut → pada (na cp1250 konzoli). Za 19 preostalih mjesta ograde nema; broj je zapisan da ga sljedeći krug može usporediti.
+Ograda: `service/tests/test_service.py` `test_bridge_run_decodes_utf8_child_output` — `claims_bridge._run` vraća točno U+2018 (mutacija: `encoding=` maknut → pada, na cp1250 konzoli). Za 19 preostalih mjesta: počišćena u kvaru 159, a `bin/testovi.sh` skupina „paket: subprocess s encoding=” (`provjeri_subprocess.py`, AST) od tada pada na svakom novom.
 
 ---
 
@@ -4125,3 +4125,33 @@ FUSNOTE - disciplina navodjenja
 Popravak (v1.9.39): `PREZIME` prima neobavezan brojčani prefiks („1. Akerlof, …”, „[3] …”); `kljuc_fusnote()` čita i „Ime Prezime i Ime Prezime, …” (Chicago); `literatura_prezimena()` vraća `{nadjen, jedinica, prezimena}`, pa su „popis nije nađen”, „popis nađen, jedinice nisu pročitane” i „fusnote nisu pročitane” tri poruke; sažetak kaže „N kršenja u k od 4 provjera — m NIJE izvedena” umjesto golog „0 kršenja”. Izmjereno na effectus: prije „popis literature nije nađen · 0 kršenja”, poslije „0 kršenja · sve 4 provjere izvedene (10 fusnota razriješeno u popisu)”.
 
 Ograda: `test_stari_kvarovi.py` K158 — effectus: `provjere.izvedeno == 4`, ≥1 fusnota razriješena, bez ➖ nalaza; isti dokument bez naslova „Literatura”: poruka „nije nađen”, sažetak „NIJE izvedena”, nema golog retka „0 kršenja”; jedinice s crticom ispred: poruka „jedinice nisu pročitane”. Mutacije: stari `PREZIME` obara effectus; `kljuc_fusnote` bez Chicago grane obara; sažetak bez grane preskoka obara negativ.
+
+---
+
+## 159. Obitelj kvara 119 zatvorena: 19 `subprocess` poziva bez `encoding=` počišćeno, a AST pregled pada na svakom novom
+
+Kvar 155 izmjerio je dug: 19 poziva `subprocess.run|Popen|check_output` s `text=True` bez
+`encoding=` u paketu, u 13 datoteka. Isti kvar vraćao se sa svakom isporukom (119 rad-audit,
+152 servis, 153 gate, 155 most) jer se na Linuxu ne vidi. Ovdje je zatvoren kao obitelj, ne kao
+primjerak:
+
+```
+$ (jednokratni AST sweep iz scratchpada sesije, nije u paketu — umetak na mjestu ključne riječi text=)
+   1  katedra-lite/scripts/build_docx.py        1  katedra-lite/scripts/check_paragraphs.py
+   1  katedra-lite/scripts/fix_rules.py         1  katedra-lite/scripts/mjera.py
+   1  katedra-lite/scripts/upute_u_profil.py    4  katedra-lite/scripts/tests/test_gate.py
+   1  rad-audit/scripts/tests/test_all.py       3  rad-audit/scripts/tests/test_bolesni.py
+   1  rad-docx/scripts/gradi.py                 2  rad-docx/scripts/izmjeri.py
+   1  rad-docx/scripts/provjeri_reference.py    1  katedra/scripts/dokaz.py
+   1  rad-orchestrator/tests/run_fixtures.py
+umetnuto: 19
+$ python3 katedra/scripts/provjeri_subprocess.py .
+✅ svaki subprocess poziv u tekstualnom načinu ima encoding=
+```
+
+Umetak je `encoding="utf-8", errors="replace"` odmah iza `text=True` (AST `end_col_offset`,
+pa višeredni pozivi prolaze isto kao jednoredni). `PYTHONIOENCODING` djetetu nije dodan
+generalno: to je potrebno samo gdje dijete piše ✔/❌ na konzolu (gate ga već ima); dekodiranje
+na roditeljskoj strani je ono što je rušilo.
+
+Ograda: `bin/testovi.sh` skupina „paket: subprocess s encoding=” — `katedra/scripts/provjeri_subprocess.py` (AST nad `katedra-lite/scripts`, `rad-audit/scripts`, `rad-docx/scripts`, `katedra/scripts`, `rad-orchestrator`, `service`, `bin`) vraća 1 i imenuje `datoteka:redak` za svaki poziv s `text=True`/`universal_newlines=True` bez `encoding=`. Mutacija: privremena datoteka s `subprocess.run(cmd, text=True)` u `service/` → skupina crvena i imenuje je.

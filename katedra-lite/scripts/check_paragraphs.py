@@ -67,7 +67,7 @@ def retci_i_stranice(pdf):
     stranice ne traže ne vide nikakvu razliku.
     """
     t = subprocess.run(["pdftotext", "-layout", pdf, "-"],
-                       capture_output=True, text=True).stdout
+                       capture_output=True, text=True, encoding="utf-8", errors="replace").stdout
     retci, stranice, stranica = [], [], 0
     for red in t.split("\n"):
         stranica += len(red) - len(red.lstrip("\f"))
