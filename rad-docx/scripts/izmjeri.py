@@ -51,7 +51,7 @@ def stranice(pdf):
     na kraj retka — a upravo takav je potpis navigacijske stranice (vodilica od točaka i
     broj na kraju retka). Sirovi tekst zato ostaje.
     """
-    out = subprocess.run(["pdfinfo", pdf], capture_output=True, text=True)
+    out = subprocess.run(["pdfinfo", pdf], capture_output=True, text=True, encoding="utf-8", errors="replace")
     m = re.search(r"Pages:\s+(\d+)", out.stdout)
     if not m:
         sys.exit(f"❌ ne mogu pročitati broj stranica: {pdf}")
@@ -59,7 +59,7 @@ def stranice(pdf):
     tekst, sirovo = [], []
     for i in range(1, n + 1):
         r = subprocess.run(["pdftotext", "-f", str(i), "-l", str(i), "-layout", pdf, "-"],
-                           capture_output=True, text=True)
+                           capture_output=True, text=True, encoding="utf-8", errors="replace")
         sirovo.append(r.stdout)
         tekst.append(norm(r.stdout))
     return tekst, sirovo

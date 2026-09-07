@@ -949,7 +949,7 @@ def provjeri(izlaz: str, args) -> int:
     else:
         naredba += ["--fakultet", args.fakultet]
     naredba += ["--tip", args.tip]
-    proc = subprocess.run(naredba, text=True, capture_output=True)
+    proc = subprocess.run(naredba, text=True, encoding="utf-8", errors="replace", capture_output=True)
     sys.stdout.write(proc.stdout)
     if proc.stderr.strip():
         sys.stderr.write(proc.stderr)

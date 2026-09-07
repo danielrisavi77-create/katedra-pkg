@@ -83,7 +83,7 @@ def _run(cmd: list[str], cwd: Path) -> tuple[int, str]:
     env.setdefault("KATEDRA_SKILL", str(KATEDRA_SKILL))
     for slug in ("rad-audit", "rad-docx", "fpzg-diplomski", "replikacija-pspp"):
         env.setdefault(slug.upper().replace("-", "_") + "_HOME", str(PKG / slug))
-    p = subprocess.run(cmd, cwd=cwd, env=env, capture_output=True, text=True)
+    p = subprocess.run(cmd, cwd=cwd, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace")
     return p.returncode, (p.stdout + p.stderr)[-1500:]
 
 

@@ -971,30 +971,105 @@ def kljuc_izvora(izvor):
     return kljuc_prvog_autora(prvi)
 
 
-def pokrivenost(put, izvori):
+# Kvar 157 (Lekta 142): „Prema Galtungu i Rugeu (1965)” daje ključ „galtungu”, jedinica
+# „Galtung, J.” daje „galtung” — isti citat izlazi na oba popisa. Padežni nastavci se
+# skidaju iterativno, na obje strane; korijen kraći od četiri znaka se ne dira („Mara”
+# ostaje „mara”), jer je lažno podudaranje gore od lažnog nepodudaranja.
+_SUFIKSI = sorted(("ovima", "evima", "ima", "ova", "eva", "om", "em", "ju", "a", "e", "i", "u"),
+                  key=len, reverse=True)
+
+
+def _korijen(kljuc):
+    k = (kljuc or "").strip().lower()
+    while True:
+        for suf in _SUFIKSI:
+            if k.endswith(suf) and len(k) - len(suf) >= 4:
+                k = k[: -len(suf)]
+                break
+        else:
+            return k
+
+
+def _broj_jedinice(izvor, pozicija):
+    """Broj numerirane jedinice („7. Autor…”, „[7] Autor…”), inače njezin redni broj u popisu."""
+    m = C.NUMERIC_LIST_ITEM.match(izvor.get("unos") or "")
+    return int(m.group(1) or m.group(2)) if m else pozicija
+
+
+def _nacin_pokrivenosti(tekst, fusnote, stil):
+    """(način, broj prepoznatih citata). Profil ima prednost; bez njega se čita iz teksta.
+    Kvar 156 (Lekta 141): pokrivenost je znala samo autor-godinu, pa je Vancouver rad dobio
+    „na popisu, a nigdje citirano” za SVE jedinice — uredan popis koji je bio nalaz o čitaču."""
+    n_ay = sum(H.kljucevi_citata(H.bez_lokatora(tekst)).values())
+    n_num = len(C.parse_vancouver(tekst)) + len(C.parse_ieee(tekst))
+    n_fn = sum(1 for t in fusnote.values() if (t or "").strip())
+    if stil:
+        try:
+            d = C.resolve_dialect(stil)
+        except Exception:  # noqa: BLE001 — nepoznat stil: čitaj iz teksta
+            d = None
+        if d in ("vancouver", "ieee"):
+            return "numericki", n_num
+        if d == "legal-footnote":
+            return "fusnote", n_fn
+        if d:
+            return "autor-godina", n_ay
+    if n_ay and n_ay >= n_num:
+        return "autor-godina", n_ay
+    if n_num:
+        return "numericki", n_num
+    if n_fn:
+        return "fusnote", n_fn
+    return "neprepoznat", 0
+
+
+def pokrivenost(put, izvori, stil=None):
     tekst = tijelo_rada(put)
     if not tekst.strip():
         return None
-    # lokator stranice („, str. 41") inače sakrije cijeli citat — v. hr_text.bez_lokatora
-    # v1.1-advisory patch (D13): i ključ citata se svodi na prezime prvog autora,
-    # pa „(Müller & Schmidt, 2019.)" i „(Čavlek et al., 2011.)" više ne ostaju
-    # zalijepljeni uz koautore koje citation_dialects._first_author ne razdvaja.
-    citati = {(kljuc_prvog_autora(a), g)
-              for a, g in H.kljucevi_citata(H.bez_lokatora(tekst))}
+    fusnote = C.extract_docx_footnotes(put) if put.lower().endswith(".docx") else {}
+    nacin, prepoznato = _nacin_pokrivenosti(tekst, fusnote, stil)
     kljucevi_izvora = {}
     for iz in izvori:
-        prez = kljuc_izvora(iz)
-        kljucevi_izvora.setdefault((prez, iz["godina"] or ""), []).append(iz)
-
-    necitirani = [v[0] for k, v in kljucevi_izvora.items()
-                  if not any(ck[0] == k[0] and ck[1].rstrip("abcdefg") == k[1]
-                             for ck in citati)]
-    bez_izvora = [c for c in citati
-                  if not any(c[0] == k[0] and c[1].rstrip("abcdefg") == k[1]
-                             for k in kljucevi_izvora)]
-    return {"citata_razlicitih": len(citati), "necitirani": necitirani,
-            "bez_izvora": sorted(bez_izvora)}
-
+        kljucevi_izvora.setdefault((_korijen(kljuc_izvora(iz)), iz["godina"] or ""), []).append(iz)
+    rez = {"stil": nacin, "izmjereno": True, "razlog": "", "citata_razlicitih": 0,
+           "necitirani": [], "bez_izvora": []}
+    if nacin == "autor-godina":
+        # lokator stranice („, str. 41") inače sakrije cijeli citat — v. hr_text.bez_lokatora;
+        # ključ citata je prezime prvog autora (D13), svedeno na korijen (kvar 157).
+        citati = {(_korijen(kljuc_prvog_autora(a)), g)
+                  for a, g in H.kljucevi_citata(H.bez_lokatora(tekst))}
+        rez["citata_razlicitih"] = len(citati)
+        rez["necitirani"] = [v[0] for k, v in kljucevi_izvora.items()
+                             if not any(ck[0] == k[0] and ck[1].rstrip("abcdefg") == k[1]
+                                        for ck in citati)]
+        rez["bez_izvora"] = sorted(c for c in citati
+                                   if not any(c[0] == k[0] and c[1].rstrip("abcdefg") == k[1]
+                                              for k in kljucevi_izvora))
+    elif nacin == "numericki":
+        brojevi = {int(ref.key) for ref in C.parse_vancouver(tekst) + C.parse_ieee(tekst)}
+        rez["citata_razlicitih"] = len(brojevi)
+        po_broju = {}
+        for poz, iz in enumerate(izvori, 1):
+            po_broju.setdefault(_broj_jedinice(iz, poz), iz)
+        rez["necitirani"] = [iz for br, iz in sorted(po_broju.items()) if br not in brojevi]
+        rez["bez_izvora"] = sorted((str(br), "") for br in brojevi if br not in po_broju)
+    elif nacin == "fusnote":
+        # citat živi u fusnoti („Ime Prezime, Naslov…”): jedinica je citirana ako se korijen
+        # prezimena prvog autora pojavi u tekstu fusnota; „citat bez izvora” se iz fusnota ne izvodi.
+        korpus = H.bez_dijakritika(" ".join(fusnote.values())).lower()
+        rez["citata_razlicitih"] = prepoznato
+        # ključ i korpus moraju biti iste abecede: korpus je bez dijakritika, pa i korijen
+        # („Kovačević” → „kovacevic”), inače svaka hrvatska jedinica ispadne necitirana
+        rez["necitirani"] = [v[0] for k, v in kljucevi_izvora.items()
+                             if not (k[0] and re.search(r"\b" + re.escape(H.bez_dijakritika(k[0]).lower()), korpus))]
+    if rez["citata_razlicitih"] == 0 and izvori:
+        # tvrda ograda (kvar 156): nula prepoznatih citata uz pun popis nije nalaz o radu
+        rez["izmjereno"] = False
+        rez["razlog"] = (f"u tijelu rada nije prepoznat nijedan citat (stil: {nacin}) — popis "
+                         f"necitiranih bio bi nalaz o čitaču, ne o radu; provjeri kako rad citira")
+        rez["necitirani"], rez["bez_izvora"] = [], []
+    return rez
 
 # ------------------------------------------------------------------- ispis
 
@@ -1324,13 +1399,22 @@ def main():
     pokr = None
     if a.pokrivenost:
         print()
-        pokr = pokrivenost(a.datoteka, izvori)
+        stil_profila = None
+        if a.profil:
+            try:
+                stil_profila = C.load_style_from_profile(a.profil)
+            except Exception:  # noqa: BLE001 — profil bez stila: čitaj iz teksta
+                stil_profila = None
+        pokr = pokrivenost(a.datoteka, izvori, stil=stil_profila)
         if pokr is None:
             print("⚠️  pokrivenost se ne može izračunati: u datoteci nema proznog tijela "
                   "(daj .docx s radom, ne samo popis literature).")
+        elif not pokr["izmjereno"]:
+            print(f"⚠️  POKRIVENOST NIJE IZMJERENA: {pokr['razlog']}")
         else:
-            print("POKRIVENOST (heuristika: sklonidba prezimena, višečlana prezimena i "
-                  "„i sur.\" mogu dati lažne nalaze — svaki redak provjeri okom)")
+            print(f"POKRIVENOST — stil {pokr['stil']}, {pokr['citata_razlicitih']} različitih citata "
+                  "(heuristika: višečlana prezimena i „i sur.\" mogu dati lažne nalaze; sklonidba se "
+                  "svodi na korijen — svaki redak provjeri okom)")
             if pokr["necitirani"]:
                 print(f"  ⚠️  na popisu, a nigdje citirano ({len(pokr['necitirani'])}):")
                 for iz in pokr["necitirani"]:
@@ -1338,7 +1422,7 @@ def main():
             if pokr["bez_izvora"]:
                 print(f"  ❌ citirano u tekstu, a nema ga na popisu ({len(pokr['bez_izvora'])}):")
                 for prez, god in pokr["bez_izvora"]:
-                    print(f"      ({prez.capitalize()}, {god}.)")
+                    print(f"      [{prez}]" if pokr["stil"] == "numericki" else f"      ({prez.capitalize()}, {god}.)")
             if not pokr["necitirani"] and not pokr["bez_izvora"]:
                 print("  ✅ svaki izvor je citiran i svaki citat ima izvor")
 
@@ -1388,6 +1472,9 @@ def main():
             "izvori": izvori,
             "abecedni_red_greske": [{"prije": p, "poslije": q} for p, q in lose],
             "pokrivenost": (None if not pokr else {
+                "stil": pokr["stil"],
+                "izmjereno": pokr["izmjereno"],
+                "razlog": pokr["razlog"],
                 "citata_razlicitih": pokr["citata_razlicitih"],
                 "necitirani": [i["unos"] for i in pokr["necitirani"]],
                 "bez_izvora": [f"{p} {g}" for p, g in pokr["bez_izvora"]],

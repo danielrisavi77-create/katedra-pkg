@@ -839,6 +839,103 @@ def main():
           and round(sum(_sc["freq"] * mp.gubitak(_sc) for _sc in mp.SC.values()), 4) == 1.8151,
           (mp.ale(), sum(_sc["freq"] * mp.gubitak(_sc) for _sc in mp.SC.values())))
 
+    # --- 156/157: pokrivenost zna numerički i fusnotni stil, sklonidbu svodi na korijen,
+    # a nula prepoznatih citata NIJE popis necitiranih (Lekta 141/142) -------------------
+    fx = os.path.join(KORIJEN, "evals", "files")
+    vs156 = modul("verify_sources")
+
+    def pokr(docx_put):
+        js = os.path.join(mapa, os.path.basename(docx_put) + ".pokr.json")
+        rr = subprocess.run([sys.executable, "-B", os.path.join(SCRIPTS, "verify_sources.py"), docx_put,
+                             "--pokrivenost", "--offline", "--json", js],
+                            capture_output=True, text=True, encoding="utf-8", errors="replace",
+                            env=dict(os.environ, PYTHONIOENCODING="utf-8"))
+        with open(js, encoding="utf-8") as f:
+            return rr.returncode, rr.stdout, json.load(f)["pokrivenost"]
+
+    def kratko(p):
+        return {k2: (len(v) if isinstance(v, list) else v) for k2, v in p.items()}
+
+    k, out, p = pokr(os.path.join(fx, "fzsri--final--prijediplomski--uskladjen.docx"))
+    check("K156: Vancouver rad — stil numerički, 20 citata, nijedna jedinica lažno necitirana",
+          p["stil"] == "numericki" and p["izmjereno"] and p["citata_razlicitih"] == 20
+          and p["necitirani"] == [] and p["bez_izvora"] == [], kratko(p))
+    check("K156: ispis više ne tvrdi „nigdje citirano (20)”", "nigdje citirano (20)" not in out, out[-300:])
+    k, out, p = pokr(os.path.join(fx, "effectus--seminar--diplomski--uskladjen.docx"))
+    check("K156: fusnotni rad — stil fusnote, citati čitani iz fusnota, ne sve jedinice necitirane",
+          p["stil"] == "fusnote" and p["izmjereno"] and p["citata_razlicitih"] > 0
+          and len(p["necitirani"]) < 18, kratko(p))
+    d = Document()
+    d.add_paragraph("Uvod", style="Heading 1")
+    d.add_paragraph("Ovaj rad ne citira nikoga u tijelu teksta, ali ima popis literature s dvije jedinice na kraju dokumenta.")
+    d.add_paragraph("Drugi odlomak tijela rada koji je dovoljno dugačak da bude prozni odlomak, a ne natpis.")
+    d.add_paragraph("Literatura", style="Heading 1")
+    d.add_paragraph("Horvat, M. (2020). Naslov djela o trendovima. Zagreb: Izdavač.")
+    d.add_paragraph("Kovač, A. (2019). Drugo djelo o istoj temi. Split: Nakladnik.")
+    bez_cit = os.path.join(mapa, "bez_citata156.docx")
+    d.save(bez_cit)
+    k, out, p = pokr(bez_cit)
+    check("K156: rad bez ijednog prepoznatog citata → pokrivenost NIJE izmjerena, bez popisa necitiranih",
+          p["izmjereno"] is False and p["necitirani"] == [] and "NIJE IZMJERENA" in out, (kratko(p), out[-200:]))
+
+    kor = vs156._korijen
+    check("K157: sklonidba se svodi na korijen na obje strane (Galtungu=Galtung, Wallacea=Wallace, Bandure=Bandura)",
+          kor("galtungu") == kor("galtung") and kor("wallacea") == kor("wallace")
+          and kor("bandure") == kor("bandura"), (kor("galtungu"), kor("wallacea"), kor("bandure")))
+    check("K157: korijen kraći od 4 znaka se ne dira (Mara ostaje mara)", kor("mara") == "mara", kor("mara"))
+    k, out, p = pokr(os.path.join(fx, "fpzg--final--prijediplomski--uskladjen.docx"))
+    check("K157: fpzg — sklonjeni citati se poklapaju s popisom: bez ❌ i bez necitiranih",
+          p["bez_izvora"] == [] and p["necitirani"] == [] and "❌ citirano u tekstu" not in out, (kratko(p), out[-200:]))
+
+    # --- 158: provjera koja nije izvedena ne ispisuje se kao „0 kršenja” (Lekta 143) ----
+    def fusn(docx_put):
+        js = os.path.join(mapa, os.path.basename(docx_put) + ".fn.json")
+        rr = subprocess.run([sys.executable, "-B", os.path.join(SCRIPTS, "provjeri_fusnote.py"), docx_put, "--json", js],
+                            capture_output=True, text=True, encoding="utf-8", errors="replace",
+                            env=dict(os.environ, PYTHONIOENCODING="utf-8"))
+        with open(js, encoding="utf-8") as f:
+            return rr.returncode, rr.stdout, json.load(f)
+
+    pf158 = modul("provjeri_fusnote")
+    check("K158: Chicago fusnota s imenom ispred daje prezime prvog autora („Michael C. Jensen i William H. Meckling, …” → Jensen)",
+          pf158.kljuc_fusnote("Michael C. Jensen i William H. Meckling, „Theory of the Firm”, 1976.") == "Jensen"
+          and pf158.kljuc_fusnote("Spence, „Job Market Signaling”, 359.") == "Spence",
+          (pf158.kljuc_fusnote("Michael C. Jensen i William H. Meckling, x"), pf158.kljuc_fusnote("Spence, x")))
+    eff = os.path.join(fx, "effectus--seminar--diplomski--uskladjen.docx")
+    k, out, j = fusn(eff)
+    pr = j.get("provjere") or {}
+    check("K158: numerirani popis se čita — sve 4 provjere izvedene, fusnote razriješene, bez ➖",
+          pr.get("izvedeno") == 4 and pr.get("ukupno") == 4 and pr.get("fusnota_pregledano", 0) >= 1
+          and not any(n["stanje"] == "➖" for n in j["nalazi"]) and "nije nađen" not in out, (pr, out[-200:]))
+    import docx as _docx
+    hrt = modul("hr_text")
+    dd = _docx.Document(eff)
+    for para in dd.paragraphs:
+        if hrt.NASLOV_LIT.match((para.text or "").strip()):
+            for run in para.runs:
+                run.text = ""
+            para.runs[0].text = "Dodatak"
+    bez_popisa = os.path.join(mapa, "bez_popisa158.docx")
+    dd.save(bez_popisa)
+    k, out, j = fusn(bez_popisa)
+    check("K158: bez popisa literature — poruka to kaže, sažetak imenuje neizvedenu provjeru, nema golog „0 kršenja”",
+          "nije nađen" in out and "NIJE izvedena" in out and not re.search(r"(?m)^0 kršenja$", out)
+          and (j.get("provjere") or {}).get("izvedeno") == 3, out[-300:])
+    dd = _docx.Document(eff)
+    u = False
+    for para in dd.paragraphs:
+        t = (para.text or "").strip()
+        if hrt.NASLOV_LIT.match(t):
+            u = True
+            continue
+        if u and len(t) > 15 and para.runs:
+            para.runs[0].text = "— " + para.runs[0].text
+    neproc = os.path.join(mapa, "neprocitan158.docx")
+    dd.save(neproc)
+    k, out, j = fusn(neproc)
+    check("K158: popis postoji, a jedinice se ne daju pročitati — druga poruka, ne „nije nađen”",
+          "nijedno prezime nije pročitano" in out and "nije nađen" not in out, out[-300:])
+
     print("=" * 70)
     print("REZULTATI TESTOVA: %d/%d prošlo"
           % (len(SVE) - len(PALO), len(SVE)))

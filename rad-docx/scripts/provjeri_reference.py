@@ -35,7 +35,7 @@ W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 def _stranice(pdf):
     try:
         out = subprocess.run(["pdftotext", "-layout", str(pdf), "-"],
-                             capture_output=True, text=True, check=True).stdout
+                             capture_output=True, text=True, encoding="utf-8", errors="replace", check=True).stdout
     except FileNotFoundError:
         print("⚠️  nema `pdftotext` (poppler-utils) — mjerenje se ne može provesti")
         return None

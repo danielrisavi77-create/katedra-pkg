@@ -37,7 +37,7 @@ MODEL_UZORAK = re.compile(r"\{\{\s*model\.(.+?)\s*\}\}")
 
 def run(cmd, env=None, tiho=True):
     r = subprocess.run(cmd, shell=isinstance(cmd, str), capture_output=True,
-                       text=True, env=env)
+                       text=True, encoding="utf-8", errors="replace", env=env)
     if r.returncode and not tiho:
         print(r.stdout, r.stderr, file=sys.stderr)
     return r

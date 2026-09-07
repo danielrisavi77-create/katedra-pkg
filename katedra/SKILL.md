@@ -1,6 +1,6 @@
 ---
 name: katedra
-description: "Meta-skill za UČENJE iz sesija: kvar, lažni nalaz ili autorova izmjena postaje pravilo, alat ili zakrpa za katedra-lite, rad-audit i rad-docx. Aktiviraj na 'zapiši kvar', 'napravi zakrpu', 'alat je krivo javio', 'nauči iz ove sesije', 'zamke.md'. Ne aktiviraj za plan, pisanje, audit, obranu ili predaju — to je kopilot katedra-lite. (Zadnje: pravilo 8 i zakrpa.py --provjeri-tvrdnje — SKILL.md ne smije tvrditi ono što kod ne radi.) v1.9.39."
+description: "Meta-skill za UČENJE iz sesija: kvar, lažni nalaz ili autorova izmjena postaje pravilo, alat ili zakrpa za katedra-lite, rad-audit i rad-docx. Aktiviraj na 'zapiši kvar', 'napravi zakrpu', 'alat je krivo javio', 'nauči iz ove sesije', 'zamke.md'. Ne aktiviraj za plan, pisanje, audit, obranu ili predaju — to je kopilot katedra-lite. (Zadnje: pravilo 8 i zakrpa.py --provjeri-tvrdnje — SKILL.md ne smije tvrditi ono što kod ne radi.) v1.9.41."
 ---
 
 # KATEDRA — skill za učenje
@@ -181,6 +181,7 @@ kaže iz koje je verzije — kvar 121 se vidio upravo tako. Zato:
 ```bash
 python3 <SKILL>/scripts/verzija.py --sljedeca          # koji broj zakrpa nosi
 python3 <SKILL>/scripts/verzija.py --postavi X.Y.Z    # VERSION i sve oznake odjednom
+python3 <SKILL>/scripts/provjeri_subprocess.py <korijen paketa>   # svaki subprocess s text=True nosi encoding= (kvar 159; skupina suitea)
 python3 <SKILL>/scripts/verzija.py --provjeri          # u bin/testovi.sh
 ```
 

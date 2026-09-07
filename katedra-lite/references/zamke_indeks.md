@@ -4,7 +4,7 @@
 > **Ne uređuj ručno.** Nakon izmjene kataloga: `indeks_zamki.py --upisi`.
 > `bin/testovi.sh` pada ako je ovaj indeks zastario.
 
-Unosa: **101** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom: **86** · ograda ne pripada (deklarirano): **20** · **duguje ogradu: 0**
+Unosa: **102** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom: **90** · ograda ne pripada (deklarirano): **17** · **duguje ogradu: 0**
 
 Traži bez učitavanja cijelog kataloga:
 
@@ -117,7 +117,8 @@ sed -n '844,880p' katedra-lite/references/zamke.md   # unos po retku
 | 152 | katedra-verifier: od četiri faze radila je jedna, a korake forme „isključivao” je zasta… | `stanje.json`, `rad.docx`, `gate.json` | ✅ | 3869 |
 | 153 | gate.py je čitao izlaz koraka bez encoding=, pa je na Windows konzoli izlaz bio mojibak… | `test_gate.py` | ✅ | 3912 |
 | 154 | Dvije sesije u istom radnom klonu: tuđi `checkout main` pomaknuo je HEAD, pa je commit … | — | ⚪ | 3931 |
-| 155 | `subprocess.run(text=True)` bez `encoding=` stigao je treći put, a paket ih ima još 19 | `claims_bridge.py`, `test_service.py` | ✅ | 3962 |
-| 156 | Pokrivenost izvora mjeri se samo autor-godinom, pa rad koji citira drukcije nema nijeda… | `fzsri--final--prijediplomski--uskladjen.docx` | ⚪ | 3986 |
-| 157 | Sklonidba je deklarirana kao moguc lazan nalaz, a isti redak svejedno nosi crveni krizic | `fpzg--final--prijediplomski--uskladjen.docx` | ⚪ | 4026 |
-| 158 | Provjera koja nije izvedena ispisuje se kao "0 krsenja", uz razlog koji nije tocan | `effectus--seminar--diplomski--uskladjen.docx`, `provjeri_fusnote.py` | ⚪ | 4076 |
+| 155 | `subprocess.run(text=True)` bez `encoding=` stigao je treći put, a paket ih ima još 19 | `claims_bridge.py`, `test_service.py`, `testovi.sh` | ✅ | 3962 |
+| 156 | Pokrivenost izvora mjeri se samo autor-godinom, pa rad koji citira drukcije nema nijeda… | `test_stari_kvarovi.py` | ✅ | 3986 |
+| 157 | Sklonidba je deklarirana kao moguc lazan nalaz, a isti redak svejedno nosi crveni krizic | `verify_sources.py`, `test_stari_kvarovi.py` | ✅ | 4028 |
+| 158 | Provjera koja nije izvedena ispisuje se kao "0 krsenja", uz razlog koji nije tocan | `test_stari_kvarovi.py` | ✅ | 4080 |
+| 159 | Obitelj kvara 119 zatvorena: 19 `subprocess` poziva bez `encoding=` počišćeno, a AST pr… | `testovi.sh`, `provjeri_subprocess.py` | ✅ | 4131 |
