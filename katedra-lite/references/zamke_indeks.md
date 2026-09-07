@@ -4,7 +4,7 @@
 > **Ne uređuj ručno.** Nakon izmjene kataloga: `indeks_zamki.py --upisi`.
 > `bin/testovi.sh` pada ako je ovaj indeks zastario.
 
-Unosa: **93** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom: **82** · ograda ne pripada (deklarirano): **16** · **duguje ogradu: 0**
+Unosa: **94** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom: **83** · ograda ne pripada (deklarirano): **16** · **duguje ogradu: 0**
 
 Traži bez učitavanja cijelog kataloga:
 
@@ -113,3 +113,4 @@ sed -n '844,880p' katedra-lite/references/zamke.md   # unos po retku
 | 148 | Registry generiran na Windowsu nosi backslash u putanjama overlaya, pa `--check` na dru… | `index.json`, `efzg-rfir.json`, `drift.py` | ✅ | 3715 |
 | 149 | Tri `.diff` datoteke iz cloud sesije ušle su u paket i u svaku gradnju kartica, jer ost… | `testovi.sh` | ✅ | 3738 |
 | 150 | Fiksan prored javljao se u EMU („prored je 152400,00”), pa je poruka skrivala baš onu č… | `provjeri_predaju.py`, `test_stari_kvarovi.py` | ✅ | 3765 |
+| 151 | Provjera kataloga mjerila je oblik markdowna, a javljala se kao da mjeri sadržaj | `brojke.md`, `test_kvar.py` | ✅ | 3812 |

@@ -7,7 +7,9 @@ brojeva na koji se pozivaju svi ostali skillovi. Kvar 116 je nastao točno ondje
 naslov u tuđem obliku alat nije vidio, pa je „sljedeći slobodan" pokazivao na
 broj koji je već potrošen.
 """
+import contextlib
 import importlib.util
+import io
 import os
 import sys
 import tempfile
@@ -79,6 +81,51 @@ def main():
     prije = open(p3, encoding="utf-8").read()
     check("R43: ispravan katalog popravak ne mijenja",
           kvar.popravi_naslove(p3) == 0 and open(p3, encoding="utf-8").read() == prije)
+
+    # R44 (kvar 151): meka provjera pita pokazuje li unos išta, a ne kojim oblikom
+    # markdowna. Stara je tražila ograđen blok i ASCII znamenku, pa je na tri
+    # kataloga dala 30 zastavica od kojih je 29 stajalo na unosima s mehanizmom,
+    # popravkom i dokazom. Ovdje se svaki oblik dokaza koji kuća stvarno piše mjeri
+    # zasebno, i uz svaki stoji unos koji doista ne pokazuje ništa — inače bi se
+    # provjera dala „popraviti" tako da više nikad ne pukne.
+    def zastavice(tijelo):
+        p = katalog(ZAGLAVLJE + "## 1. naslov\n" + tijelo + "\n")
+        vrecica = io.StringIO()
+        with contextlib.redirect_stdout(vrecica):
+            kvar.provjeri(p)
+        return [r.strip()[2:].strip() for r in vrecica.getvalue().splitlines()
+                if r.startswith("   · ")]
+
+    # 330 znakova: iznad praga 250, ali ISPOD starih 400 — inače vraćanje praga
+    # na 400 ne obori nijednu ogradu i mutacija tiho prođe (izmjereno).
+    DUGO = "prozni opis mehanizma i popravka. " * 10
+    check("R44: gola pritužba (bez broja i bez dokaza) se javlja",
+          any("ne pokazuje ništa" in x for x in zastavice(DUGO)), zastavice(DUGO))
+    check("R44: inline kod je dokaz, iako nije ograđen blok",
+          not any("ne pokazuje" in x for x in zastavice(DUGO + "vrijednost `w:line` je kriva.")),
+          zastavice(DUGO + "vrijednost `w:line` je kriva."))
+    check("R44: tablica je dokaz",
+          not any("ne pokazuje" in x for x in zastavice(DUGO + "\n| a | b |\n| - | - |\n")),
+          zastavice(DUGO + "\n| a | b |\n| - | - |\n"))
+    check("R44: doslovno citirana poruka alata je dokaz",
+          not any("ne pokazuje" in x for x in zastavice(DUGO + "alat javi \u201eprored je fiksan\u201c i stane.")),
+          zastavice(DUGO + "alat javi \u201eprored je fiksan\u201c i stane."))
+    check("R44: ograđen blok je i dalje dokaz",
+          not any("ne pokazuje" in x for x in zastavice(DUGO + "\n```\nizlaz\n```\n")),
+          zastavice(DUGO + "\n```\nizlaz\n```\n"))
+    # Kvar 151 je nastao baš na ovome: `#fcfcfb` naspram `#ffffff` je mjera, a u
+    # njoj nema nijedne ASCII znamenke.
+    # Bez backtickova: da mjeru drži BROJKA, a ne inline dokaz. S backtickovima
+    # unos prolazi i sa starom BROJKA, pa mutacija ne bi pala.
+    HEX = DUGO + "podloga je #ffffff, a validator uzima #fcfcfb."
+    check("R44: heksadecimalna vrijednost bez znamenke je mjera",
+          not any("ne pokazuje" in x for x in zastavice(HEX)), zastavice(HEX))
+    # Prag duljine: pokazivač na drugi dokument pada, potpun kratak unos ne.
+    check("R44: unos ispod praga (pokazivač) se javlja kao kratak",
+          any("kratak unos" in x for x in zastavice("Vidi `brojke.md`. Nalaz 31,5 % naspram 31,4 %.")),
+          zastavice("Vidi `brojke.md`. Nalaz 31,5 % naspram 31,4 %."))
+    check("R44: potpun unos od 250+ znakova nije kratak",
+          not any("kratak unos" in x for x in zastavice(DUGO)), zastavice(DUGO))
 
     print("=" * 70)
     print("REZULTATI TESTOVA: %d/%d prošlo"
