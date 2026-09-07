@@ -13,16 +13,34 @@ export PYTHONIOENCODING="${PYTHONIOENCODING:-utf-8}"
 KORIJEN="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 UKUPNO=0
 PALO=0
+PALI=()
+
+# Kvar 142: kad je jedna skupina pala, sažetak je javio samo BROJ. Tko ispis
+# provuče kroz `tail`, ostane bez imena skupine i bez njezina izlaza, pa se pad
+# koji se ne ponovi ne da ni dijagnosticirati — a nagađanje uzroka je točno ono
+# što pravilo 20 zabranjuje. Zato: imena palih skupina idu u sažetak, a CIJELI
+# ispis svake skupine u dnevnik koji preživi prolaz.
+DNEVNIK="${KATEDRA_TESTOVI_DNEVNIK:-$KORIJEN/.testovi/zadnji.log}"
+mkdir -p "$(dirname "$DNEVNIK")"
+: > "$DNEVNIK"
 
 pokreni() {
   local naziv="$1"; shift
   echo ""
   echo "── $naziv ────────────────────────────────────────────"
-  if "$@"; then
+  {
+    echo ""
+    echo "══ $naziv"
+  } >> "$DNEVNIK"
+  # `tee` u dnevnik; izlazni kod uzima se iz PIPESTATUS, ne iz tee-a.
+  "$@" 2>&1 | tee -a "$DNEVNIK"
+  local kod="${PIPESTATUS[0]}"
+  if [ "$kod" -eq 0 ]; then
     echo "   ✅ $naziv"
   else
-    echo "   ❌ $naziv (izlazni kod $?)"
+    echo "   ❌ $naziv (izlazni kod $kod)"
     PALO=$((PALO + 1))
+    PALI+=("$naziv")
   fi
   UKUPNO=$((UKUPNO + 1))
 }
@@ -61,6 +79,8 @@ echo "════════════════════════�
 if [ "$PALO" -eq 0 ]; then
   echo "✅ svih $UKUPNO skupina prošlo"
 else
-  echo "❌ $PALO od $UKUPNO skupina palo"
+  echo "❌ $PALO od $UKUPNO skupina palo:"
+  for n in "${PALI[@]}"; do echo "   · $n"; done
+  echo "   cijeli ispis: $DNEVNIK"
 fi
 exit "$PALO"

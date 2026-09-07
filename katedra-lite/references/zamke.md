@@ -3366,3 +3366,52 @@ označeni.
 
 Ograda: `test_stari_kvarovi.py`, skupina „katedra-lite: stari kvarovi" u
 `bin/testovi.sh` (20 → 21 skupina). Mutacije svih pet zapisane su gore.
+
+---
+
+## 142. Pad suitea javio je samo brojku, pa se pad koji se ne ponovi nije dao ni dijagnosticirati
+
+Poslije jednog `pull`-a jedini ulaz javio je:
+
+```
+❌ 1 od 21 skupina palo
+```
+
+Sva četiri kasnija prolaza prošla su čisto. Skupina se **ne zna** — ispis je bio
+provučen kroz `tail -2`, a sažetak nosi samo brojku; izlaz svake skupine otišao je
+na terminal i nestao s njim. Ostalo je nagađanje uzroka, što je točno ono što
+pravilo 20 zabranjuje ostatku paketa: ovdje se dogodilo u alatu koji ta pravila
+provodi.
+
+Kvar nije u tome što je nešto palo. Kvar je što **trag ne postoji**.
+
+Popravak, dva dijela:
+
+```
+❌ 2 od 21 skupina palo:
+   · katedra-lite: indeks zamki usklađen s katalogom
+   · katalog kvarova: katedra-lite
+   cijeli ispis: /put/do/paketa/.testovi/zadnji.log
+```
+
+Sažetak imenuje pale skupine, pa `tail` više ne guta ono što je potrebno. Cijeli
+ispis svake skupine ide u `.testovi/zadnji.log` (`tee`, izlazni kod iz
+`PIPESTATUS[0]`, ne iz `tee`-a), pa prolaz koji se ne ponovi ostavlja dokaz.
+Putanja se može premjestiti kroz `KATEDRA_TESTOVI_DNEVNIK`. Dnevnik je u
+`.gitignore`: trag, ne artefakt.
+
+Mjereno mutacijom (`## 24.` → `## 99924.` u katalogu):
+
+```
+prije popravka:  ❌ 1 od 21 skupina palo            (koja — ne piše)
+poslije:         ❌ 2 od 21 skupina palo:  imena obje + put do dnevnika
+u dnevniku:      · kvar 99924: numeracija preskače — očekivan 24
+```
+
+Mutacija je usput pokazala i da jedan slom povlači dvije skupine (katalog i
+indeks), što se iz same brojke također nije vidjelo.
+
+Ograda: nema — provjera bi tražila pokretanje cijelog suitea unutar suitea, a to
+je skuplje od kvara koji čuva. Umjesto ograde stoji mutacija gore, ponovljiva u
+jednom potezu. Prvi idući pad sam je provjera: ako sažetak ne imenuje skupinu,
+popravak ne radi.
