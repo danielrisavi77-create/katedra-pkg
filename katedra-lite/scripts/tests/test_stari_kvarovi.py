@@ -128,6 +128,44 @@ def main():
     check("K33: `provjeri_dijelove.py` postoji",
           os.path.exists(os.path.join(SCRIPTS, "provjeri_dijelove.py")))
 
+    # --- kvar 29: uvjet je znao samo fakultet, ne i tip rada ------------------
+    # Kućni stil završnog primjenjivao se na seminarski jer `uvjet.tipovi`
+    # nitko nije gledao. `_primjenjivo` je čista funkcija, pa se mjeri izravno.
+    zapis = {"uvjet": {"tipovi": ["zavrsni", "diplomski"]}}
+    check("K29: sposobnost za završni NE vrijedi za seminarski",
+          not v._primjenjivo(zapis, None, "seminarski"))
+    check("K29: ista sposobnost vrijedi za diplomski",
+          v._primjenjivo(zapis, None, "diplomski"))
+    check("K29: bez `tipovi` ne isključuje se ništa",
+          v._primjenjivo({"uvjet": {}}, None, "seminarski"))
+    check("K29: bez konteksta (tip nije poznat) ne isključuje se ništa",
+          v._primjenjivo(zapis, None, None))
+
+    # --- kvar 26: `meta` se koristio u `_renderiraj` koji ga nikad nije primio --
+    import inspect
+    bd = modul("build_docx")
+    par = inspect.signature(bd._renderiraj).parameters
+    check("K26: `_renderiraj` prima `meta`", "meta" in par)
+    check("K26: `meta` ima zadanu vrijednost (poziv bez njega ne puca)",
+          "meta" in par and par["meta"].default is not inspect.Parameter.empty,
+          str(par.get("meta")))
+
+    # --- kvar 48: proturječje u vlastitim brojkama rada ------------------------
+    # „šest od sedam koraka" u jednom poglavlju i „pet od sedam koraka" u drugom
+    # ne pada ni na jednoj provjeri lanca — nijedna ne gleda rad protiv njega
+    # samoga. Lens i usporedba su čiste funkcije.
+    pb = modul("provjeri_brojke_u_tekstu")
+    m = pb.UZORAK_OD.search("Time je zatvoreno šest od sedam koraka postupka.")
+    check("K48: uzorak hvata „N od M <imenica>”", bool(m), m and m.groups())
+    nalazi = [("korak", "od", "6", "7", "Rasprava", "šest od sedam koraka"),
+              ("korak", "od", "5", "7", "Zaključak", "pet od sedam koraka")]
+    prot = pb.proturjecja(nalazi)
+    check("K48: dvije različite vrijednosti istog pojma su nalaz",
+          len(prot) == 1 and prot[0]["pojam"] == "korak", prot)
+    isti = [("korak", "od", "6", "7", "Rasprava", "šest od sedam"),
+            ("korak", "od", "6", "7", "Zaključak", "šest od sedam")]
+    check("K48: ista vrijednost dvaput NIJE nalaz", pb.proturjecja(isti) == [])
+
     print("=" * 70)
     print("REZULTATI TESTOVA: %d/%d prošlo"
           % (len(SVE) - len(PALO), len(SVE)))
