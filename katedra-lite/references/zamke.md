@@ -4019,7 +4019,9 @@ POKRIVENOST (heuristika: sklonidba prezimena, viseclana prezimena i "i sur." mog
    citiranja uopce nije prepoznat, a `pokrivenost` cita samo `tijelo_rada(put)`.
 ```
 
-Ograda: nema — otvoren kvar, popravak nije napravljen. Izmjereno 7. 9. 2026. na v1.9.37 nad `evals/files/fzsri--final--prijediplomski--uskladjen.docx`: `verify_sources.py --pokrivenost --offline` i dalje ispisuje „na popisu, a nigdje citirano (20)” uz `citata_razlicitih: 0` u `--json` — kvar živ. Popravak i ograda: zaseban krug (prepoznavanje numeričkog i fusnotnog citiranja + tvrda ograda na nula prepoznatih citata).
+Popravak (v1.9.39): `_nacin_pokrivenosti()` bira stil iz profila (`--profil` → `citiranje.stil`) ili iz teksta — autor-godina, numerički (`citation_dialects.parse_vancouver` + `parse_ieee`, citirani brojevi protiv brojeva jedinica) ili fusnote (`extract_docx_footnotes`, korijen prezimena u tekstu fusnota); nula prepoznatih citata uz pun popis daje `izmjereno: false` i ⚠️ „POKRIVENOST NIJE IZMJERENA” bez popisa. Izmjereno na fzsri: prije „na popisu, a nigdje citirano (20)”, poslije „stil numericki, 20 različitih citata · ✅ svaki izvor je citiran”.
+
+Ograda: `test_stari_kvarovi.py` K156 — fzsri: stil numerički, 20 citata, 0 necitiranih, ispis bez „nigdje citirano (20)”; effectus: stil fusnote, ne sve jedinice necitirane; sintetički rad bez citata: `izmjereno false`, prazan popis, ⚠️ u ispisu. Mutacije: numerička grana → `if False` obara fzsri; tvrda ograda → `if False` obara sintetički.
 
 ---
 
@@ -4069,7 +4071,9 @@ POKRIVENOST (heuristika: sklonidba prezimena, viseclana prezimena i "i sur." mog
    ispravan APA; nijedna strana nije pogrijesila.
 ```
 
-Ograda: nema — otvoren kvar, popravak nije napravljen. Izmjereno 7. 9. 2026. na v1.9.37 nad `evals/files/fpzg--final--prijediplomski--uskladjen.docx`: ❌ `(Galtungu, 1965.)`, `(Wallacea, 2018.)` i ⚠️ `Galtung i Ruge 1965` — kvar živ. Popravak i ograda: zaseban krug (svođenje na korijen u `kljuc_prvog_autora` i `kljuc_izvora`, granica četiri znaka).
+Popravak (v1.9.39): `_korijen()` u `verify_sources.py` — nastavci `ovima, evima, ima, ova, eva, om, em, ju, a, e, i, u` skidaju se iterativno na OBJE strane usporedbe, korijen kraći od četiri znaka ostaje netaknut; zaglavlje više ne upozorava na sklonidbu nego kaže da se svodi na korijen. Izmjereno na fpzg: prije ❌ `(Galtungu, 1965.)`, `(Wallacea, 2018.)` + ⚠️ `Galtung i Ruge 1965`; poslije „18 različitih citata · ✅ svaki izvor je citiran i svaki citat ima izvor”.
+
+Ograda: `test_stari_kvarovi.py` K157 — `_korijen(galtungu) == _korijen(galtung)`, `wallacea == wallace`, `bandure == bandura`, `mara` ostaje `mara`; fpzg: `bez_izvora` i `necitirani` prazni, ispis bez ❌. Mutacija: uvjet skidanja → `if False` obara.
 
 ---
 
@@ -4118,4 +4122,6 @@ FUSNOTE - disciplina navodjenja
     prelazi granicu izmedju dvaju proizvoda. Za mehanizam je vazan samo brojcani prefiks.)
 ```
 
-Ograda: nema — otvoren kvar, popravak nije napravljen. Izmjereno 7. 9. 2026. na v1.9.37 nad `evals/files/effectus--seminar--diplomski--uskladjen.docx`: `katedra-lite/scripts/provjeri_fusnote.py` ispisuje „➖ popis literature nije nađen” i „0 kršenja” — kvar živ. Popravak i ograda: zaseban krug (brojčani prefiks u uzorku prezimena, razdvojene poruke, brojač koji kaže koliko je provjera izvedeno od koliko).
+Popravak (v1.9.39): `PREZIME` prima neobavezan brojčani prefiks („1. Akerlof, …”, „[3] …”); `kljuc_fusnote()` čita i „Ime Prezime i Ime Prezime, …” (Chicago); `literatura_prezimena()` vraća `{nadjen, jedinica, prezimena}`, pa su „popis nije nađen”, „popis nađen, jedinice nisu pročitane” i „fusnote nisu pročitane” tri poruke; sažetak kaže „N kršenja u k od 4 provjera — m NIJE izvedena” umjesto golog „0 kršenja”. Izmjereno na effectus: prije „popis literature nije nađen · 0 kršenja”, poslije „0 kršenja · sve 4 provjere izvedene (10 fusnota razriješeno u popisu)”.
+
+Ograda: `test_stari_kvarovi.py` K158 — effectus: `provjere.izvedeno == 4`, ≥1 fusnota razriješena, bez ➖ nalaza; isti dokument bez naslova „Literatura”: poruka „nije nađen”, sažetak „NIJE izvedena”, nema golog retka „0 kršenja”; jedinice s crticom ispred: poruka „jedinice nisu pročitane”. Mutacije: stari `PREZIME` obara effectus; `kljuc_fusnote` bez Chicago grane obara; sažetak bez grane preskoka obara negativ.
