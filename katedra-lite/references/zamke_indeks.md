@@ -4,7 +4,7 @@
 > **Ne uređuj ručno.** Nakon izmjene kataloga: `indeks_zamki.py --upisi`.
 > `bin/testovi.sh` pada ako je ovaj indeks zastario.
 
-Unosa: **84** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom: **59** · ograda ne pripada (deklarirano): **12** · **duguje ogradu: 18**
+Unosa: **85** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom: **59** · ograda ne pripada (deklarirano): **13** · **duguje ogradu: 18**
 
 Traži bez učitavanja cijelog kataloga:
 
@@ -104,6 +104,7 @@ sed -n '844,880p' katedra-lite/references/zamke.md   # unos po retku
 | 139 | „Bez ograde” je bio jedan pretinac za tri stanja, pa popis duga nije bio popis posla | `test_indeks.py` | ⚪ | 3228 |
 | 140 | Dvadeset šest unosa duguje ogradu; izmjereno je koliko ih uopće ima test koji ih dodiru… | `kvar.md`, `SKILL.md` | ⚪ | 3267 |
 | 141 | Prvih pet novih ograda bile su lažne, i to je pokazala mutacija, ne čitanje | `vjestine.py`, `test_stari_kvarovi.py`, `testovi.sh` | ✅ | 3313 |
+| 142 | Pad suitea javio je samo brojku, pa se pad koji se ne ponovi nije dao ni dijagnosticira… | — | ⚪ | 3372 |
 
 ## Unosi bez ograde
 
