@@ -4,7 +4,7 @@
 > **Ne uređuj ručno.** Nakon izmjene kataloga: `indeks_zamki.py --upisi`.
 > `bin/testovi.sh` pada ako je ovaj indeks zastario.
 
-Unosa: **83** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom: **53** · ograda ne pripada (deklarirano): **10** · **duguje ogradu: 25**
+Unosa: **86** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom: **53** · ograda ne pripada (deklarirano): **10** · **duguje ogradu: 28**
 
 Traži bez učitavanja cijelog kataloga:
 
@@ -103,6 +103,9 @@ sed -n '844,880p' katedra-lite/references/zamke.md   # unos po retku
 | 138 | Mjerena je samo strana koja je mogla porasti; kad je izmjerena i druga, prag se nije po… | `rad.docx` | ⚪ | 3171 |
 | 139 | „Bez ograde” je bio jedan pretinac za tri stanja, pa popis duga nije bio popis posla | `test_indeks.py` | ⚪ | 3221 |
 | 140 | Dvadeset šest unosa duguje ogradu; izmjereno je koliko ih uopće ima test koji ih dodiru… | `kvar.md`, `SKILL.md` | ⚪ | 3260 |
+| 141 | Pokrivenost izvora mjeri se samo autor-godinom, pa rad koji citira drukcije nema nijeda… | — | — | 3306 |
+| 142 | Sklonidba je deklarirana kao moguc lazan nalaz, a isti redak svejedno nosi crveni krizic | — | — | 3344 |
+| 143 | Provjera koja nije izvedena ispisuje se kao "0 krsenja", uz razlog koji nije tocan | — | — | 3392 |
 
 ## Unosi bez ograde
 
@@ -137,3 +140,6 @@ posao, ne stanje.
 - 72–73 — alat za provjeru tvrdnji bio je i sam tvrdnja bez pokrića (redak 954)
 - 74 — Trajna napomena o metodi nosila je znak ⚠, pa je svaki rad — i savršeno čist — imao barem jedan „na… (redak 965)
 - 98–104 — audit paketa nakon rada Znahor (redak 1308)
+- 141 — Pokrivenost izvora mjeri se samo autor-godinom, pa rad koji citira drukcije nema nijedan citat (redak 3306)
+- 142 — Sklonidba je deklarirana kao moguc lazan nalaz, a isti redak svejedno nosi crveni krizic (redak 3344)
+- 143 — Provjera koja nije izvedena ispisuje se kao "0 krsenja", uz razlog koji nije tocan (redak 3392)
