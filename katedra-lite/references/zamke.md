@@ -365,6 +365,7 @@ alat izlazi s kodom 1 i porukom „NIJE provjereno, nije uredno" umjesto s tihom
 Dokaz: isti rad, prije `exit 0` bez ijednog retka mjerenja, poslije `exit 1` i 4 izmjerene
 slike s 4 kršenja.
 
+Ograda: `test_stari_kvarovi.py` K40 — fixture s jednom slikom, pa `<wp:inline>` preimenovan u `<wp:anchor>`: `inline_shapes` tada vidi 0 (fixture doista reproducira kvar), `_slike` mora vidjeti 1, a `_crteza_u_xml` mora biti 1. Mutacija: uklanjanje poziva `_plutajuce` u `_slike` obara test.
 ## 41. Uvod na razini Heading 2 prijavljuje se kao „rad nema tezu"
 
 `check_argument.py` gradi poglavlja samo iz `Heading 1` (`if razina == 1`). Naslov niže
@@ -392,6 +393,7 @@ se javi „nema uvoda". Kad naslov postoji, poruka glasi „„Uvod” je na raz
 izrijekom kaže **„Ovo NIJE nalaz o tezi — dok je razina naslova kriva, teza se ne mjeri."**
 Regresija provjerena: rad s Uvodom na `Heading 1` i dalje daje zeleno na obje dimenzije.
 
+Ograda: `test_stari_kvarovi.py` K41 — fixture s „Uvod” na Heading 2 mora dati `_uvod_na_krivoj_razini() == (2, ...)`, a isti naslov na Heading 1 mora dati `None`. Mutacija: `poglavlja.nizi_naslovi = []` obara test.
 ## 42. Alat za dokazivanje popravaka ne poznaje smjer tihog kvara koji sam skill proglašava prioritetom
 
 `katedra/SKILL.md` § 1.4 kaže da tihi kvarovi imaju prednost: „Kvar koji sruši skriptu netko
@@ -517,6 +519,7 @@ Popravak: pravilo `format.stranica` u `check_rules.py`, s očekivanom vrijednoš
 Ograda koja bi ga bila uhvatila: procjena stranica koja se poziva na A4 mora prvo provjeriti
 da dokument jest A4, inače procjenjuje nešto što ne postoji.
 
+Ograda: `test_stari_kvarovi.py` K45 — dokument na Letteru (21,59 × 27,94 cm) uz očekivani A4 mora dati `LOSE` s `rule_id = format.stranica`, a A4 uz A4 `OK`. Mutacija: `if not ocekivano` → `if True` (provjera se preskače) obara test.
 ## 46. `_empirijski` se hrani statusom dijela koji time postaje ključan
 
 `_empirijski(kat)` vraća `True` ako je dio `metodologija` u statusu `napravljeno` ili
@@ -963,8 +966,9 @@ skillu i nijedan runner ga odavde nije zvao. `[TREBA IZVOR]` u fusnoti prolazio 
 do predaje. Sada: `rad-audit/scripts/check_placeholders.py` (tijelo, ćelije,
 fusnote, endnote, zaglavlja, podnožja), faza A2 u obama runnerima.
 
----
+Ograda: `test_stari_kvarovi.py` K71 — u predaji je `placeholderi` izravan blokirajući korak koji zove `check_placeholders.py`; u auditu faza A ide kroz blokirajući `motor_audit` (`engine.py --audit` → `rad-audit/generate_report.py`, r. 115, koji sam citira ovaj kvar), a da motor doista nađe `[TREBA IZVOR]` čuva `rad-audit/scripts/tests/test_bolesni.py`. Mutacije: preimenovanje `kid`-a `placeholderi` odnosno `motor_audit` obara po jednu provjeru.
 
+---
 ## 72–73. alat za provjeru tvrdnji bio je i sam tvrdnja bez pokrića
 
 `zakrpa.py --provjeri-tvrdnje` nad `katedra-lite` vraćao je „✓ SKILL.md i kod se
@@ -3428,6 +3432,10 @@ u dnevniku:      · kvar 99924: numeracija preskače — očekivan 24
 Mutacija je usput pokazala i da jedan slom povlači dvije skupine (katalog i
 indeks), što se iz same brojke također nije vidjelo.
 
+Dopuna (kvar 145): izmjeren je mehanizam koji **može** proizvesti točno ovakav
+neponovljiv pad — zastarjeli `.pyc` nad izvorom iste veličine upisanim u istoj
+sekundi. Kandidat, ne dokaz; suite od tada ne piše bytecode.
+
 Ograda: nema — provjera bi tražila pokretanje cijelog suitea unutar suitea, a to
 je skuplje od kvara koji čuva. Umjesto ograde stoji mutacija gore, ponovljiva u
 jednom potezu. Prvi idući pad sam je provjera: ako sažetak ne imenuje skupinu,
@@ -3516,3 +3524,60 @@ bash bloka iznad, gdje ta riječ također stoji, pa je test padao nad ispravnim
 routerom. Uzorak koji hvata prvo pojavljivanje mjeri mjesto, ne tvrdnju.
 
 Ograda: `test_stari_kvarovi.py` K43, K49, K134.
+
+---
+
+## 145. Mutacijski test izvodio je bytecode PRETHODNE mutacije, jer su se dvije mutacije poklopile po veličini i sekundi
+
+Pri ograđivanju kvara 71 dvije su mutacije dirale istu datoteku (`gate.py`):
+preimenovanje koraka `placeholderi`, pa preimenovanje koraka `motor_audit`. Druga
+je trebala oboriti auditnu provjeru, a oborila je — predajnu, točno kao prva:
+
+```
+kvar 71a  → K71: predaja zove check_placeholders.py kao blokirajući korak
+kvar 71b  → K71: predaja zove check_placeholders.py kao blokirajući korak   ← krivo
+```
+
+Izravno mjerenje istog stanja (`koraci("audit")` s mutacijom b) davalo je točan
+rezultat, a tri ručne reprodukcije također. Anomalija je živjela samo u skripti.
+
+Uzrok je potvrđen tek **namjernim izazivanjem uvjeta**, ne pogađanjem:
+
+```
+veličine: izvornik 33096 · mutant A 33097 · mutant B 33097     (oba +1 znak)
+
+A → B s ISTIM mtime-om (os.utime):   pod B pada PREDAJNA provjera   ← zastarjeli .pyc
+A → B s mtime-om pomaknutim 2 s:     pod B pada AUDITNA provjera    ← točno
+```
+
+Python `.pyc` smatra valjanim ako se izvor slaže po **veličini i sekundi
+mtime-a**. Dva mutanta iste duljine, upisana unutar iste sekunde, dijele oba —
+pa se izvodi bytecode prvoga nad izvorom drugoga. Skripta je bila brza, mutanti
+jednako dugi, i „provjera" je mjerila krivi kod, a izgledala kao svaka druga.
+
+Ovo je opasnije od običnog lažnog nalaza: mutacijski test je **ograda ogradama**
+(pravilo 34). Ako on laže, laž se ne da uhvatiti ničim dalje u lancu.
+
+Doseg, izmjeren: raniji mutacijski prolazi u ovom katalogu (kvarovi 141, 143,
+144) mutirali su različite `.py` datoteke ili ne-Python datoteke, pa ih ovaj
+mehanizam nije mogao pogoditi; jedini pogođeni rezultat bio je 71b, i on je sada
+ponovljen ispravno.
+
+Popravak, na dva mjesta:
+
+- mutacijske skripte: `python -B`, `PYTHONDONTWRITEBYTECODE=1` i brisanje
+  `__pycache__` prije svakog prolaza;
+- `bin/testovi.sh`: `export PYTHONDONTWRITEBYTECODE=1`. Suite je malen, bytecode mu
+  ne treba, a lažna boja je skupa.
+
+Isti mehanizam je **kandidat** za neobjašnjeni pad iz kvara 142 („1 od 21 skupina
+palo" odmah poslije `pull`-a, neponovljivo): `pull` prepiše datoteke, a datoteka
+jednake veličine upisana u istoj sekundi u kojoj je prethodno kompilirana ostavlja
+stari `.pyc` valjanim. Kandidat, ne dokaz — za taj događaj nema dnevnika. Od kvara
+142 dnevnik postoji; ako se ponovi, prvo se gleda je li pala skupina čiji je
+izvor mijenjan u toj sekundi.
+
+Ograda: mutacijske skripte same su si ograda — kontrolirani pokus gore ponovljiv je
+u jednom potezu (`os.utime` na isti mtime mora dati krivi rezultat s cacheom, a
+točan s `-B`). Regresijski test u suiteu nema smisla: suite od ovog commita ne piše
+bytecode, pa se uvjet u njemu ne može ni pojaviti.
