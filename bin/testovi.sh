@@ -80,6 +80,9 @@ ostaci_zakrpa() {
   echo "nema ostataka zakrpa među praćenim datotekama"
 }
 pokreni "paket: nema ostataka zakrpa" ostaci_zakrpa
+# service/: verifikator za Katedra app. Testovi koji dižu FastAPI bez paketa fastapi su
+# PRESKOČENI i imenovani (-rs) — deklarirano ograničenje, ne prolaz.
+pokreni "servis: katedra-verifier" env KATEDRA_VERIFIER_TOKEN=dev python3 -m pytest -q -rs -p no:cacheprovider "$KORIJEN/service/tests"
 pokreni "katedra-lite: indeks zamki usklađen s katalogom" \
   python3 "$KORIJEN/katedra-lite/scripts/indeks_zamki.py" --provjeri
 

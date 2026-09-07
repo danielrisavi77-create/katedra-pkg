@@ -59,8 +59,12 @@ FAZE = ("plan", "pisanje", "audit", "predaja")
 #   pukao          provjera se srušila                           → blokira
 OK, NALAZ, PRESKOCENO, PUKAO = "ok", "nalaz", "preskoceno", "pukao"
 NEPRIMJENJIVO = "neprimjenjivo"
+# Kvar 152: pozivatelj koji NE ŽELI pokrenuti korak (forma provjerava drugi sustav) imao
+# je samo --dopusti-preskok, a taj oprašta korak kojemu FALI ULAZ — korak s ulazom se
+# i dalje pokretao. Isključenje je zasebno stanje: upisano, vidljivo, ne blokira.
+ISKLJUCENO = "iskljuceno"
 ZNAK = {OK: "✅", NALAZ: "❌", PRESKOCENO: "➖", PUKAO: "💥",
-        NEPRIMJENJIVO: "◦"}
+        NEPRIMJENJIVO: "◦", ISKLJUCENO: "⊘"}
 
 
 class Korak:
@@ -447,7 +451,11 @@ def pokreni(korak: Korak, cwd: str, suho: bool) -> dict:
         return _rez(stanje="planirano", naredba=naredba, razlog=korak.zasto)
 
     try:
-        r = subprocess.run(argv, cwd=cwd, capture_output=True, text=True, timeout=900)
+        # Kvar 119/153: bez encoding= Windows konzola (cp1250) sruši čitač izlaza i izlaz
+        # koraka nestane; dijete bez PYTHONIOENCODING padne na prvom ✔ koje ispiše.
+        r = subprocess.run(argv, cwd=cwd, capture_output=True, text=True, timeout=900,
+                           encoding="utf-8", errors="replace",
+                           env={**os.environ, "PYTHONIOENCODING": "utf-8"})
     except subprocess.TimeoutExpired:
         return _rez(stanje=PUKAO, kod=None, naredba=naredba,
                     razlog="provjera nije završila u 15 minuta")
@@ -471,6 +479,14 @@ def pokreni(korak: Korak, cwd: str, suho: bool) -> dict:
     grijeh = (r.stderr or "").strip()
     return _rez(stanje=stanje, kod=kod, naredba=naredba, razlog=korak.zasto,
                 izlaz=izlaz[-4000:], greska=grijeh[-2000:])
+
+
+def iskljucen(korak: Korak, razlog: str) -> dict:
+    """Rezultat koraka koji pozivatelj izrijekom NE pokreće (--iskljuci). Nije prošao,
+    nije pao, nije preskočen zbog ulaza: isključen je, s razlogom u izvještaju."""
+    return {"korak": korak.kid, "naziv": korak.naziv, "blokira": korak.blokira,
+            "covjek": korak.covjek, "sekunde": 0.0, "stanje": ISKLJUCENO,
+            "razlog": "isključeno pozivom: " + razlog, "naredba": None}
 
 
 def _bitni_redci(izlaz: str, koliko: int = 8) -> list[str]:
@@ -498,7 +514,7 @@ def _tablica(rezultati: list[dict], faza: str, suho: bool) -> None:
         znak = "·" if r["stanje"] == "planirano" else ZNAK.get(r["stanje"], "?")
         tezina = "blokira" if r["blokira"] else "savjet"
         print(f"{znak} {r['naziv']:<52} {tezina}")
-        if r["stanje"] in (PRESKOCENO, PUKAO, NEPRIMJENJIVO, "planirano") \
+        if r["stanje"] in (PRESKOCENO, PUKAO, NEPRIMJENJIVO, ISKLJUCENO, "planirano") \
                 and r.get("razlog"):
             print(f"     {r['razlog']}")
         if r["stanje"] == PUKAO and r.get("greska"):
@@ -542,6 +558,8 @@ def zakljucak(rezultati: list[dict],
         "nepokrenuto": [r["korak"] for r in nepokrenuti],
         "preskok_dopusten": {k: dop[k] for k in izuzeti},
         "neprimjenjivo": neprimjenjivi,
+        "iskljuceno": {r["korak"]: r.get("razlog", "") for r in rezultati
+                       if r["stanje"] == ISKLJUCENO},
     }
     return (1 if (blokirajuci or nepokrenuti) else 0), sazetak
 
@@ -564,6 +582,11 @@ def main(argv=None) -> int:
                     default=[], metavar="KORAK=RAZLOG",
                     help="blokirajući korak smije ostati nepokrenut, uz upisan razlog; "
                          "može se ponoviti")
+    ap.add_argument("--iskljuci", dest="iskljuci", action="append",
+                    default=[], metavar="KORAK=RAZLOG",
+                    help="korak se NE POKREĆE, uz upisan razlog (npr. formu provjerava "
+                         "drugi sustav); vidljivo u izvještaju, ne blokira. Nije isto što "
+                         "i --dopusti-preskok, koji oprašta korak kojemu fali ulaz")
     args = ap.parse_args(argv)
 
     korijen = context.resolve_project_root(args.project_root)
@@ -579,7 +602,23 @@ def main(argv=None) -> int:
         "kat": kat,
     }
 
-    rezultati = [pokreni(k, korijen, args.suho) for k in koraci(args.faza, c)]
+    iskljuceni: dict[str, str] = {}
+    for stavka in args.iskljuci:
+        korak_id, _, razlog = stavka.partition("=")
+        korak_id, razlog = korak_id.strip(), razlog.strip()
+        if not korak_id or not razlog:
+            print(f"❌ --iskljuci traži oblik KORAK=RAZLOG, dobio: {stavka!r}", file=sys.stderr)
+            return 2
+        iskljuceni[korak_id] = razlog
+    svi = koraci(args.faza, c)
+    nepoznati = sorted(set(iskljuceni) - {k.kid for k in svi})
+    if nepoznati:
+        print(f"❌ --iskljuci imenuje korake kojih u fazi nema: {', '.join(nepoznati)}",
+              file=sys.stderr)
+        return 2
+
+    rezultati = [iskljucen(k, iskljuceni[k.kid]) if k.kid in iskljuceni
+                 else pokreni(k, korijen, args.suho) for k in svi]
     _tablica(rezultati, args.faza, args.suho)
 
     if args.suho:
@@ -616,6 +655,10 @@ def main(argv=None) -> int:
     if s["preskok_dopusten"]:
         print("➖ preskok dopušten izrijekom (upisano u izvještaj):")
         for korak_id, razlog in s["preskok_dopusten"].items():
+            print(f"     {korak_id}: {razlog}")
+    if s["iskljuceno"]:
+        print("⊘ isključeno pozivom, NIJE pokrenuto (upisano u izvještaj):")
+        for korak_id, razlog in s["iskljuceno"].items():
             print(f"     {korak_id}: {razlog}")
     if s["nepokrenuto"]:
         print(f"⛔ NIJE POKRENUTO, a blokira: {', '.join(s['nepokrenuto'])}")

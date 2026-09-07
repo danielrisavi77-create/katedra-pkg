@@ -4,7 +4,7 @@
 > **Ne uređuj ručno.** Nakon izmjene kataloga: `indeks_zamki.py --upisi`.
 > `bin/testovi.sh` pada ako je ovaj indeks zastario.
 
-Unosa: **94** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom: **83** · ograda ne pripada (deklarirano): **16** · **duguje ogradu: 0**
+Unosa: **96** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom: **85** · ograda ne pripada (deklarirano): **16** · **duguje ogradu: 0**
 
 Traži bez učitavanja cijelog kataloga:
 
@@ -114,3 +114,5 @@ sed -n '844,880p' katedra-lite/references/zamke.md   # unos po retku
 | 149 | Tri `.diff` datoteke iz cloud sesije ušle su u paket i u svaku gradnju kartica, jer ost… | `testovi.sh` | ✅ | 3738 |
 | 150 | Fiksan prored javljao se u EMU („prored je 152400,00”), pa je poruka skrivala baš onu č… | `provjeri_predaju.py`, `test_stari_kvarovi.py` | ✅ | 3765 |
 | 151 | Provjera kataloga mjerila je oblik markdowna, a javljala se kao da mjeri sadržaj | `brojke.md`, `test_kvar.py` | ✅ | 3812 |
+| 152 | katedra-verifier: od četiri faze radila je jedna, a korake forme „isključivao” je zasta… | `stanje.json`, `rad.docx`, `gate.json` | ✅ | 3869 |
+| 153 | gate.py je čitao izlaz koraka bez encoding=, pa je na Windows konzoli izlaz bio mojibak… | `test_gate.py` | ✅ | 3912 |
