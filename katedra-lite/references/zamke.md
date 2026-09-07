@@ -3710,3 +3710,30 @@ $ profile_registry.py --write && git diff references/fakulteti/index.json
 Popravak: `_rel()` u `profile_rules.py` — jedna normalizacija za hash i za registry.
 
 Ograda: `test_stari_kvarovi.py` K148 — `generate_registry` nad kopijom `references/fakulteti` ne smije dati backslash ni u `generated_from` ni u `rute[].source`. Provjera je stvarna samo na Windowsu (na Linuxu `relative_to` i bez popravka daje `/`); suite se ovdje vrti na Windowsu. Mutacija: `_rel` bez `.replace` obara obje.
+
+---
+
+## 149. Tri `.diff` datoteke iz cloud sesije ušle su u paket i u svaku gradnju kartica, jer ostatke zakrpa ništa ne traži
+
+Nađeno usput pri kvaru 32 (`ls references/fakulteti/`). Tri datoteke, 1 991 B, nastale
+1. 9. 2026. u cloud sesiji (`/tmp/kl-skill` → `/home/claude/katedra-lite-rt`), praćene od
+`2fab294` (subtree 2. 9.), isporučene u svakoj gradnji kartica otada:
+
+```
+$ git ls-files | grep -E '\.(diff|bak|orig|rej)$'
+katedra-lite/references/fakulteti/fakulteti__resolved_schema.json.diff
+katedra-lite/references/fakulteti/fakulteti__schema.json.diff
+katedra-lite/references/fakulteti/fakulteti_fpzg.json.diff
+$ patch --dry-run -p3 -N < fakulteti_fpzg.json.diff
+Reversed (or previously applied) patch detected!  Skipping patch.
+```
+
+Sve tri su već primijenjene (esej u enumu tipova, `primjerci` u shemi, `null` opsezi eseja
+maknuti), pa ne nose ništa što kod ne zna — samo šum koji korisnik dobije u kartici i koji
+sljedeći čitač mora tumačiti. Kod ih ignorira (`_faculty_profile_paths` uzima samo `*.json`),
+pa nije bilo nalaza koji bi ih otkrio: datoteka koju ništa ne čita ne pada ni na čemu.
+
+Popravak: obrisane; `bin/testovi.sh` dobiva skupinu koja pada na svakoj praćenoj
+`.diff/.bak/.orig/.rej` datoteci i imenuje je.
+
+Ograda: `bin/testovi.sh` skupina „paket: nema ostataka zakrpa” — `git ls-files` ne smije sadržavati `.diff/.bak/.orig/.rej`. Mutacija: staged `ostatak.bak` → skupina crvena i sažetak je imenuje.
