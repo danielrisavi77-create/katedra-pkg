@@ -47,6 +47,17 @@ def modul_rad_audit(ime):
     return m
 
 
+def modul_rad_docx(ime):
+    """Modul iz sestrinskog skilla `rad-docx`."""
+    put = os.path.join(os.path.dirname(KORIJEN), "rad-docx", "scripts")
+    spec = importlib.util.spec_from_file_location(ime, os.path.join(put, ime + ".py"))
+    m = importlib.util.module_from_spec(spec)
+    if put not in sys.path:
+        sys.path.insert(0, put)
+    spec.loader.exec_module(m)
+    return m
+
+
 def modul_katedra(ime):
     """Modul iz sestrinskog skilla `katedra` (isti paket, druga mapa)."""
     put = os.path.join(os.path.dirname(KORIJEN), "katedra", "scripts")
@@ -592,6 +603,149 @@ def main():
     r_bs = [x["source"] for x in reg["rute"] if "\\" in x["source"]]
     check("K148: generated_from nema backslash", not s_bs, s_bs)
     check("K148: rute[].source nema backslash", not r_bs, r_bs[:3])
+
+    # --- 99: pod zahvatom `stil` tipografski popravak markera nije promjena ------
+    # Isti par .md datoteka: natpis s dvostrukim razmakom → s NBSP-om i jednim.
+    vr = modul("verify_rewrite")
+    tijelo99 = "Ovo je odlomak tijela rada koji ima dovoljno riječi da bude odlomak, a ne natpis niti naslov."
+    md_a = os.path.join(mapa, "prije.md")
+    md_b = os.path.join(mapa, "poslije.md")
+    with open(md_a, "w", encoding="utf-8") as f:
+        f.write("# Uvod\n\n" + tijelo99 + "\n\n## Tablica 1. Udaljenost 5 km  po danu\n\n" + tijelo99 + "\n")
+    with open(md_b, "w", encoding="utf-8") as f:
+        f.write("# Uvod\n\n" + tijelo99 + "\n\n## Tablica 1. Udaljenost 5" + chr(160) + "km po danu\n\n" + tijelo99 + "\n")
+
+    def markeri99(zahvat):
+        return [k for k, p, *_ in vr.usporedi(md_a, md_b, zahvat=zahvat) if "marker" in p]
+
+    check("K99: pod `stil` NBSP/dvostruki razmak u natpisu NIJE promjena markera",
+          markeri99("stil") == ["ok"], markeri99("stil"))
+    check("K99: pod `geometrija` isti par JEST promjena markera (doslovnost ostaje)",
+          markeri99("geometrija") == ["x"], markeri99("geometrija"))
+
+    # --- 100/101/104: alati rad-docx nad fixture dokumentima ---------------------
+    from docx.enum.text import WD_LINE_SPACING
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+    from docx.shared import Cm, Pt
+    import zipfile
+    pp = modul_rad_docx("provjeri_predaju")
+
+    def dxml_iz(put):
+        with zipfile.ZipFile(put) as zz:
+            return zz.read("word/document.xml").decode("utf-8")
+
+    # 100: numeracija tijela je ondje gdje se RESTARTA, ne u posljednjoj sekciji
+    def doc_numeracija(ime, restart_u_sredini):
+        d = Document()
+        d.add_paragraph("Naslovnica i sadržaj")
+        d.add_section()
+        d.add_paragraph("Uvod", style="Heading 1")
+        d.add_paragraph(tijelo99)
+        d.add_section()
+        d.add_paragraph("Prilog", style="Heading 1")
+        d.add_paragraph(tijelo99)
+        if restart_u_sredini is not None:
+            # python-docx: add_section() vraća sekciju nad ISTIM sentinel sectPr-om
+            # (kasnije zadnjom), pa prva inačica ove ograde nije gađala srednju
+            # sekciju i mutacija ju je preživjela. Sekcija se uzima po indeksu.
+            cilj = d.sections[1] if restart_u_sredini else d.sections[2]
+            pg = OxmlElement("w:pgNumType")
+            pg.set(qn("w:start"), "1")
+            cilj._sectPr.append(pg)
+            cilj.footer.is_linked_to_previous = False
+            cilj.footer.paragraphs[0].text = "str."
+        put = os.path.join(mapa, ime)
+        d.save(put)
+        return put
+
+    prof100 = {"format": {"numeracija": {"tijelo_pocinje_od": 1, "prednji_dio": "bez"}}}
+
+    def numeracija_greske(put):
+        P100 = pp.Provjera()
+        pp.provjeri_numeraciju(P100, dxml_iz(put), prof100)
+        return P100.greske
+
+    g = numeracija_greske(doc_numeracija("num_sredina.docx", True))
+    check("K100: restart u SREDNJOJ sekciji s podnožjem, zadnja (prilog) bez podnožja → bez greške", not g, g)
+    g = numeracija_greske(doc_numeracija("num_bez.docx", None))
+    check("K100: nijedna sekcija ne restarta → greška koja to kaže (provjera je živa)",
+          any("nijedna sekcija" in x for x in g), g)
+
+    # 101: „prored je fiksan — slike se obrežu” samo za odlomke koji NOSE sliku
+    from PIL import Image
+    png = os.path.join(mapa, "slika101.png")
+    Image.new("RGB", (300, 120), "white").save(png)
+
+    def doc_prored(ime, slika, slika_fiksna):
+        d = Document()
+        sec = d.sections[0]
+        sec.page_width, sec.page_height = Cm(21.0), Cm(29.7)
+        d.add_paragraph("Uvod", style="Heading 1")
+        for i in range(5):
+            p = d.add_paragraph(tijelo99 + " (%d)" % i)
+            p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.EXACTLY
+            p.paragraph_format.line_spacing = Pt(12)
+        if slika:
+            p = d.add_paragraph(tijelo99 + " (sa slikom)")
+            if slika_fiksna:
+                p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.EXACTLY
+                p.paragraph_format.line_spacing = Pt(12)
+            else:
+                p.paragraph_format.line_spacing = 1.5
+            p.add_run().add_picture(png, width=Cm(5))
+        put = os.path.join(mapa, ime)
+        d.save(put)
+        return put
+
+    def fiksan(put):
+        P101 = pp.Provjera()
+        pp.provjeri_format(P101, put, Document(put), {"format": {"prored": 1.5}})
+        return ([x for x in P101.greske if "fiksan" in x], [x for x in P101.upozorenja if "fiksan" in x])
+
+    g, u = fiksan(doc_prored("prored_bez.docx", False, False))
+    check("K101: fiksan prored bez ijedne slike → ni greška ni upozorenje o slikama", not g and not u, (g, u))
+    g, u = fiksan(doc_prored("prored_fiks.docx", True, True))
+    check("K101: slika u fiksno proređenom odlomku → GREŠKA (obrezuje se)", bool(g), (g, u))
+    g, u = fiksan(doc_prored("prored_nefiks.docx", True, False))
+    check("K101: slika u nefiksnom odlomku uz fiksni ostatak → samo upozorenje", not g and bool(u), (g, u))
+
+    # 104: mrtvi medijski dijelovi se vide, broje i čiste u ZASEBAN izlaz
+    import hashlib
+    ip = modul_rad_docx("inventar_paketa")
+    ps = modul_rad_docx("priprema_slanja")
+    d = Document()
+    d.add_paragraph("Uvod", style="Heading 1")
+    d.add_paragraph(tijelo99)
+    d.add_picture(png, width=Cm(8))
+    cist = os.path.join(mapa, "cist104.docx")
+    d.save(cist)
+    mrtav = os.path.join(mapa, "mrtav104.docx")
+    with zipfile.ZipFile(cist) as zin, zipfile.ZipFile(mrtav, "w", zipfile.ZIP_DEFLATED) as zout:
+        for i in zin.infolist():
+            data = zin.read(i.filename)
+            if i.filename == "word/document.xml":
+                data = re.sub(rb"<w:drawing>.*?</w:drawing>", b"", data, flags=re.S)
+            zout.writestr(i, data)
+    check("K104: čist dokument nema mrtvih medijskih dijelova", ip.mrtvi_mediji(cist) == [], ip.mrtvi_mediji(cist))
+    m = ip.mrtvi_mediji(mrtav)
+    check("K104: slika bez <w:drawing> je točno jedan mrtvi dio s veličinom",
+          len(m) == 1 and m[0][1].startswith("word/media/") and m[0][2] > 0, m)
+    check("K104: težina broji mrtvo zasebno i jednako",
+          m and ip.tezina(mrtav)["mrtvo_bajtova"] == m[0][2], ip.tezina(mrtav))
+    izlaz = os.path.join(mapa, "za_slanje104.docx")
+    h0 = hashlib.sha256(open(mrtav, "rb").read()).hexdigest()
+    ps.pripremi(mrtav, izlaz, 300)
+    h1 = hashlib.sha256(open(mrtav, "rb").read()).hexdigest()
+    # I bajtovi moraju otići, ne samo relacija: datoteka bez relacije i dalje se da
+    # izvaditi iz paketa (prva inačica gledala je samo relacije i mutacija je prošla).
+    check("K104: izlaz za slanje nema mrtvih dijelova NI medijskih bajtova, a ulaz je netaknut",
+          os.path.isfile(izlaz) and ip.mrtvi_mediji(izlaz) == [] and ip.tezina(izlaz)["medij_bajtova"] == 0 and h0 == h1,
+          (ip.mrtvi_mediji(izlaz), ip.tezina(izlaz), h0 == h1))
+    rr = subprocess.run([sys.executable, "-B", os.path.join(os.path.dirname(KORIJEN), "rad-docx", "scripts", "priprema_slanja.py"),
+                         mrtav, "--izlaz", mrtav], capture_output=True, text=True,
+                        encoding="utf-8", errors="replace", env=dict(os.environ, PYTHONIOENCODING="utf-8"))
+    check("K104: izlaz = ulaz odbija s kodom 2 (arhiva se ne prepisuje)", rr.returncode == 2, (rr.returncode, rr.stderr[-120:]))
 
     print("=" * 70)
     print("REZULTATI TESTOVA: %d/%d prošlo"

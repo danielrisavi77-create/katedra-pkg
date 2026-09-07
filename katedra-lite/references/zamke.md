@@ -1432,18 +1432,40 @@ Profil zasad stoji kao datoteka, kao i `hks-fzs`, i **nije upisan u registry**:
 `efzg` zastario. To se ne zaobilazi; upis u registry je zaseban zahvat koji počinje
 ponovnim pokretanjem `faculty_scale_gate.py`.
 
-**Djelomično pokriveno, i to se ne zaokružuje.** Dva od sedam kvarova imaju regresijski test, oba u `katedra-lite/scripts/tests/test_gate.py` i oba provjerena mutacijom:
+**Pokriveno u cijelosti (v1.9.32), stavku po stavku, svaka mutacijom.** Prije pisanja ograda
+svaki je alat izmjeren na fixture dokumentu (pravilo 35); pritom se pokazalo da 102 ogradu
+**već ima** — rad-audit `test_all.py` R35, tri provjere — dok je ovaj unos tvrdio da je nema
+(obrazac iz kvara 147: tvrdnja u katalogu bez ponovnog mjerenja).
 
 ```
-kvar 98   Z1: profil bez format.odlomak daje kod 3 (preskočeno), ne 2
-          mutacija `return 3` → `return 2`   →  Z1 pada
-kvar 103  Z2: crni stupac na lijevom rubu JEST nalaz
-          mutacija `_rub_odrezan` → `{}`     →  Z2 pada  (36/36 → 35/36)
+kvar 98   test_gate.py Z1 — profil bez format.odlomak daje kod 3, ne 2;   mutacija `return 3` → `return 2` obara
+kvar 99   test_stari_kvarovi.py K99 — isti .md par (dvostruki razmak → NBSP u natpisu):
+          `stil` → markeri ok, `geometrija` → ❌;                        mutacija `if zahvat == "stil"` → `if False` obara
+kvar 100  K100 — restart numeracije u SREDNJOJ sekciji s podnožjem, zadnja (prilog) bez
+          podnožja → bez greške; bez restarta → „nijedna sekcija”;  mutacija `sekcije[gdje[0]]` → `sekcije[-1]` obara
+kvar 101  K101 — bez slike: nema nalaza „fiksan”; slika u fiksnom odlomku: greška;
+          slika u nefiksnom uz fiksni ostatak: samo upozorenje;     mutacija `pogodeni` iz svih odlomaka obara
+kvar 102  rad-audit test_all.py R35 — dosljedan dijalekt nije nalaz, miješan jest;
+          postojao i prije ovog kruga;                                mutacija `if drugi` → `if False` obara (183/185)
+kvar 103  test_gate.py Z2 — crni stupac na rubu jest nalaz;            mutacija `_rub_odrezan` → `{}` obara
+kvar 104  K104 — čist .docx: 0 mrtvih; .docx s uklonjenim <w:drawing>: točno jedan (416 B)
+          i težina ga broji; `pripremi` daje izlaz bez mrtvih, ulaz netaknut (sha256),
+          CLI s izlazom = ulazu vraća 2, izlaz bez medijskih BAJTOVA; mutacije: filtar `in rabljeni` maknut obara čist slučaj,
+                                              `mrtvi = set()` u `pripremi` obara izlaz
 ```
 
-Preostalih pet (99–102, 104) nema regresijski test. Zbog toga ovaj unos **ostaje u dugu** — zbirni unos nije pokriven dok mu nisu pokrivene stavke, a rečenica koja imenuje ogradu ovdje bi ga maknula s popisa i time slagala. Popis duga vrijedi onoliko koliko mu se vjeruje kad je neugodan.
+Dvije prve inačice ograda preživjele su mutaciju, a oko to nije vidjelo: K100 — python-docx
+`add_section()` vraća sekciju nad istim sentinel `sectPr`-om koji poslije postane ZADNJA sekcija,
+pa je „restart u sredini” ležao u zadnjoj (zamka za `docx_zamke.md`); K104 — ograda je gledala
+relacije, a mutacija je maknula relaciju i ostavila bajtove u `word/media/`. Obje prepisane.
+
+Usput izmjereno, nije popravljeno: uz `EXACTLY` prored `provjeri_format` javlja „prored je 152400,00, profil traži 1,50” —
+vrijednost u EMU, nečitljiva čovjeku. Zaseban kvar kad dođe na red.
+
+Ograda: `test_stari_kvarovi.py` K99, K100, K101, K104; `test_gate.py` Z1, Z2; rad-audit `test_all.py` R35 — sve mutirane, popis gore. Dug ograda je time 0.
 
 ---
+
 ## 105. metapodaci: cijela razina dokumenta koju nitko nije gledao
 
 Lanac je čitao tekst, brojke, citate, polja, slike i paket. `docProps/` nije

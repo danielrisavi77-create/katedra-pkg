@@ -88,3 +88,14 @@ repozitorij nije higijena nego sadržaj.
 
 `inventar_paketa.mrtvi_mediji()` ih nalazi, `priprema_slanja.py` ih uklanja.
 Uklanjanje ide u **zasebnu izlaznu datoteku**: arhivska verzija ostaje netaknuta.
+
+## 7. `python-docx`: `add_section()` vraća sekciju nad sentinel `sectPr`-om
+
+`s2 = d.add_section(); …; s3 = d.add_section()` — `s2` i `s3` omataju ISTI element:
+`add_section()` klonira zadnji (sentinel) `sectPr` u odlomak i vraća sekciju nad
+sentinelom, koji nakon sljedećeg poziva postane zadnja sekcija. Sve što se poslije
+upiše u `s2` (numeracija, podnožje) završi u ZADNJOJ sekciji. Nađeno pri ograđivanju
+kvara 100: fixture „restart u srednjoj sekciji” imao je restart u prilogu, a mutacija
+je preživjela. Sekcije se uzimaju po indeksu **nakon** što su sve dodane:
+`d.sections[1]`.
+
