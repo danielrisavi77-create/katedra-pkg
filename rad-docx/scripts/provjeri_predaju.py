@@ -39,6 +39,12 @@ def hr(x, dec=2):
     return f"{float(x):.{dec}f}".replace(".", ",")
 
 
+def hr_kratko(x):
+    """Broj bez suvišne decimalne nule: 12,0 → „12", 12,5 → „12,5"."""
+    s = hr(x, 1)
+    return s[:-2] if s.endswith(",0") else s
+
+
 def ravno(d, prefiks=""):
     """Ugniježđeni JSON → {putanja: broj} za sve brojeve."""
     out = {}
@@ -321,6 +327,17 @@ def provjeri_format(P, docx_put, d, profil):
         u_stilu = ('w:line="%d"' % round(trazeni * 240)) in styles
         if prored is None:
             P.u("prored nije zadan ni na odlomcima ni u stilu — nasljeđuje se iz predloška")
+        elif isinstance(prored, docx.shared.Length):
+            # Kvar 150: kad je pravilo EXACTLY ili AT_LEAST, python-docx vraća
+            # `line_spacing` kao Length (EMU), a ne kao višekratnik. Grana ispod
+            # ga je gurala kroz `float()` i ispisivala „prored je 152400,00,
+            # profil traži 1,50" — broj koji čovjek ne može pročitati i koji
+            # skriva pravu činjenicu: prored je zadan u TOČKAMA, pa višekratnik
+            # iz profila ne može ni pogoditi, koliko god točaka stavili.
+            kako = "najmanje" if "AT_LEAST" in (pravila or "").upper() else "fiksan"
+            P.g(f"prored je {kako} {hr_kratko(prored.pt)} pt, profil traži "
+                f"višekratnik {hr_kratko(trazeni)} "
+                f"(u {udio * 100:.0f} % odlomaka tijela)")
         elif abs(float(prored) - trazeni) > 0.01:
             P.g(f"prored je {hr(float(prored), 2)}, profil traži {hr(trazeni)} "
                 f"(u {udio * 100:.0f} % odlomaka tijela)")
