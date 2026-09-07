@@ -60,7 +60,7 @@ se ne može provjeriti sabiranjem izgleda kao greška čak i kad je točniji.
 
 ```python
 ukupno_prikazano = r3(sum(r3(f * r2(g)) for f, g in scenariji))   # 1,816
-# točna vrijednost je 1,8155 — ali nju nitko ne može provjeriti iz tablice
+# točna vrijednost je 1,8151 — ali nju nitko ne može provjeriti iz tablice
 ```
 
 Ako se razlika ne može izbjeći, **navedi je u izvoru pod tablicom**: „razlika u trećoj
