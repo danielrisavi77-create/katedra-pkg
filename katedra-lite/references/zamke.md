@@ -1394,8 +1394,18 @@ Profil zasad stoji kao datoteka, kao i `hks-fzs`, i **nije upisan u registry**:
 `efzg` zastario. To se ne zaobilazi; upis u registry je zaseban zahvat koji počinje
 ponovnim pokretanjem `faculty_scale_gate.py`.
 
----
+**Djelomično pokriveno, i to se ne zaokružuje.** Dva od sedam kvarova imaju regresijski test, oba u `katedra-lite/scripts/tests/test_gate.py` i oba provjerena mutacijom:
 
+```
+kvar 98   Z1: profil bez format.odlomak daje kod 3 (preskočeno), ne 2
+          mutacija `return 3` → `return 2`   →  Z1 pada
+kvar 103  Z2: crni stupac na lijevom rubu JEST nalaz
+          mutacija `_rub_odrezan` → `{}`     →  Z2 pada  (36/36 → 35/36)
+```
+
+Preostalih pet (99–102, 104) nema regresijski test. Zbog toga ovaj unos **ostaje u dugu** — zbirni unos nije pokriven dok mu nisu pokrivene stavke, a rečenica koja imenuje ogradu ovdje bi ga maknula s popisa i time slagala. Popis duga vrijedi onoliko koliko mu se vjeruje kad je neugodan.
+
+---
 ## 105. metapodaci: cijela razina dokumenta koju nitko nije gledao
 
 Lanac je čitao tekst, brojke, citate, polja, slike i paket. `docProps/` nije
@@ -3418,3 +3428,39 @@ Ograda: nema — provjera bi tražila pokretanje cijelog suitea unutar suitea, a
 je skuplje od kvara koji čuva. Umjesto ograde stoji mutacija gore, ponovljiva u
 jednom potezu. Prvi idući pad sam je provjera: ako sažetak ne imenuje skupinu,
 popravak ne radi.
+
+---
+
+## 143. Unos koji o ogradi samo GOVORI ispao je iz popisa duga
+
+Zbirni unos 98–104 dobio je rečenicu koja izrijekom kaže da **ostaje u dugu** jer
+mu je pokriveno dva od sedam kvarova. Poslije te izmjene:
+
+```
+prije rečenice:  duguje ogradu: 15
+poslije:         duguje ogradu: 14        ← unos je nestao s popisa
+```
+
+Uzrok je u samoj rečenici. Da objasni zašto ne smije stajati, citirala je token:
+„rečenica koja počinje s `Ograda:` ovdje bi ga maknula s popisa". Detektor je taj
+citat pročitao kao tvrdnju da ograda postoji — pa je unos koji je *tražio* da
+ostane otvoren zatvorio sam sebe.
+
+Isti oblik kao kvarovi 132 i 139: detektor gleda **oblik teksta**, a tekst govori
+o samom detektoru. Razlika je što ovdje šteta ide u smjeru koji se ne primijeti —
+dug se **smanjuje**, a smanjenje nitko ne provjerava.
+
+Popravak je uzak namjerno: rep koji počinje trotočkom (`…` ili `...`) nije ograda.
+To pogađa točno citat i placeholder, a ne dira nijednu stvarnu ogradu — provjereno
+na svih 62 unosa sa stanjem „ima", nijedan nema takav rep.
+
+Usput izmjereno, i **nije** popravljeno: od 62 ograde njih **5** ne imenuje nijedan
+artefakt (datoteku u navodnicima ni oznaku testa) nego opisuje doktrinarnu
+promjenu — kvarovi 43, 49, 50, 53 i 134. Strože pravilo („ograda mora imenovati
+artefakt") preselilo bi ih u dug. Nije uvedeno jer bi promijenilo značenje brojke
+u istom potezu u kojem se ona popravlja; zapisano da se odluka donese svjesno, ne
+usput.
+
+Ograda: `test_indeks.py` R75 — citat s trotočkom mora ostati dug, prava ograda mora
+ostati ograda. Mutacija: uklanjanje trotočke iz `NIJE_OGRADA_RE` obara prve dvije
+provjere.

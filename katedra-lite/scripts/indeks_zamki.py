@@ -51,7 +51,7 @@ OGRADA_RE = re.compile(
     r"(?:\*\*)?Ograd[ae]\b:?(?:\*\*)?\s*(?P<rep>.{0,40})", re.S
 )
 # „nema" bez razloga nije ograda ni deklaracija — ostaje dug (kvar 139).
-NIJE_OGRADA_RE = re.compile(r"^\s*(?:koj[aei]|nema\b|protiv\s+ponavljanja[,:]?\s*$)")
+NIJE_OGRADA_RE = re.compile(r"^\s*(?:koj[aei]|nema\b|\u2026|\.\.\.|protiv\s+ponavljanja[,:]?\s*$)")
 
 
 # Kvar 139: „nema ogradu" spajalo je tri stanja u jedno — unos kojemu ograda
