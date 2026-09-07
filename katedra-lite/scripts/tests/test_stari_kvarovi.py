@@ -477,6 +477,122 @@ def main():
     check("K38: ⏸ nedostupno prvo traži ponovnu provjeru mreže",
           "ponovi" in radnja3, radnja3[:100])
 
+    # --- 35: u numeričkom dijalektu točka iza godine je kraj reference -----------
+    # Na Vancouver profilu (tocka_iza_godine: false) jedinica „…; 2014.”
+    # davala je ❌ „godina s točkom” — 11 od 75 na stvarnom radu, sve lažno.
+    # Katalog je kvar vodio kao NEPOPRAVLJEN, a kod ga je popravio (v1.9): ovo je
+    # ograda i za popravak i za istinitost unosa.
+    jed = "15. Ozimec Vulinec Š. Palijativna skrb. Zagreb: Zdravstveno veleučilište; 2014."
+    o_van = pl.ocekivani_oblik({"citiranje": {"stil": "vancouver", "tocka_iza_godine": False}})
+    o_ag = pl.ocekivani_oblik({"citiranje": {"stil": "autor-godina", "tocka_iza_godine": False}})
+    check("K35: Vancouver — završna točka iza godine NIJE nalaz",
+          not any("godina s točkom" in x[1] for x in pl.provjeri_jedinicu(jed, o_van)),
+          pl.provjeri_jedinicu(jed, o_van))
+    check("K35: autor-godina bez točke — ista jedinica JEST nalaz (pravilo i dalje živi)",
+          any("godina s točkom" in x[1] for x in pl.provjeri_jedinicu(jed, o_ag)))
+
+    # --- 32: gate bez benchmarka, registry bez gatea ---------------------------
+    # evals/ nije u paketu: gate je tražio benchmark i cases koji nikad nisu bili u
+    # repou, registry je od v1.9.3 bio stale za efzg i nitko nije primijetio.
+    import shutil
+    fsg = modul("faculty_scale_gate")
+    prr = modul("profile_rules")
+    pol = {"core_benchmark_min_accuracy": 1.0, "max_regressions": 0, "max_critical_regressions": 0}
+    prov, sha, upoz = fsg.benchmark_check(None, pol)
+    check("K32: bez benchmarka provjera je preskočena, prolazi, hash None i nosi ⚠",
+          prov.get("passed") and prov.get("skipped") and sha is None
+          and any("bez benchmarka" in u for u in upoz), (prov, sha, upoz))
+    for ime, acc in (("ok", 1.0), ("los", 0.5)):
+        with open(os.path.join(mapa, "bench_%s.json" % ime), "w", encoding="utf-8") as f:
+            json.dump({"candidate": {"score": {"accuracy": acc}}, "comparison": {}}, f)
+    prov, sha, upoz = fsg.benchmark_check(fsg.Path(os.path.join(mapa, "bench_ok.json")), pol)
+    check("K32: benchmark koji postoji i prolazi daje passed + hash, bez ⚠",
+          prov.get("passed") and not prov.get("skipped") and sha and not upoz, (prov, sha, upoz))
+    prov, sha, upoz = fsg.benchmark_check(fsg.Path(os.path.join(mapa, "bench_los.json")), pol)
+    check("K32: benchmark s accuracy 0.5 NE prolazi (prag i dalje živi)", not prov.get("passed"), prov)
+
+    fak = os.path.join(mapa, "fakulteti")
+    shutil.copytree(os.path.join(KORIJEN, "references", "fakulteti"), fak,
+                    ignore=shutil.ignore_patterns("__pycache__", "*.diff"))
+    prr.refresh_stale_admissions(fak)          # polazište: kopija je usklađena
+    # … i efzg je production, inače bi „→ advisory” prošlo vakuumski (kopija repoa
+    # već jest advisory; prva inačica ove ograde preživjela je mutaciju zbog toga).
+    kat_put = os.path.join(fak, "_support_catalog.json")
+    with open(kat_put, encoding="utf-8") as f:
+        kat_sve = json.load(f)
+    kat_sve["profiles"]["efzg"]["tier"] = "production"
+    with open(kat_put, "w", encoding="utf-8") as f:
+        json.dump(kat_sve, f, ensure_ascii=False, indent=2)
+    efzg = os.path.join(fak, "efzg.json")
+    with open(efzg, "a", encoding="utf-8") as f:
+        f.write("\n")                          # isti JSON, drugi bajtovi = drugi bundle
+    try:
+        prr._admitted_profiles(fak)
+        stale = ""
+    except prr.ProfileRuleError as e:
+        stale = str(e)
+    check("K32: promijenjen bundle je stale i poruka kaže oba izlaza",
+          "stale za efzg" in stale and "bez-admisije" in stale, stale[:160])
+
+    def registry(*argv):
+        rr = subprocess.run([sys.executable, "-B", os.path.join(SCRIPTS, "profile_registry.py"),
+                             "--faculty-dir", fak] + list(argv), capture_output=True, text=True,
+                            encoding="utf-8", errors="replace",
+                            env=dict(os.environ, PYTHONIOENCODING="utf-8"))
+        return rr.returncode, rr.stdout + rr.stderr
+
+    k, out = registry("--check")
+    check("K32: --check nad stale registryjem vraća 2 i imenuje profil", k == 2 and "efzg" in out, (k, out[-160:]))
+    k, out = registry("--write")
+    check("K32: --write bez --bez-admisije i dalje odbija (gate se ne zaobilazi tiho)", k == 2, (k, out[-160:]))
+    k, out = registry("--check", "--bez-admisije")
+    check("K32: --bez-admisije bez --write je greška uporabe", k == 2, (k, out[-160:]))
+    k, out = registry("--write", "--bez-admisije")
+    check("K32: --write --bez-admisije prolazi i na ispisu imenuje što je degradirao",
+          k == 0 and "⚠ efzg" in out and "production → advisory" in out, (k, out[-200:]))
+    with open(os.path.join(fak, "_support_catalog.json"), encoding="utf-8") as f:
+        kat = json.load(f)["profiles"]["efzg"]
+    check("K32: katalog nosi novi hash i tier advisory",
+          kat["tier"] == "advisory" and kat["bundle_sha256"] == prr.faculty_bundle_sha256(fak, "efzg"), kat)
+    with open(os.path.join(fak, "index.json"), encoding="utf-8") as f:
+        tier_u_indeksu = {x["slug"]: x.get("support_tier") for x in json.load(f)["fakulteti"]}
+    check("K32: index.json kaže advisory za efzg", tier_u_indeksu.get("efzg") == "advisory", tier_u_indeksu)
+    k, out = registry("--check")
+    check("K32: poslije toga --check prolazi", k == 0, (k, out[-160:]))
+
+    # gate bez cases (evals/ nije u paketu): poruka s izlazom, ne Errno — i prije jsonschema
+    def gate(*argv, **env):
+        rr = subprocess.run([sys.executable, "-B", os.path.join(SCRIPTS, "faculty_scale_gate.py"),
+                             "--faculty-dir", fak, "--fakultet", "efzg", "--tier", "pilot",
+                             "--as-of", "2026-09-07"] + list(argv),
+                            capture_output=True, text=True, encoding="utf-8", errors="replace",
+                            env=dict(os.environ, PYTHONIOENCODING="utf-8", **env))
+        return rr.returncode, rr.stderr
+
+    k, err = gate("--cases", os.path.join(mapa, "nema.jsonl"))
+    check("K32: gate bez cases kaže gdje je izlaz (--bez-admisije), kod 2, ne Errno",
+          k == 2 and "bez-admisije" in err and "Errno" not in err and "Traceback" not in err, (k, err[-200:]))
+
+    # bez paketa jsonschema: ❌ s uputom i kod 2, ne traceback (stub zaklanja pravi paket)
+    stub = os.path.join(mapa, "bez_jsonschema", "jsonschema")
+    os.makedirs(stub)
+    with open(os.path.join(stub, "__init__.py"), "w", encoding="utf-8") as f:
+        f.write("raise ImportError('stub: nema jsonschema')\n")
+    cases = os.path.join(mapa, "cases.jsonl")
+    with open(cases, "w", encoding="utf-8") as f:
+        f.write(json.dumps({"id": "c1", "faculty": "efzg", "query": "efzg", "expected": {"/slug": "efzg"}}) + "\n")
+    k, err = gate("--cases", cases, PYTHONPATH=os.path.join(mapa, "bez_jsonschema"))
+    check("K32: bez paketa jsonschema gate kaže ❌ što napraviti (kod 2), ne traceback",
+          k == 2 and "jsonschema" in err and "Traceback" not in err, (k, err[-200:]))
+
+    # --- 148: registry ne smije ovisiti o OS-u na kojem je generiran ---------
+    # Stvarna provjera samo na Windowsu (na Linuxu relative_to i bez popravka daje /).
+    reg = prr.generate_registry(fak)
+    s_bs = [x for x in reg["generated_from"] if "\\" in x]
+    r_bs = [x["source"] for x in reg["rute"] if "\\" in x["source"]]
+    check("K148: generated_from nema backslash", not s_bs, s_bs)
+    check("K148: rute[].source nema backslash", not r_bs, r_bs[:3])
+
     print("=" * 70)
     print("REZULTATI TESTOVA: %d/%d prošlo"
           % (len(SVE) - len(PALO), len(SVE)))

@@ -53,7 +53,7 @@ python3 <KATEDRA_SKILL>/scripts/faculty_scale_gate.py \
 ```
 
 Prije `--admit` moraju proći schema, routing, provenance, `evals/quality/faculty_cases.jsonl`
-i stabilni B18 core benchmark. `production` dodatno zahtijeva `status: potvrdeno` i fresh provenance.
+i B18 core benchmark ako postoji (bez njega gate prolazi uz ⚠ „admisija bez benchmarka”, kvar 32). `production` dodatno zahtijeva `status: potvrdeno` i fresh provenance.
 Nakon PASS-a, admission/regeneration je **maintainer-only** postupak u writable source checkoutu, ne runtime mutacija instaliranog skilla:
 
 ```bash
@@ -63,7 +63,16 @@ python3 <KATEDRA_SKILL>/scripts/profile_registry.py --write
 ```
 
 Promjena base profila ili pripadnog overlaya mijenja bundle hash i čini admission stale dok se gate ponovno ne pokrene.
-Trenutno: **EFZG = production**, **FPZG = pilot**.
+**Zakrpa profila = ponovna admisija, u istom potezu.** U instaliranom paketu gate se ne može ponoviti
+(`evals/` nije u paketu — ni benchmark ni cases), pa zakrpa ide s:
+
+```bash
+python3 <KATEDRA_SKILL>/scripts/profile_registry.py --write --bez-admisije   # hash osvježen, tier → advisory (kvar 32)
+```
+
+`advisory` znači: profil je u registryju, ali nitko mu nije ponovio gate. Vraća se na `pilot`/`production`
+samo kroz `faculty_scale_gate.py --admit` u izvornom checkoutu. `profile_registry.py --check` je skupina u `bin/testovi.sh`.
+Trenutno: **EFZG = advisory**, **FPZG = advisory** (bundle promijenjen u v1.9.3, gate nije ponovljen).
 
 U svakoj isporuci navedi izvor: *„margine 25/25/30/25 mm (Upute za izradu diplomskog rada, str. 6)"*. **Zahtjev bez provenancea ne postoji.**
 Production profil/overlay ima `provenance.default` i po potrebi `provenance.rules` keyed JSON Pointerom.
