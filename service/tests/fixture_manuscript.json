@@ -1,5 +1,5 @@
 {
-  "version": 1, "id": "m1", "title": "Obvezno glasanje i legitimnost izbora", "workType": "d",
+  "version": 1, "id": "m1", "projectId": "project-1", "title": "Obvezno glasanje i legitimnost izbora", "workType": "d",
   "meta": {"institution": "FPZG", "mentor": "izv. prof. dr. sc. Test", "citationStyle": "fpzg", "deadline": "2026-12-01", "unitId": "unizg-fpzg", "profileId": "fpzg-diplomski"},
   "sections": [
     {"id": "s0", "title": "Sažetak", "kind": "frontmatter", "order": 0, "status": "draft", "content": {"type": "doc", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Rad ispituje odnos obveznog glasanja i legitimnosti u tri poglavlja."}]}]}},
