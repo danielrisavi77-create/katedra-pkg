@@ -83,6 +83,7 @@ Popravak: specifične grane prije općih; sažetak iz `.katedra/sazetak.md`; „
 tema fonta iz profila. Ostaje (fixture, jedna pojava): naslov `# 1. Uvod` u markdownu izlazi kao
 „1. 1. UVOD" — dvostruka numeracija, v. `ideje.md`.
 
+Ograda: `test_stari_kvarovi.py` K27 (djelomična) — `_je_popis_literature` mora prepoznati „popis literature” i „popis korištenih izvora”, a ne „popis tablica”. Redoslijed grana u generatoru rukopisa traži cijeli rukopis i nije mjeren. Mutacija: funkcija vraća `False` → dvije provjere padaju.
 ## 28. Izlazni kod se računa iz broja simbola, a ne iz toga smije li simbol blokirati
 
 Vlasnik: `katedra-lite` (nalaz 4, lažni nalaz). `gate.py --faza audit` javio BLOKIRA na koraku
@@ -102,6 +103,7 @@ Popravak: izlazni kod 1 samo zbog ❌; na `nepotvrdeno` ❌ zadržavaju samo pra
 `explicit` (resolver ili sidecar `<profil>.provenance.json`), provenance se čita u oba oblika
 (default/rules). Ide i u `zasto.md` pod pravilo 18 kao „što se dogodilo kad ga nije bilo".
 
+Ograda: `test_stari_kvarovi.py` K28 — CLI nad Letterom i nad A4 uz prazan profil (`--tip seminarski`): izlazni kod je 1 točno kad `broj_krsenja > 0` u vlastitom JSON-u alata. Profil bez `--tip` daje kod 2 bez JSON-a, pa pomoćnik to prijavljuje kao nalaz, ne kao traceback (pravilo 20). Mutacija: `if not any(... == LOSE ...)` → `if True` obara Letter slučaj.
 ## 29. Kućni stil završnog rada primjenjuje se na seminarski jer uvjet zna samo fakultet, ne tip
 
 Vlasnik: `katedra-lite` + `fpzg-diplomski` (nalaz 5). `vjestine.json` veže `stil.kucni` →
@@ -214,6 +216,7 @@ Napomena protokola: verzija PRIJE popravka nije sačuvana (dodaci nose već popr
 se po §1.4 kvar ne može reproducirati i unos ostaje **bez dokaza** — brojka 🔴/❔ dolazi iz
 izvještaja sesije, ne iz ponovljenog trčanja.
 
+Ograda: `test_stari_kvarovi.py` K34 — `komponenta_opseg(kat, None, {datoteke: {rad_docx}})` mora dati 100 „iz gotovog rada”, a bez plana i bez rada `None`. Mutacija: grana za gotov rad → `if False` obara prvu.
 ## 35. Pravilo „godina s točkom" mjeri se i na stilu u kojem je točka iza godine kraj reference
 
 Vlasnik: `katedra-lite` (novi lažni nalaz, otkriven pri dokazu za 31). `provjeri_literaturu.py` na
@@ -304,6 +307,7 @@ o sadržaju); ni jedno ni drugo → NSK, Hrčak, CroRIS, pa mentor. `conflict`/`
 je nalaz o mreži, ne o izvoru. Ograda koje nema: nijedan test ne traži da nalaz koji ne blokira
 ipak imenuje sljedeću kretnju — to je pravilo za oko, ne za stroj, i stoji u `references/kvar.md`.
 
+Ograda: `test_stari_kvarovi.py` K38 — `radnja_za_izvor`: `unverified` bez URL-a i DOI-ja kaže „potraži je u …”, s URL-om kaže „otvori …”, `⏸` prvo traži ponovnu provjeru mreže. Mutacija: „potraži je u” → „pogledaj” obara prvu.
 ## 39. Doktrina ne poznaje lokator koji kod već proizvodi, pa se gotov citat tretira kao nedovršen
 
 Vlasnik: `katedra-lite`. `evidence_ingest.py` od popravka Q19 za izvor bez tiskane paginacije
@@ -422,6 +426,7 @@ Ovo je treći put da se pravilo iz § 0.8 potvrdilo (v. kvarove 36 i 37): alat z
 sebe izuzima prestaje učiti prvi. Nađeno je jer je protokol zahtijevao dokaz — da se dokaz
 preskočio, kvar 40 bio bi isporučen s bilješkom „dokaz nije prošao, ali radi".
 
+Ograda: `test_stari_kvarovi.py` K42 — `dokaz.py` CLI: 0 → ≠0 bez `--tihi` je „obrnuto od očekivanog” i pada; s `--tihi` je dokazan tihi kvar i prolazi; dva jednaka stanja ne dokazuju ništa. Mutacija: grana `--tihi` → `if False` obara drugu.
 ## 43. Doktrina je za 403 na pushu upućivala na read-only GitHub konektor, pa je popravak bio klik koji ništa ne mijenja
 
 § 0.0 je ispravno prepoznavao egress politiku („ne ponavljaj i ne zaobilazi — prijavi”), a onda
@@ -549,6 +554,7 @@ Popravak je dvodijelan. Prvo, `citac_dio_metodologija` za status `provjereno` vr
 statusa dijela nego iz zapisa u `stanje.json` (`vlastito_istrazivanje: da|ne`), koji se
 postavlja u modu 1 dok je uputa pred očima.
 
+Ograda: `test_stari_kvarovi.py` K46 — `_empirijski(kat)` čita odluku autora iz `stanje.json`: `true` → empirijski, „ne” → nije. Mutacija: grana za `bool` → `if False` obara prvu.
 ## 47. Lokator dokaza poznaje samo stranicu, pa standardi i propisi ispadaju iz lanca
 
 `validate_records` u `claim_ledger.py` traži `locator.kind == "page"` i cijeli broj
@@ -834,6 +840,7 @@ zaključan u njemu. Popravak: pravila 33 i 34 u `katedra-lite/SKILL.md`, i obvez
 `katedra` § 1.3 pri svakom novom pravilu provjeri nose li ga bratski skillovi već pod drugim
 imenom (ladica doktrina, ne samo ladica kvarova).
 
+Ograda: `test_stari_kvarovi.py` K56 — router mora nositi pravila 33 i 34 pod tim brojevima i naslovima (odlučujući token, ne rečenica). Mutacija: `može` → `moze` u naslovu pravila 33 obara test.
 ## 57. `VERSION` zaostaje za commitom, a § 0.0 taj broj ispisuje kao prvo što sesija kaže
 
 ```
@@ -923,8 +930,9 @@ rutinski čitala `.katedra/predaja.json` koji nitko nije napisao.
 Sada: iznimka je KRITIČNO, faza s izlaznim kodom ≥ 2 ulazi u nalaze kao
 „faza nije izvedena", a `audit_all` vraća `max(KODOVI.values())`.
 
----
+Ograda: `test_stari_kvarovi.py` K61 — `audit_all.run`: povratak 1 upisuje 1, iznimka u modulu je kod 2, `SystemExit(3)` ostaje 3. Povratak `max(KODOVI.values())` iz `main` nije mjeren zasebno (traži cijeli audit). Mutacija: `kod = 2` → `kod = 0` pri iznimci obara drugu.
 
+---
 ## 64–66. klase pogrešaka koje nijedan alat nije gledao
 
 | Kvar | Što je prolazilo | Alat |
@@ -980,6 +988,7 @@ Dodano: svaka skripta imenovana u `SKILL.md` i `references/*.md` mora postojati 
 paketu ili kod satelita. Odmah je našla dvije rupe: `provjeri_povratak.py` (motor
 cijelog moda 7, opisan u `povratak.md`, nije postojao) i `soffice.py`.
 
+Ograda: `test_stari_kvarovi.py` K72/K73 — skill čiji `SKILL.md` tvrdi 12/12 testova i spominje `test_all.py`, a datoteke nema, mora dobiti oba ❌. Mutacija uvjeta `if stvarno is None` ne obara test nego **ruši alat** (`TypeError` na `stvarno[1]`) — što je isto pad ograde, samo u obliku pada; harness to od kvara 145 prijavljuje kao „test se srušio prije sažetka”. Mutacija provjere 7 obara K73.
 ## 74. Trajna napomena o metodi nosila je znak ⚠, pa je svaki rad — i savršeno čist — imao barem jedan „nalaz"
 
 `check_citations_authoryear.py` na kraju ispisa objašnjava kako gradi ključ. To je **napomena
@@ -1005,6 +1014,7 @@ Ovaj je unos napisan naknadno. Popravak je stigao u seriji v1.9.6 kao commit „
 broj 74 stajao je potrošen u porukama commita i nedostupan sljedećoj zakrpi. Mjerenje gore
 napravljeno je pri upisu, nad verzijama iz gita, a ne prepisano iz poruke commita.
 
+Ograda: `test_stari_kvarovi.py` K74 — CLI nad čistim dokumentom (jedan citat autor–godina i njegova jedinica): redak `NAPOMENA O METODI` postoji i ne počinje znakom ⚠, i nijedan redak ispisa ne počinje s ⚠. Mutacija: vraćen ⚠ ispred napomene obara obje.
 ## 75–78. prvi prolaz kroz STVARNI rad
 
 **Kad:** 5. 9. 2026., odmah nakon podizanja blokada. **Rad:** FPZG, preddiplomski,
@@ -3581,3 +3591,51 @@ Ograda: mutacijske skripte same su si ograda — kontrolirani pokus gore ponovlj
 u jednom potezu (`os.utime` na isti mtime mora dati krivi rezultat s cacheom, a
 točan s `-B`). Regresijski test u suiteu nema smisla: suite od ovog commita ne piše
 bytecode, pa se uvjet u njemu ne može ni pojaviti.
+
+---
+
+## 146. Mutacijski harness pročitao je pad alata kao „ništa nije palo”, jer je pad i pali test dijelio izlazni kod 1
+
+Pri ograđivanju kvara 72 mutacija je isključila granu `if stvarno is None`.
+Harness je javio:
+
+```
+kvar 72  → NIŠTA NIJE PALO
+```
+
+Izravno pokretanje iste mutacije pokazalo je što se dogodilo:
+
+```
+TypeError: 'NoneType' object is not subscriptable        (zakrpa.py, r. 194)
+```
+
+Alat se **srušio** — što je za ogradu ispravan ishod (test nije prošao) — ali
+harness je pad prepoznavao po izlaznom kodu, a traceback u Pythonu daje kod **1**,
+isti kao pali test. Nula linija s `FAIL` + kod 1 = „ništa nije palo". Pravilo 20,
+doslovno, u alatu čija je jedina svrha provjeravati mogu li provjere pasti.
+
+Popravak: pad se prepoznaje po tome je li test uopće **došao do sažetka**
+(`REZULTATI TESTOVA`), a ne po kodu. Poslije:
+
+```
+kvar 72  → << test se SRUŠIO prije sažetka: TypeError: 'NoneType' object is not subscriptable >>
+```
+
+Isti popravak odmah je uhvatio i drugi pad, ovaj put u samom testu: pomoćnik za
+K28 pretpostavljao je da `check_rules.py` uvijek napiše JSON, a alat bez `--tip`
+vraća kod 2 bez datoteke — `FileNotFoundError` je zaklonio K38, K42, K61 i K74 iza
+sebe. Pomoćnik sada nedostatak JSON-a prijavljuje kao nalaz s razlogom.
+
+Usput, treći put ista zamka iz kvara 141: višeredni uzorak mutacije nikad nije
+pogodio jer radno stablo nosi CRLF, a uzorak LF. Spasio ga je `assert` na broju
+pogodaka — mutacija koja se tiho ne primijeni bila bi lažni „NIŠTA NIJE PALO"
+druge vrste. Harness sada normalizira prijelome prije traženja.
+
+Tri kvara u dva sata, sva tri u alatu koji mjeri, nijedan u alatu koji se mjeri.
+To nije slučajnost: harness se piše brzo i nitko ga ne mutira. Od ovog unosa
+vrijedi da svaki mutacijski harness mora (a) prepoznati pad po nedostatku
+sažetka, (b) normalizirati prijelome retka, (c) ne pisati bytecode (kvar 145).
+
+Ograda: nema — harness živi u scratchpadu sesije, ne u paketu, pa nema što ući u
+suite. Tri uvjeta gore zapisana su ovdje da ih sljedeći harness pročita prije nego
+ponovi isto.
