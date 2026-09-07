@@ -153,6 +153,16 @@ def main():
     check("R74: proza o nedostatku ograde ostaje dug",
           indeks._stanje_ograde("Nalaz bez ograde je bilješka.") == "nema")
 
+    # R75: citat tokena nije ograda (kvar 143). Unos koji o ogradi GOVORI
+    #      ne smije time ispasti iz popisa duga.
+    check("R75: „Ograda: …” kao citat nije ograda",
+          indeks._stanje_ograde("rečenica „Ograda: …” ovdje bi ga maknula")
+          == "nema")
+    check("R75: „Ograda: ...” s tri točke isto",
+          indeks._stanje_ograde("Ograda: ... popuni poslije") == "nema")
+    check("R75: prava ograda i dalje vrijedi",
+          indeks._stanje_ograde("Ograda: `test_x.py` R9 pada bez toga.") == "ima")
+
     print("=" * 70)
     print("REZULTATI TESTOVA: %d/%d prošlo"
           % (len(SVE) - len(PALO), len(SVE)))
