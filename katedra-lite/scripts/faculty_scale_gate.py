@@ -26,6 +26,10 @@ from profile_rules import (  # noqa: E402
 DEFAULT_FACULTY_DIR = ROOT / "references" / "fakulteti"
 DEFAULT_CASES = ROOT / "evals" / "quality" / "faculty_cases.jsonl"
 DEFAULT_BENCHMARK = ROOT / "evals" / "benchmark" / "v1_vs_v2_contract.json"
+# Kvar 32: `evals/` od v1.3 nije u paketu, pa instalirani skill nema ni benchmark ni
+# cases. Bez benchmarka gate SMIJE proći uz ⚠ (evidence.benchmark_sha256 = null);
+# bez cases NE smije — kvalifikacijski slučajevi jedini su dokaz da profil radi.
+BEZ_BENCHMARKA = "admisija bez benchmarka: evals/benchmark/v1_vs_v2_contract.json nije u paketu"
 
 
 def sha256_file(path: Path) -> str:
@@ -163,8 +167,30 @@ def _aliases_for_faculty(root: Path, base: Mapping[str, Any], overlays: list[dic
     return routes
 
 
-def evaluate(faculty_dir: Path, faculty: str, tier: str, as_of: str, *, cases_path: Path, benchmark_path: Path) -> dict[str, Any]:
-    import jsonschema
+def benchmark_check(benchmark_path: Path | None, tier_policy: Mapping[str, Any]) -> tuple[dict[str, Any], str | None, list[str]]:
+    """Vraća (provjera, sha256 ili None, upozorenja). None = benchmarka nema (kvar 32)."""
+    if benchmark_path is None:
+        return {"passed": True, "skipped": True, "note": BEZ_BENCHMARKA}, None, [BEZ_BENCHMARKA]
+    bench=load_profile(benchmark_path)
+    score=((bench.get("candidate") or {}).get("score") or {})
+    comp=bench.get("comparison") or {}
+    bench_ok=(float(score.get("accuracy",0)) >= float(tier_policy["core_benchmark_min_accuracy"])
+              and len(comp.get("regressions") or []) <= int(tier_policy["max_regressions"])
+              and len(comp.get("critical_regressions") or []) <= int(tier_policy["max_critical_regressions"]))
+    check={"passed":bench_ok,"accuracy":score.get("accuracy"),"regressions":len(comp.get("regressions") or []),"critical_regressions":len(comp.get("critical_regressions") or [])}
+    return check, sha256_file(benchmark_path), []
+
+
+def evaluate(faculty_dir: Path, faculty: str, tier: str, as_of: str, *, cases_path: Path, benchmark_path: Path | None) -> dict[str, Any]:
+    if not Path(cases_path).is_file():  # kvar 32: bez cases nema gatea, i to se kaže, ne Errno
+        raise ProfileRuleError(f"kvalifikacijski slučajevi ne postoje: {cases_path} — evals/ nije u paketu; "
+                               "gate se pokreće u izvornom checkoutu (razvoj.md), a u instaliranom paketu "
+                               "zakrpa profila ide s: profile_registry.py --write --bez-admisije")
+    try:
+        import jsonschema
+    except ImportError as exc:  # kvar 32: traceback nije poruka; kaži što napraviti
+        raise ProfileRuleError("profil se ne može validirati: nedostaje paket jsonschema. "
+                               "Što napraviti: instaliraj jsonschema (pyproject.toml) pa ponovi.") from exc
 
     policy=load_profile(faculty_dir / "_scale_policy.json")
     tier_policy=(policy.get("tiers") or {}).get(tier)
@@ -300,21 +326,15 @@ def evaluate(faculty_dir: Path, faculty: str, tier: str, as_of: str, *, cases_pa
     checks["sanity_band"]={"passed":not sanity,"violations":sanity}
     if sanity: reasons.append("rule_values_outside_sanity_band")
 
-    bench=load_profile(benchmark_path)
-    score=((bench.get("candidate") or {}).get("score") or {})
-    comp=bench.get("comparison") or {}
-    bench_ok=(float(score.get("accuracy",0)) >= float(tier_policy["core_benchmark_min_accuracy"])
-              and len(comp.get("regressions") or []) <= int(tier_policy["max_regressions"])
-              and len(comp.get("critical_regressions") or []) <= int(tier_policy["max_critical_regressions"]))
-    checks["core_benchmark"]={"passed":bench_ok,"accuracy":score.get("accuracy"),"regressions":len(comp.get("regressions") or []),"critical_regressions":len(comp.get("critical_regressions") or [])}
-    if not bench_ok: reasons.append("core_benchmark_not_stable")
+    checks["core_benchmark"], benchmark_sha, upozorenja = benchmark_check(benchmark_path, tier_policy)
+    if not checks["core_benchmark"]["passed"]: reasons.append("core_benchmark_not_stable")
 
     evidence={
         "bundle_sha256": faculty_bundle_sha256(faculty_dir, faculty),
         "qualification_sha256": sha256_file(cases_path),
-        "benchmark_sha256": sha256_file(benchmark_path),
+        "benchmark_sha256": benchmark_sha,
     }
-    return {"schema_version":1,"faculty":faculty,"tier":tier,"as_of":as_of,"decision":"pass" if not reasons else "fail","reasons":reasons,"checks":checks,"evidence":evidence}
+    return {"schema_version":1,"faculty":faculty,"tier":tier,"as_of":as_of,"decision":"pass" if not reasons else "fail","reasons":reasons,"warnings":upozorenja,"checks":checks,"evidence":evidence}
 
 
 def admit(faculty_dir: Path, report: Mapping[str, Any]) -> None:
@@ -343,12 +363,16 @@ def main() -> int:
     ap.add_argument("--tier", choices=["production","pilot"], required=True)
     ap.add_argument("--as-of", required=True, help="ISO date for provenance freshness/admission")
     ap.add_argument("--cases", default=str(DEFAULT_CASES))
-    ap.add_argument("--benchmark", default=str(DEFAULT_BENCHMARK))
+    ap.add_argument("--benchmark", default=None, help="B18 benchmark JSON; bez opcije: evals/benchmark/… ako postoji, inače ⚠ admisija bez benchmarka (kvar 32)")
     ap.add_argument("--admit", action="store_true", help="write/update _support_catalog.json only if gate passes")
     ap.add_argument("--json", action="store_true")
     args=ap.parse_args()
     try:
-        report=evaluate(Path(args.faculty_dir),args.fakultet,args.tier,args.as_of,cases_path=Path(args.cases),benchmark_path=Path(args.benchmark))
+        if args.benchmark:
+            benchmark_path: Path | None = Path(args.benchmark)
+        else:
+            benchmark_path = DEFAULT_BENCHMARK if DEFAULT_BENCHMARK.is_file() else None
+        report=evaluate(Path(args.faculty_dir),args.fakultet,args.tier,args.as_of,cases_path=Path(args.cases),benchmark_path=benchmark_path)
         if args.admit and report["decision"]=="pass":
             admit(Path(args.faculty_dir),report)
     except (ProfileRuleError, OSError, json.JSONDecodeError, ValueError) as exc:
@@ -357,7 +381,8 @@ def main() -> int:
         print(json.dumps(report,ensure_ascii=False,indent=2))
     else:
         print(f"{report['decision'].upper()}: {report['faculty']} [{report['tier']}]")
-        for name, check in report["checks"].items(): print(f"  {'✓' if check.get('passed') else '✗'} {name}")
+        for name, check in report["checks"].items(): print(f"  {'⚠' if check.get('skipped') else '✓' if check.get('passed') else '✗'} {name}")
+        for u in report.get("warnings") or []: print(f"  ⚠ {u}")
         if report["reasons"]: print("  reasons: "+", ".join(report["reasons"]))
     return 0 if report["decision"]=="pass" else 1
 

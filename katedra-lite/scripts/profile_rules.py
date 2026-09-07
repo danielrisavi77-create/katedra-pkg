@@ -528,11 +528,17 @@ def faculty_bundle_paths(faculty_dir: str | Path, slug: str) -> list[Path]:
     return sorted(paths, key=lambda x: str(x.relative_to(root)))
 
 
+def _rel(path: Path, root: Path) -> str:
+    """Putanja relativno na root, uvijek s „/”: kvar 148 — na Windowsu je
+    `relative_to` davao backslash, pa je index.json ovisio o OS-u generiranja."""
+    return str(path.relative_to(root)).replace("\\", "/")
+
+
 def faculty_bundle_sha256(faculty_dir: str | Path, slug: str) -> str:
     root = Path(faculty_dir)
     h = hashlib.sha256()
     for path in faculty_bundle_paths(root, slug):
-        rel = str(path.relative_to(root)).replace("\\", "/")
+        rel = _rel(path, root)
         h.update(rel.encode("utf-8"))
         h.update(b"\0")
         h.update(path.read_bytes())
@@ -550,9 +556,34 @@ def _admitted_profiles(faculty_dir: Path) -> dict[str, Any] | None:
         expected = str((admission or {}).get("bundle_sha256") or "")
         if actual != expected:
             raise ProfileRuleError(
-                f"admission bundle hash stale za {slug}: pokreni faculty_scale_gate.py ponovno"
+                f"admission bundle hash stale za {slug}: pokreni faculty_scale_gate.py ponovno, "
+                "ili profile_registry.py --write --bez-admisije (tier → advisory; kvar 32)"
             )
     return profiles
+
+
+def refresh_stale_admissions(faculty_dir: str | Path) -> list[tuple[str, str]]:
+    """Kvar 32: bundle se promijenio, a gate se u instaliranom paketu ne može ponoviti
+    (evals/ nije u paketu). Hash se osvježi, a tier pada na „advisory”: registry
+    ostaje čitljiv, ali profil više ne tvrdi admisiju koju nitko nije ponovio.
+    Vraća [(slug, stari_tier)] za svaki osvježeni profil; prazno = ništa nije bilo stale."""
+    root = Path(faculty_dir)
+    catalog = load_support_catalog(root)
+    if catalog is None:
+        return []
+    osvjezeni: list[tuple[str, str]] = []
+    for slug, admission in dict(catalog.get("profiles") or {}).items():
+        actual = faculty_bundle_sha256(root, slug)
+        if actual == str((admission or {}).get("bundle_sha256") or ""):
+            continue
+        osvjezeni.append((slug, str(admission.get("tier"))))
+        admission["bundle_sha256"] = actual
+        admission["tier"] = "advisory"
+    if osvjezeni:
+        _support_catalog_path(root).write_text(
+            json.dumps(catalog, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+    return osvjezeni
 
 
 def _faculty_profile_paths(faculty_dir: Path) -> list[Path]:
@@ -628,12 +659,12 @@ def generate_registry(faculty_dir: str | Path) -> dict[str, Any]:
         match = {k: str(v) for k, v in (overlay.get("match") or {}).items() if k in CONTEXT_KEYS}
         if admissions is not None and match.get("faculty") not in admissions:
             continue
-        sources.append(str(path.relative_to(root)))
+        sources.append(_rel(path, root))
         aliases = overlay.get("aliases") or []
         if aliases and not match.get("faculty"):
             raise ProfileRuleError(f"overlay aliasi moraju imati match.faculty: {path}")
         for alias in aliases:
-            add_route(str(alias), match, str(path.relative_to(root)))
+            add_route(str(alias), match, _rel(path, root))
 
     return {
         "verzija": 2,

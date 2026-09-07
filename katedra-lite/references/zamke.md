@@ -177,12 +177,28 @@ $ profile_registry.py --check
 ❌ admission bundle hash stale za fpzg: pokreni faculty_scale_gate.py ponovno              [2]
 ```
 
-Popravak (nije napravljen): ili `--benchmark` opcionalan kad datoteke nema (uz ⚠️ „admisija bez
-benchmarka"), ili `profile_registry.py --write --bez-admisije` koji hash osvježi i označi profil
-`advisory`. Doktrina za `razvoj.md`/SKILL.md: zakrpa profila = ponovna admisija, u istom potezu.
-Zaobilaz koji radi: `profile_resolver.py --profil-datoteka <slug>.json` (ADVISORY).
+Popravak (v1.9.30, izmjeren): tri izlaza iz petlje, jer su tri prepreke, ne jedna. Mjerenje na
+instaliranom paketu pokazalo je da gornji opis govori premalo: gate je prvo padao na
+`ModuleNotFoundError: jsonschema` (traceback, kod 1), s paketom na benchmark, a s umjetnim
+benchmarkom na `evals/quality/faculty_cases.jsonl` (Errno 2) — nijedna od te dvije datoteke
+nikad nije bila u repou (`git log --all` prazan). Registry je bio `stale` za efzg od v1.9.3
+(bundle promijenjen u sesiji „porezne olakšice”) i nitko nije primijetio, jer `--check`
+nije bio u suiti.
 
-Ograda: nema — popravak nije napravljen, pa nema što ograđivati. Ovo je **otvoren kvar**, ne rupa u ogradama; razlikovanje je bitno jer se otvoren kvar zatvara popravkom, a rupa testom.
+1. `faculty_scale_gate.py`: bez `--benchmark` uzima `evals/benchmark/…` ako postoji, inače
+   provjera `core_benchmark` prolazi kao preskočena uz ⚠ „admisija bez benchmarka”,
+   `evidence.benchmark_sha256 = null`. Cases koji ne postoje daju poruku s izlazom (ne Errno),
+   `jsonschema` koji nedostaje daje ❌ s uputom i kod 2, ne traceback.
+2. `profile_registry.py --write --bez-admisije`: stale hash osvježi i tier spusti na `advisory`;
+   `--write` bez zastavice i dalje odbija. Na ovom repou: efzg production → advisory, fpzg
+   pilot → advisory, jer im nitko nije ponovio gate.
+3. `bin/testovi.sh`: `profile_registry.py --check` je skupina.
+
+Zaobilaz koji je radio i dalje radi: `profile_resolver.py --profil-datoteka <slug>.json` (ADVISORY).
+
+Ograda: `test_stari_kvarovi.py` K32 — `benchmark_check(None)` preskače uz ⚠ i hash `None`, benchmark s accuracy 0.5 pada; nad kopijom `references/fakulteti` promijenjen bundle je stale, `--check` daje 2, `--write` 2, `--write --bez-admisije` 0 s ⚠ i `advisory` u katalogu i u `index.json`, poslije toga `--check` 0; gate bez cases i gate bez paketa `jsonschema` (stub na `PYTHONPATH`) kažu ❌ s izlazom, kod 2, bez tracebacka. Mutacije: `if benchmark_path is None` → `if False` ruši test; `advisory` → stari tier obara katalog (prva inačica ograde tu mutaciju NIJE uhvatila, jer je kopija repoa već bila advisory — polazište se sada izričito postavlja na production, kvar 141 obrazac); `except ImportError` → `LookupError` obara jsonschema provjeru; osvježavanje → prazna petlja obara `--bez-admisije`. Kraj do kraja (gate PASS uz ⚠ → `--admit` upisuje `null` → `--check` 0) izmjeren je jednom uz `jsonschema` iz privremene mape i nije u suiti: ovaj stroj paketa nema.
+
+
 ## 33. Shema opsega zna samo ukupni rad, pa se pravila po dijelovima ne mogu ni zapisati ni provjeriti
 
 Vlasnik: `katedra-lite` (nalaz 9, kvar u obliku provjere koja ne postoji). Upute HKS-FZS traže
@@ -231,11 +247,15 @@ propisuje (redoslijed prvog pojavljivanja).
      ❌ godina s točkom (2014.), a profil ju ne traži      × 11
 ```
 
-Popravak (nije napravljen): za `stil` u `NUMERIC_DIALECTS` preskočiti „godina s točkom" i abecedni
-red, a provjeravati numeraciju popisa. Fixture: `assets/fixture_popis_citirane_literature.docx`
-(jedinica 2 daje isti lažni ❌).
+Popravak (postoji od v1.9, unos ga nije vidio): `NUMERICKI_STILOVI = ("ieee", "vancouver")` u
+`provjeri_literaturu.py` preskače „godina s točkom” i abecedni red za numerički stil
+(komentar `v1.9 (kvar 35)`). Izmjereno: jedinica „15. Ozimec Vulinec Š. … ; 2014.” na
+Vancouver profilu s `tocka_iza_godine: false` → nema nalaza; ista jedinica na autor–godina →
+nalaz. Unos je pisan prije popravka i nitko ga nije ponovno mjerio — to je kvar 147.
 
-Ograda: nema — popravak nije napravljen (unos to i kaže), pa je i ovo **otvoren kvar**, ne rupa u ogradama.
+Ograda: `test_stari_kvarovi.py` K35 — Vancouver bez nalaza, autor–godina s nalazom. Mutacija: `NUMERICKI_STILOVI = ("ieee",)` obara Vancouver provjeru.
+
+
 ## 36. Skill za učenje dokumentira dvije zastavice koje njegove skripte nemaju
 
 Vlasnik: `katedra` (pravilo 8). `SKILL.md` §1.3 propisuje `kvar.py … --provjeri --nastavak-od 23`, a
@@ -3639,3 +3659,54 @@ sažetka, (b) normalizirati prijelome retka, (c) ne pisati bytecode (kvar 145).
 Ograda: nema — harness živi u scratchpadu sesije, ne u paketu, pa nema što ući u
 suite. Tri uvjeta gore zapisana su ovdje da ih sljedeći harness pročita prije nego
 ponovi isto.
+
+---
+
+## 147. Katalog je vodio popravljen kvar kao otvoren, a otvoren kvar opisao premalo, jer unosi nisu bili ponovno mjereni
+
+Krug „popravi 32 i 35” počeo je mjerenjem oba unosa na instaliranom paketu (pravilo 35).
+Kvar 35 (lažni ❌ „godina s točkom” na Vancouveru) **više nije postojao**: kod ga je
+popravio u v1.9 i to piše u komentaru (`v1.9 (kvar 35)`), a unos je i dalje završavao s
+„popravak nije napravljen … otvoren kvar”. Kvar 32 je postojao, ali unos je znao za jednu
+od tri prepreke (benchmark); mjerenje je našlo još dvije (`jsonschema`, cases) i to da je
+registry stvarno stale od v1.9.3 — četiri dana — a nitko nije primijetio.
+
+```
+$ python -c "import provjeri_literaturu as pl; o=pl.ocekivani_oblik({'citiranje':{'stil':'vancouver','tocka_iza_godine':False}}); print(pl.provjeri_jedinicu('15. Ozimec Vulinec Š. Palijativna skrb. Zagreb: Zdravstveno veleučilište; 2014.', o))"
+[]                                                      ← kod, od v1.9 (autor-godina daje ❌ godina s točkom)
+$ sed -n 238p references/zamke.md                       ← katalog, isti dan, v1.9.29
+Ograda: nema — popravak nije napravljen (unos to i kaže), pa je i ovo **otvoren kvar**, ne rupa u ogradama.
+```
+
+Oba su ista greška u dvije boje: unos u katalogu je tvrdnja o kodu, a tvrdnja bez ponovnog
+mjerenja stari. „Otvoren kvar” u katalogu nije stanje koda nego stanje unosa u trenutku
+pisanja.
+
+Popravak: prije popravljanja kvara izmjeri unos (naredba, kod, poruka), pa tek onda diraj kod
+— i unos prepiši prema mjerenju, ne prema sjećanju. Od ovog kruga `indeks_zamki.py --bez-ograde`
+ostaje jedini popis otvorenog.
+
+Ograda: nema — pravilo je o postupku (izmjeri unos prije nego popravljaš), pa nema što ući u suite; K32 i K35 plod su tog mjerenja.
+
+---
+
+## 148. Registry generiran na Windowsu nosi backslash u putanjama overlaya, pa `--check` na drugom sustavu javlja drift
+
+Nađeno pri popravku kvara 32: prvi `profile_registry.py --write` koji je na ovom stroju uopće
+došao do generiranja (dotad ga je zaustavljao stale hash) dao je `index.json` s
+`overlays\efzg-rfir.json` umjesto `overlays/efzg-rfir.json` u `generated_from` i u
+`rute[].source`. Uzrok: `str(path.relative_to(root))` u `generate_registry`;
+`faculty_bundle_sha256` isti put već normalizira, `generate_registry` nije. Posljedica:
+`index.json` ovisi o OS-u na kojem je generiran, pa `--check` prolazi samo na istom OS-u —
+commit s Windowsa bio bi drift na Linuxu i obrnuto. Ista obitelj kao kvar 127 (`drift.py`,
+`git show` s backslashom).
+
+```
+$ profile_registry.py --write && git diff references/fakulteti/index.json
+-    "overlays/efzg-rfir.json",
++    "overlays\\efzg-rfir.json",
+```
+
+Popravak: `_rel()` u `profile_rules.py` — jedna normalizacija za hash i za registry.
+
+Ograda: `test_stari_kvarovi.py` K148 — `generate_registry` nad kopijom `references/fakulteti` ne smije dati backslash ni u `generated_from` ni u `rute[].source`. Provjera je stvarna samo na Windowsu (na Linuxu `relative_to` i bez popravka daje `/`); suite se ovdje vrti na Windowsu. Mutacija: `_rel` bez `.replace` obara obje.

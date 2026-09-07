@@ -11,11 +11,11 @@
         "type": "object",
         "required": ["tier", "admitted_at", "bundle_sha256", "qualification_sha256", "benchmark_sha256", "gate_version"],
         "properties": {
-          "tier": {"enum": ["production", "pilot"]},
+          "tier": {"enum": ["production", "pilot", "advisory"]},
           "admitted_at": {"type": "string", "format": "date"},
           "bundle_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
           "qualification_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-          "benchmark_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "benchmark_sha256": {"anyOf": [{"type": "string", "pattern": "^[0-9a-f]{64}$"}, {"type": "null"}]},
           "gate_version": {"type": "integer", "minimum": 1}
         },
         "additionalProperties": false
