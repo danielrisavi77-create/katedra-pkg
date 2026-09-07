@@ -3863,3 +3863,65 @@ stoji bez backtickova.
 Ograda: `test_kvar.py` R44 (8 provjera). Mutacije, svaka obara samo svoju: `DOKAZ = (BLOK,)`
 → padaju 3 (inline, tablica, citat); `BROJKA = r"\d"` → pada heks; `NAJKRACI = 400` → pada
 prag; `if False:` → pada gola pritužba.
+
+---
+
+## 152. katedra-verifier: od četiri faze radila je jedna, a korake forme „isključivao” je zastavicom koja ne isključuje
+
+Isporuka druge linije (`service/`, 7. 9. 2026.) stigla je s testom samo za agenta `writing`.
+Mjerenje svih četiriju faza na paketu v1.9.32, isti fixture rukopis:
+
+```
+intake  → plan      verified   (6 ok)
+writing → pisanje   verified   (5 ok, 3 savjetna nalaza, evidence preskočen dopušteno)
+review  → audit     RuntimeError: stanje_init.py --set mod=audit pao: mod=audit bez gotovog rada u .docx …
+export  → predaja   TypeError: unsupported operand type(s) for +: 'NoneType' and 'str'
+```
+
+Tri uzroka, pa četvrti: (1) `mod=audit` upisivao se u `stanje.json` **prije** gradnje `rad.docx`,
+a `stanje_init` to s pravom odbija; (2) `subprocess.run(..., text=True)` bez `encoding=` — cp1250
+čitač pukne na bajtu 0x98, `r.stdout` je `None` (kvar 119, drugi put, u tuđem kodu); (3) kad gradnja
+`rad.docx` padne, koraci nad dokumentom se preskoče, u fazi pisanje su savjetni, i rezultat je bio
+**`verified` uz 5 od 9 preskočenih koraka** — verifikator koji nije provjerio rekao je da je provjerio.
+
+Kad su (1)–(3) popravljeni, audit i predaja dali su `failed` iz četvrtog razloga: servis je korake
+forme (`literatura`, `motor_audit`, `metapodaci`…) „isključivao” kroz `--dopusti-preskok`, a ta
+zastavica **oprašta samo korak kojemu fali ulaz**. S izgrađenim `rad.docx` svi su se koraci forme
+vrtjeli: `literatura` je pukla (kod 2, nijedna jedinica), `motor_audit` blokirao. README-ova rečenica
+„skripte forme isključene” nije bila istinita ni za jedan poziv s dokumentom — gate nije imao
+zastavicu koja to radi, pa ju je servis pretpostavio.
+
+Popravak: `gate.py --iskljuci KORAK=RAZLOG` — korak se ne pokreće, u `gate.json` stoji kao
+`iskljuceno` s razlogom, ne blokira, nepoznato ime je kod 2 (zasebno od `--dopusti-preskok`);
+`gate_mapping` ga preslikava u `gate_step_excluded`, `blocking: false`. Servis: redoslijed rukopis →
+`rad.docx` → `--set datoteke.rad_docx=true` → `mod=`; `encoding="utf-8"` u svakom `subprocess`; bez
+`rad.docx` u fazi koja ga treba rezultat je `failed` s `verifier_error`; `izmjene` isključen
+(privremeni projekt nema snimki, `diff_versions.py` izlazi s kodom 2). Poslije, isti fixture:
+
+```
+intake  → plan      verified
+writing → pisanje   verified
+review  → audit     blocked          (nalazi o sadržaju fixturea, nijedan alat pukao)
+export  → predaja   blocked          (dijelovi, placeholderi, sažetak, izvori, predaja_docx)
+```
+
+Ograda: `service/tests/test_service.py` — `test_all_phases_run_end_to_end[intake|review|export]`, `test_docx_build_failure_is_failed_not_verified`, `test_sp_decodes_utf8_child_output`, `test_run_decodes_utf8_child_output`; `test_gate.py` G14 (×4). Mutacije: `_set_stanje(root, f"mod={faza}")` bez `rad_docx` obara review; `if docx_err` → `if False` obara docx test; `encoding=` maknut iz `_run` i iz `_sp` obara utf-8 testove (prva inačica te ograde bila je vakuumska: e2e više nije prolazio kroz korak koji piše 0x98, pa dijete sada izravno ispisuje U+2018); `if k.kid in iskljuceni` → `if False` obara G14. Testovi koji dižu FastAPI bez paketa `fastapi` su preskočeni i imenovani (`-rs`): skupina „servis: katedra-verifier” na ovom stroju mjeri 4 od 10.
+
+---
+
+## 153. gate.py je čitao izlaz koraka bez encoding=, pa je na Windows konzoli izlaz bio mojibake ili prazan
+
+Nađeno pri kvaru 152: isti obrazac kao kvar 119, u samom gateu. `pokreni()` je zvao
+`subprocess.run(argv, text=True)` — dijete piše UTF-8, roditelj dekodira cp1250. Kad prođe, izlaz
+je mojibake; kad ne prođe (0x81/0x83/0x88/0x90/0x98), čitač pukne i `izlaz` je prazan. U Dockeru
+(UTF-8) nevidljivo; na razvojnom stroju svaki gate, svaki korak.
+
+```
+korak: python -c "print('Čš ✔')"
+prije:   stanje=ok  izlaz='ÄŚĹˇ âś”'          ← mutacija (encoding= maknut), izmjereno
+poslije: stanje=ok  izlaz='Čš ✔'
+```
+
+Popravak: `encoding="utf-8", errors="replace"` i `PYTHONIOENCODING=utf-8` za dijete u `pokreni()`.
+
+Ograda: `test_gate.py` G15 — korak koji ispiše `Čš ✔` vraća točno taj izlaz s kodom 0. Mutacija: `encoding=` maknut → G15 pada s `'ÄŚĹˇ âś”'`. Provjera je stvarna samo na cp1250 konzoli (na UTF-8 sustavu prolazi i bez popravka, kao K148); suite se ovdje vrti na Windowsu.

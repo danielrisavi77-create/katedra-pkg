@@ -130,6 +130,38 @@ def main() -> int:
         check("G12: --dopusti-preskok bez razloga vraća 2", p.returncode == 2,
               p.returncode)
 
+        # Kvar 152: --iskljuci korak NE pokreće, upiše razlog, ne blokira; nepoznato ime je greška
+        import json as _j
+        gj = os.path.join(d, ".katedra", "gate.json")
+        p = subprocess.run(
+            [sys.executable, os.path.join(SCRIPTS, "gate.py"), "--faza", "audit",
+             "--kat", os.path.join(d, ".katedra"), "--project-root", d,
+             "--iskljuci", "literatura=forma: Lekta", "--json", gj],
+            capture_output=True, text=True, encoding="utf-8", errors="replace")
+        g = _j.load(open(gj, encoding="utf-8")) if os.path.exists(gj) else {"koraci": [], "sazetak": {}}
+        lit = next((k for k in g["koraci"] if k["korak"] == "literatura"), {})
+        check("G14: isključeni korak je u izvještaju kao iskljuceno s razlogom, bez naredbe",
+              lit.get("stanje") == "iskljuceno" and "forma: Lekta" in lit.get("razlog", "")
+              and lit.get("naredba") is None, lit)
+        check("G14: sažetak imenuje isključeno i NE broji ga među nepokrenute",
+              g["sazetak"].get("iskljuceno") == {"literatura": lit.get("razlog")}
+              and "literatura" not in (g["sazetak"].get("nepokrenuto") or []), g["sazetak"])
+        check("G14: ispis kaže da je isključeno pozivom", "isključeno pozivom" in p.stdout, p.stdout[-300:])
+        p = subprocess.run(
+            [sys.executable, os.path.join(SCRIPTS, "gate.py"), "--faza", "audit",
+             "--kat", os.path.join(d, ".katedra"), "--project-root", d,
+             "--iskljuci", "nepostojeci=razlog"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace")
+        check("G14: --iskljuci s nepoznatim korakom vraća 2 i imenuje ga",
+              p.returncode == 2 and "nepostojeci" in p.stderr, (p.returncode, p.stderr[-200:]))
+
+        # Kvar 153: izlaz koraka se čita kao utf-8, dijete piše utf-8 — i na cp1250 konzoli
+        k15 = gate.Korak("proba", "proba", [sys.executable, "-c", "print(chr(268)+chr(353)+' '+chr(10004))"])
+        r15 = gate.pokreni(k15, d, False)
+        check("G15: korak koji ispiše Čš ✔ vraća točno taj izlaz (kod 0)",
+              r15.get("stanje") == "ok" and r15.get("izlaz") == chr(268) + chr(353) + " " + chr(10004),
+              (r15.get("stanje"), r15.get("kod"), r15.get("izlaz"), (r15.get("greska") or "")[-120:]))
+
     # ── kvarovi iz audita Znahor ─────────────────────────────────────────
     # 98: profil bez format.odlomak je granica (kod 3), ne pad (kod 2)
     import json as _json

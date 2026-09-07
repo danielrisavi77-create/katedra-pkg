@@ -1,6 +1,6 @@
 ---
 name: katedra-lite
-description: "Kopilot za akademske radove na hrvatskom: novi rad, plan i program, pisanje, poboljšanje, audit, obrana, predaja, povratak iz Worda. Vodi stanje u .katedra/ i pokreće provjere kroz gate po fazama (plan, pisanje, audit, predaja): citati i literatura, brojke naspram izvora, hipoteze, statistika, aritmetika u tablicama, metapodaci, jezik, prikazi, Word polja. Aktiviraj kad korisnik piše ili dorađuje seminarski, završni, diplomski ili specijalistički rad, traži audit rada, provjeru citata, predajnu verziju ili pripremu obrane. Motori su sateliti: rad-audit (audit), rad-docx (izrada .docx-a), fpzg-diplomski i drugi profili (kućni stil), replikacija-pspp (neovisna provjera brojki). v1.9.35."
+description: "Kopilot za akademske radove na hrvatskom: novi rad, plan i program, pisanje, poboljšanje, audit, obrana, predaja, povratak iz Worda. Vodi stanje u .katedra/ i pokreće provjere kroz gate po fazama (plan, pisanje, audit, predaja): citati i literatura, brojke naspram izvora, hipoteze, statistika, aritmetika u tablicama, metapodaci, jezik, prikazi, Word polja. Aktiviraj kad korisnik piše ili dorađuje seminarski, završni, diplomski ili specijalistički rad, traži audit rada, provjeru citata, predajnu verziju ili pripremu obrane. Motori su sateliti: rad-audit (audit), rad-docx (izrada .docx-a), fpzg-diplomski i drugi profili (kućni stil), replikacija-pspp (neovisna provjera brojki). v1.9.36."
 ---
 
 # KATEDRA-LITE — kopilot za akademske radove
@@ -371,9 +371,11 @@ korak.
     `nalaz`, `preskočeno` ili `alat pukao`. Od v1.9.5 to više nije samo izgovoreno nego
     **izvršeno**: blokirajući korak u stanju `preskočeno` blokira jednako kao pad
     (kvar 58 — do tada je gate uz sedam nepokrenutih blokirajućih provjera ispisivao
-    „✅ nijedna blokirajuća provjera nije pala" i izlazni kod 0). Jedini izlaz je
-    izuzeće imenom: `--dopusti-preskok korak=razlog`, koje razlog upisuje u `gate.json`.
-    Ograda: `scripts/tests/test_gate.py` (25 testova, G1–G12).
+    „✅ nijedna blokirajuća provjera nije pala" i izlazni kod 0). Izlaz je samo izuzeće
+    imenom, s razlogom upisanim u `gate.json`: `--dopusti-preskok korak=razlog` za korak
+    kojemu fali ulaz, `--iskljuci korak=razlog` za korak koji se namjerno ne pokreće
+    (kvar 152; forma koju provjerava drugi sustav). Ograda: `scripts/tests/test_gate.py`
+    (41 provjera, G1–G15, Z1–Z2).
 
 21. **Ciljana ocjena se mjeri, ne obećava.** `scripts/rubrika.py` agregira postojeće
     artefakte u pojas — gornju granicu koju rad u ovom stanju može dosegnuti — i imenuje što

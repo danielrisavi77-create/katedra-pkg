@@ -108,3 +108,16 @@ python3 <KATEDRA_SKILL>/scripts/provenance_report.py \
 
 Profil je **jedini izvor** citatnog stila, opsega, margina i obaveznih dijelova. Sve što o formatu piše u `references/pisanje.md` vrijedi samo kad profila nema.
 
+### Servis `service/` (katedra-verifier)
+
+HTTP servis za Katedra app, u korijenu paketa: rukopis (`ManuscriptV1`) → privremeni `.katedra/`
+projekt → `build_docx.py` → `gate.py --faza … --json` → `VerificationResultV1`. Bez modela, bez
+trajnog stanja; forma se ne provjerava (`gate.py --iskljuci`, forma je Lekta). Upute i ugovor:
+`service/README.md`. Testovi: `service/tests` — skupina „servis: katedra-verifier” u
+`bin/testovi.sh`; oni koji dižu FastAPI traže paket `fastapi`, bez njega su preskočeni i imenovani
+(`-rs`), ne prolaze tiho. Docker slika kopira cijeli paket (`service/Dockerfile`).
+
+`gate.py` ima dva imenovana izuzeća, oba s razlogom u `gate.json`: `--dopusti-preskok korak=razlog`
+(korak kojemu fali ulaz smije ostati nepokrenut) i `--iskljuci korak=razlog` (korak se namjerno ne
+pokreće; stanje `iskljuceno`, ne blokira; kvar 152). Nepoznato ime je u oba slučaja kod 2.
+
