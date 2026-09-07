@@ -3806,3 +3806,60 @@ AT_LEAST, MULTIPLE 2,0, MULTIPLE 1,5). Mutacija `elif isinstance(prored, docx.sh
 → `elif False:` obara tri K150 provjere i nijednu drugu; mutacija
 `pogodeni = [p for p in sa_slikom` → `[p for p in odlomci` i dalje obara dvije K101 provjere
 i nijednu K150 — stegnuti filtar nije oslabio K101.
+
+---
+
+## 151. Provjera kataloga mjerila je oblik markdowna, a javljala se kao da mjeri sadržaj
+
+Nađeno trijažom „za oko" popisa nakon kvara 150. `kvar.py --provjeri` na tri kataloga
+davao je **30 zastavica**; pregledom svake ispalo je da **29 stoji na unosima koji imaju
+i mehanizam, i popravak, i dokaz**.
+
+Dva uzorka su krivila:
+
+```python
+BROJKA  = re.compile(r"\d")              # samo ASCII znamenka
+ISJECAK = re.compile(r"^```|^\s{4}\S")   # samo ograđen ili uvučen blok
+```
+
+`ISJECAK` je pitao „ima li unos ograđen blok", a javljao „nema isječka koda ni izlaza koji
+kvar pokazuje". To nije ista tvrdnja. Izmjereno na svih 20 tako označenih unosa: **nijedan
+nije bio bez dokaza** — svi nose inline kod, tablicu ili doslovno citiranu poruku alata.
+Primjer, kvar 79: nalaz „**30 bibliografskih jedinica umjesto 27**” stoji u prozi, s
+brojkom i mehanizmom, i prijavljen je kao unos koji ništa ne pokazuje.
+
+`BROJKA` je tražila znamenku, pa je kvar 10 — čija je **cijela mjera** `#fcfcfb` naspram
+`#ffffff` — ostao „bez mjere”. U tim dvjema vrijednostima doista nema nijedne ASCII
+znamenke.
+
+Prag duljine (400 zn.) bio je iznad stvarnog dna: svih šest unosa između 318 i 360 znakova
+nosi mehanizam, popravak i dokaz. Kvar 2 (360 zn.) ima „25 % manja”, „96/72 = 1,333”,
+„15,5 cm izađe 11,6 cm” i ograđen blok — i bio je prijavljen kao prekratak da opiše
+mehanizam.
+
+Šteta nije u pojedinoj zastavici nego u broju: 30 stalnih redaka koje je svaka gradnja
+ispisivala, a svaki je pregledan i odbačen, uči oko da preskoči popis. Unos koji doista ne
+pokazuje ništa nestao bi među njima — točno ono što taj popis treba uhvatiti.
+
+Popravak: pita se ono što se tvrdi. Dokaz je blok, tablica, citirana poruka **ili** inline
+kod; mjera je znamenka **ili** heksadecimalna vrijednost. Zastavica pada samo kad nema
+ničega od toga. Prag spušten na 250.
+
+```
+prije:  rad-docx 12 · rad-audit 2 · katedra-lite 16   = 30
+poslije: rad-docx  1 · rad-audit 0 · katedra-lite  0   = 1
+```
+
+Preostala zastavica je kvar 11 (199 zn.): pokazivač na `brojke.md`, bez vlastitog opisa
+mehanizma. To je jedini unos koji je trijaža potvrdila kao stvarno tanak — ostaje javljen
+i ostaje za čovjeka.
+
+**Prve dvije inačice ograde preživjele su mutaciju**, kao kod 98–104. Testno tijelo bilo je
+408 znakova, dakle iznad i novog i starog praga, pa vraćanje praga na 400 nije oborilo
+ništa; a heksadecimalna vrijednost bila je u backtickovima, pa ju je spašavao inline dokaz,
+ne `BROJKA`. Obje prepisane: tijelo je sada 330 znakova (između pragova), a heks vrijednost
+stoji bez backtickova.
+
+Ograda: `test_kvar.py` R44 (8 provjera). Mutacije, svaka obara samo svoju: `DOKAZ = (BLOK,)`
+→ padaju 3 (inline, tablica, citat); `BROJKA = r"\d"` → pada heks; `NAJKRACI = 400` → pada
+prag; `if False:` → pada gola pritužba.

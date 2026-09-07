@@ -33,9 +33,29 @@ import sys
 # izrijekom i prijavljuje kao tvrdi nalaz, uz naredbu koja ga popravlja.
 NASLOV_TUDJI = re.compile(r"^##\s+Kvar(?:ovi)?\s+(\d+)(?:\s*[\u2013\u2014-]\s*(\d+))?\s+[\u2013\u2014-]\s+(.+?)\s*$", re.M)
 NASLOV = re.compile(r"^##\s+(\d+)(?:\s*[–—-]\s*(\d+))?\.\s+(.+?)\s*$", re.M)
-BROJKA = re.compile(r"\d")
-ISJECAK = re.compile(r"^```|^\s{4}\S", re.M)
-NAJKRACI = 400          # znakova; kraće od toga nije opisan mehanizam nego dojam
+# Kvar 151: prvi par uzoraka mjerio je OBLIK MARKDOWNA, a javljao se kao da mjeri
+# sadržaj. `ISJECAK` je tražio ograđen ili uvučen blok, pa je unos koji kvar
+# pokazuje inline kodom, tablicom ili doslovno citiranom porukom prijavljivan kao
+# „nema isječka koda ni izlaza". `BROJKA` je tražila ASCII znamenku, pa je unos
+# čija je cijela mjera `#fcfcfb` naspram `#ffffff` (bez ijedne znamenke!) ostajao
+# „bez mjere". Izmjereno na tri kataloga: 30 zastavica, od toga 29 na unosima koji
+# imaju i mehanizam i popravak i dokaz. Toliko stalnog crvenila oko nauči da ne
+# gleda popis, pa se unos koji doista ne pokazuje ništa izgubi među njima.
+#
+# Sada se pita ono što se tvrdi: pokazuje li unos IŠTA — broj, doslovnu vrijednost,
+# blok, tablicu ili citiranu poruku. Uzorci ostaju namjerno široki: cilj je uhvatiti
+# unos koji je gola pritužba, ne suditi o obliku dokaza.
+BROJKA = re.compile(r"\d|#[0-9a-fA-F]{3,8}\b")
+BLOK = re.compile(r"^```|^\s{4}\S", re.M)
+TABLICA = re.compile(r"^\s*\|.*\|\s*$", re.M)
+CITAT = re.compile(r"[\u201e\u0022][^\n]{10,}?[\u201c\u201d\u0022]")
+INLINE = re.compile(r"`[^`\n]+`")
+DOKAZ = (BLOK, TABLICA, CITAT, INLINE)
+# 400 je bilo iznad stvarnog dna: svih šest unosa između 250 i 400 znakova nosi
+# mehanizam, popravak i dokaz (npr. rad-docx 2 = 360 zn., s „25 % manja",
+# „96/72 = 1,333" i ograđenim blokom). Ispod 250 ostaje samo pokazivač na drugi
+# dokument, a to je jedini oblik koji je trijaža potvrdila kao stvarno tanak.
+NAJKRACI = 250          # znakova; kraće od toga je pokazivač, ne opis mehanizma
 NASTAVAK = re.compile(r"nadovezuje se na unos\s+(\d+)", re.I)
 
 
@@ -135,10 +155,9 @@ def provjeri(put, od=None, nastavak_od=None):
 
         if od is not None and broj < od:
             continue
-        if not BROJKA.search(tijelo):
-            meki.append((broj, "nema nijedne brojke — kvar bez mjere je slutnja"))
-        if not ISJECAK.search(tijelo):
-            meki.append((broj, "nema isječka koda ni izlaza koji kvar pokazuje"))
+        if not BROJKA.search(tijelo) and not any(u.search(tijelo) for u in DOKAZ):
+            meki.append((broj, "ne pokazuje ništa — ni broj, ni doslovnu vrijednost, "
+                               "ni blok, ni tablicu, ni citiranu poruku"))
         if len(tijelo.strip()) < NAJKRACI:
             meki.append((broj, f"kratak unos ({len(tijelo.strip())} zn.) — "
                                "provjeri opisuje li mehanizam ili samo simptom"))
