@@ -64,6 +64,7 @@ NameError: name 'meta' is not defined                     [izlazni kod: 1]  → 
 Popravak: `_renderiraj(..., meta=None)` i `meta = meta or {}` (u `build_docx.py.diff`). Fixture:
 `assets/fixture_rukopis_tablica/` — jedno poglavlje, jedna tablica (dokazi/nalaz3_build_docx.txt).
 
+Ograda: `test_stari_kvarovi.py` K26 — `_renderiraj` mora primati `meta` i imati zadanu vrijednost, pa poziv bez njega ne puca. Mjeri se potpis kroz `inspect.signature`, ne tekst datoteke. Mutacija: uklanjanje `=None` obara test.
 ## 27. Grana `startswith('popis')` hvata prije `'popis literature'`, pa rukopis dobiva fantomske naslove
 
 Vlasnik: `katedra-lite` (nalaz 3b). S `--rukopis` generator uvijek dodaje prazne naslove
@@ -121,6 +122,7 @@ mora javiti „nema izjave" umjesto `StopIteration`. Drugi sloj: `predaja.md` tr
 `rad-docx/scripts/provjeri_reference.py` „obavezno nad konačnim PDF-om" — te skripte u `rad-docx`
 **nema** (8 skripti, nijedna se tako ne zove); mrtva naredba, v. 37.
 
+Ograda: `test_stari_kvarovi.py` K29 — sposobnost s `uvjet.tipovi = ["zavrsni","diplomski"]` ne smije vrijediti za seminarski, mora za diplomski, a bez `tipovi` ili bez poznatog tipa ne isključuje ništa. `_primjenjivo` je čista funkcija, pa se mjeri izravno. Mutacija: `tipovi = None` obara točno negativni slučaj.
 ## 30. Numerički stil u ovalnim zagradama ne postoji, pa rad sa 75 referenci prolazi kao rad bez citata
 
 Vlasnik: `katedra-lite` + `rad-audit` (nalaz 6). `citation_dialects.py` zna autor-godina, IEEE `[n]`
@@ -594,6 +596,7 @@ vrijednost točna — imenuje obje i mjesto na kojem stoje.
 Ograda koja bi ga bila uhvatila: faza C već radi „isti pojam, više vrijednosti iste jedinice"
 za mjerne veličine. Ista logika nad brojem koraka i udjelima nije bila primijenjena.
 
+Ograda: `test_stari_kvarovi.py` K48 — `UZORAK_OD` mora uhvatiti „šest od sedam koraka", a `proturjecja()` prijaviti dvije različite vrijednosti istog pojma i **ne** prijaviti dvije iste. Popravak živi u `provjeri_brojke_u_tekstu.py`, ne u `consistency_check.py` kako unos pretpostavlja. Mutacija: `if len(vrijednosti) > 1` → `if False` obara test.
 ## 49. `drift.py` mjeri samo SKILL.md, a kartica i repo razilaze se i u `scripts/`
 
 `drift.py --kratko` uspoređuje `SKILL.md` account kartice i repoa i vraća 0 kad su isti.
