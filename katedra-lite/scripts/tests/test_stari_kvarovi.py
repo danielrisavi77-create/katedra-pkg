@@ -36,6 +36,28 @@ def check(naziv, uvjet, detalj=""):
             print("           detalj: %r" % (detalj,))
 
 
+def modul_rad_audit(ime):
+    """Modul iz sestrinskog skilla `rad-audit`."""
+    put = os.path.join(os.path.dirname(KORIJEN), "rad-audit", "scripts")
+    spec = importlib.util.spec_from_file_location(ime, os.path.join(put, ime + ".py"))
+    m = importlib.util.module_from_spec(spec)
+    if put not in sys.path:
+        sys.path.insert(0, put)
+    spec.loader.exec_module(m)
+    return m
+
+
+def modul_katedra(ime):
+    """Modul iz sestrinskog skilla `katedra` (isti paket, druga mapa)."""
+    put = os.path.join(os.path.dirname(KORIJEN), "katedra", "scripts")
+    spec = importlib.util.spec_from_file_location(ime, os.path.join(put, ime + ".py"))
+    m = importlib.util.module_from_spec(spec)
+    if put not in sys.path:
+        sys.path.insert(0, put)
+    spec.loader.exec_module(m)
+    return m
+
+
 def modul(ime):
     spec = importlib.util.spec_from_file_location(ime, os.path.join(SCRIPTS, ime + ".py"))
     m = importlib.util.module_from_spec(spec)
@@ -289,6 +311,171 @@ def main():
     check("K71: audit ima blokirajući motor koji nosi fazu A",
           m is not None and m.blokira and any("--audit" in str(a) for a in m.argv),
           None if m is None else (m.blokira, [str(a) for a in m.argv][:3]))
+
+    # --- 46: odluka o vlastitom istraživanju je u stanju projekta -----------
+    # Prije se izvodila iz statusa dijela `metodologija`, koji je time sam sebi
+    # stvarao kriterij. `_empirijski(kat)` je čista funkcija nad mapom.
+    rb = modul("rubrika")
+
+    def kat_sa(stanje):
+        k = tempfile.mkdtemp()
+        with open(os.path.join(k, "stanje.json"), "w", encoding="utf-8") as f:
+            json.dump(stanje, f)
+        return k
+
+    check("K46: odluka autora `vlastito_istrazivanje: true` je empirijski rad",
+          rb._empirijski(kat_sa({"vlastito_istrazivanje": True})) is True)
+    check("K46: odluka „ne” NIJE empirijski rad",
+          rb._empirijski(kat_sa({"vlastito_istrazivanje": "ne"})) is False)
+
+    # --- 34: gotov rad bez plana nije „nezapočet” ---------------------------
+    nap = modul("napredak")
+    vr, opis = nap.komponenta_opseg(kat_sa({}), None,
+                                    {"datoteke": {"rad_docx": "rad.docx"}})
+    check("K34: gotov rad bez plana daje opseg 100 „iz gotovog rada”",
+          vr == 100 and isinstance(opis, dict) and "postojeći rad" in opis.get("ocjena", ""),
+          (vr, opis))
+    vr2, opis2 = nap.komponenta_opseg(kat_sa({}), None, {})
+    check("K34: bez plana i bez rada opseg se NE izmišlja", vr2 is None, (vr2, opis2))
+
+    # --- 56: doktrina o gateovima (pravila 33 i 34) mora stajati u routeru -------
+    # Odlučujući token je broj + naslov pravila, ne cijela rečenica.
+    check("K56: pravilo 33 „provjera koja ne može pasti” je u routeru",
+          bool(re.search(r"^33\. \*\*Provjera koja ne može pasti", router, re.M)))
+    check("K56: pravilo 34 „provjera se prima tek kad je pokazano da pada” je u routeru",
+          bool(re.search(r"^34\. \*\*Provjera se prima tek kad je pokazano da pada", router, re.M)))
+
+    # --- 72–73: provjera tvrdnji ne smije javiti ✓ nad skillom bez testova -------
+    # SKILL.md tvrdi 12/12 testova i spominje test_all.py, a datoteke nema.
+    za = modul_katedra("zakrpa")
+    sk = os.path.join(tempfile.mkdtemp(), "lazni-skill")
+    os.makedirs(os.path.join(sk, "scripts"))
+    with open(os.path.join(sk, "SKILL.md"), "w", encoding="utf-8", newline="\n") as f:
+        f.write("# Skill\n\nProlazi 12/12 testova (scripts/tests/test_all.py).\n")
+    n7273 = za.provjeri_tvrdnje(sk)
+    check("K72: tvrdnja o testovima bez suitea je ❌",
+          any("suite se ne može pokrenuti" in x for x in n7273), n7273)
+    check("K73: spomen test_all.py bez datoteke je ❌",
+          any("test_all.py ne postoji" in x or "ne postoji" in x and "test_all" in x for x in n7273), n7273)
+
+    # --- 27: „popis literature” nije običan „popis” --------------------------
+    # Grana startswith("popis") hvatala je i popis literature prije specifične
+    # grane. Popravak je uveo `_je_popis_literature`; ograda mjeri tu funkciju
+    # (djelomično — redoslijed grana u generatoru traži cijeli rukopis).
+    bdx = modul("build_docx")
+    check("K27: „popis literature” jest popis literature",
+          bdx._je_popis_literature("popis literature"))
+    check("K27: „popis korištenih izvora” jest popis literature",
+          bdx._je_popis_literature("popis korištenih izvora"))
+    check("K27: „popis tablica” NIJE popis literature",
+          not bdx._je_popis_literature("popis tablica"))
+
+    # --- 28: izlazni kod iz toga SMIJE LI simbol blokirati, ne iz broja simbola --
+    # Ugovor: kod je 1 točno kad postoji ❌ (broj_krsenja > 0); sama ⚠ daje 0.
+    # Mjeri se CLI na dva dokumenta i uspoređuje s vlastitim JSON-om alata.
+    import subprocess
+    prof = os.path.join(mapa, "prazan_profil.json")
+    with open(prof, "w", encoding="utf-8") as f:
+        json.dump({"slug": "proba", "format": {}}, f)
+
+    def check_rules_kod(docx_put):
+        js = docx_put + ".json"
+        rr = subprocess.run([sys.executable, "-B", os.path.join(SCRIPTS, "check_rules.py"),
+                             docx_put, "--profil", prof, "--tip", "seminarski", "--json", js],
+                            capture_output=True, text=True, encoding="utf-8", errors="replace")
+        # Alat koji je pukao nije provjera koja je prosla (pravilo 20): ako JSON
+        # nije napisan, to je NALAZ s razlogom, ne traceback koji zakloni ostatak.
+        if not os.path.exists(js):
+            return rr.returncode, None, (rr.stderr or rr.stdout).strip().splitlines()[-3:]
+        with open(js, encoding="utf-8") as f:
+            iz = json.load(f)
+        return rr.returncode, int(iz.get("broj_krsenja") or 0), None
+
+    for ime, (w, h) in (("letter", (21.59, 27.94)), ("a4", (21.0, 29.7))):
+        dokument_formata(w, h, "k28_%s.docx" % ime)
+        kod, krsenja, greska = check_rules_kod(os.path.join(mapa, "k28_%s.docx" % ime))
+        check("K28: %s — alat je napisao JSON (nije pukao)" % ime, greska is None, greska)
+        if greska is None:
+            check("K28: %s — izlazni kod 1 ⇔ broj_krsenja > 0 (kod %d, kršenja %d)" % (ime, kod, krsenja),
+                  (kod == 1) == (krsenja > 0), (kod, krsenja))
+
+    # --- 61–63: srušena faza nije faza bez nalaza -------------------------------
+    aa = modul_rad_audit("audit_all")
+    aa.KODOVI.clear()
+    check("K61: faza koja vrati 1 upisuje 1", aa.run("t1", lambda: 1) == 1 and aa.KODOVI["t1"] == 1)
+
+    def pukni():
+        raise RuntimeError("proba")
+
+    check("K61: iznimka u modulu je kod 2 (KRITIČNO), ne 0",
+          aa.run("t2", pukni) == 2 and aa.KODOVI["t2"] == 2)
+
+    def izadji3():
+        sys.exit(3)
+
+    check("K61: SystemExit(3) ostaje 3 — granica se ne pretvara u pad",
+          aa.run("t3", izadji3) == 3 and aa.KODOVI["t3"] == 3)
+
+    # --- 42: dokaz.py razlikuje smjer tihog kvara --------------------------------
+    dz = os.path.join(os.path.dirname(KORIJEN), "katedra", "scripts", "dokaz.py")
+    PY = sys.executable
+    prolazi = PY + " -c \"import sys;print('A');sys.exit(0)\""
+    pada    = PY + " -c \"import sys;print('B');sys.exit(1)\""
+
+    def dokaz(*argv):
+        rr = subprocess.run([PY, "-B", dz] + list(argv), capture_output=True, text=True,
+                            encoding="utf-8", errors="replace",
+                            env=dict(os.environ, PYTHONIOENCODING="utf-8"))
+        return rr.returncode, rr.stdout
+
+    k, out = dokaz("--prije", prolazi, "--poslije", pada)
+    check("K42: 0 → ≠0 bez --tihi je „obrnuto od očekivanog” i pada",
+          k == 1 and "obrnuto" in out, (k, out[-160:]))
+    k, out = dokaz("--prije", prolazi, "--poslije", pada, "--tihi")
+    check("K42: isti par s --tihi je dokazan tihi kvar i prolazi",
+          k == 0 and "tihi kvar" in out, (k, out[-160:]))
+    k, out = dokaz("--prije", prolazi, "--poslije", prolazi)
+    check("K42: dva jednaka stanja ne dokazuju ništa",
+          k == 1 and "ne razlikuje" in out, (k, out[-160:]))
+
+    # --- 74: napomena o metodi nije nalaz ---------------------------------------
+    # Redak koji vrijedi za svaki rad ne smije nositi ⚠, inače brojač nikad ne
+    # pokazuje nulu. Mjeri se ispis nad čistim dokumentom.
+    p74 = os.path.join(mapa, "cist_citat.docx")
+    d = Document()
+    d.add_paragraph("Uvod", style="Heading 1")
+    d.add_paragraph("Ranija analiza pokazuje jasan trend u ovom području (Horvat, 2020).")
+    d.add_paragraph("Literatura", style="Heading 1")
+    d.add_paragraph("Horvat, M. (2020). Naslov djela o trendovima. Zagreb: Izdavač.")
+    d.save(p74)
+    cay = os.path.join(os.path.dirname(KORIJEN), "rad-audit", "scripts", "check_citations_authoryear.py")
+    rr = subprocess.run([PY, "-B", cay, p74], capture_output=True, text=True,
+                        encoding="utf-8", errors="replace",
+                        env=dict(os.environ, PYTHONIOENCODING="utf-8"))
+    redci = rr.stdout.splitlines()
+    napomena = next((x for x in redci if "NAPOMENA O METODI" in x), "")
+    check("K74: napomena o metodi postoji i NE počinje znakom ⚠",
+          napomena and not napomena.lstrip().startswith("⚠"), napomena[:80])
+    check("K74: čist dokument nema nijedan ⚠ redak",
+          not any(x.lstrip().startswith("⚠") for x in redci),
+          [x for x in redci if x.lstrip().startswith("⚠")][:3])
+
+    # --- 38: nepotvrđen izvor dobiva NAREDBU čovjeku, ne samo simbol ---------
+    # Nalaz koji ništa ne traži tretira se kao nalaz koji ništa ne znači.
+    vs = modul("verify_sources")
+    bez_adrese = {"status": "?", "url": None, "doi": None,
+                  "verification": {"status": vs.UNVERIFIED, "reason": "nema u Crossrefu"}}
+    _o, radnja = vs.radnja_za_izvor(bez_adrese)
+    check("K38: unverified bez URL-a i DOI-ja kaže GDJE pogledati",
+          bool(radnja) and "potraži" in radnja, radnja[:100])
+    s_adresom = dict(bez_adrese, url="https://example.org/jedinica")
+    _o, radnja2 = vs.radnja_za_izvor(s_adresom)
+    check("K38: unverified s URL-om kaže da se adresa otvori i provjeri",
+          "otvori" in radnja2 and "example.org" in radnja2, radnja2[:100])
+    nedostupno = dict(bez_adrese, status=vs.NEDOSTUPNO)
+    _o, radnja3 = vs.radnja_za_izvor(nedostupno)
+    check("K38: ⏸ nedostupno prvo traži ponovnu provjeru mreže",
+          "ponovi" in radnja3, radnja3[:100])
 
     print("=" * 70)
     print("REZULTATI TESTOVA: %d/%d prošlo"
