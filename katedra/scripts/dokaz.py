@@ -28,7 +28,7 @@ def pokreni(naredba, oznaka):
     print("─" * 72)
     print(f"{oznaka}: {naredba}")
     print("─" * 72)
-    r = subprocess.run(naredba, shell=True, capture_output=True, text=True)
+    r = subprocess.run(naredba, shell=True, capture_output=True, text=True, encoding="utf-8", errors="replace")
     izlaz = (r.stdout or "") + (r.stderr or "")
     print(izlaz.rstrip() or "(bez izlaza)")
     print(f"[izlazni kod: {r.returncode}]")

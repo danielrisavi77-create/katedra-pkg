@@ -112,7 +112,7 @@ def _odlomci_iz_teksta(tekst: str) -> list[list[dict]]:
 
 def _pdf_tekst(put: str) -> str:
     if shutil.which("pdftotext"):
-        r = subprocess.run(["pdftotext", "-layout", put, "-"], capture_output=True, text=True)
+        r = subprocess.run(["pdftotext", "-layout", put, "-"], capture_output=True, text=True, encoding="utf-8", errors="replace")
         if r.returncode == 0 and r.stdout.strip():
             return r.stdout
     try:

@@ -635,7 +635,7 @@ def test_manifest():
     """Kvar 1/11: manifest motora mora se slagati s otiskom koda."""
     import subprocess
     r = subprocess.run([sys.executable, os.path.join(SCRIPTS, "osvjezi_contract.py")],
-                       capture_output=True, text=True)
+                       capture_output=True, text=True, encoding="utf-8", errors="replace")
     check("R22: engine_contract.json se slaže s otiskom koda "
           "(popravak: python3 osvjezi_contract.py --upisi)",
           r.returncode == 0, r.stdout.strip().splitlines()[-1:] )

@@ -104,7 +104,7 @@ def main() -> int:
         p = subprocess.run(
             [sys.executable, os.path.join(SCRIPTS, "gate.py"), "--faza", "audit",
              "--kat", os.path.join(d, ".katedra"), "--project-root", d],
-            capture_output=True, text=True)
+            capture_output=True, text=True, encoding="utf-8", errors="replace")
         check("G10: prazan projekt NE prolazi fazu audit", p.returncode == 1,
               p.returncode)
         check("G10: ispis imenuje što se nije pokrenulo",
@@ -118,7 +118,7 @@ def main() -> int:
             [sys.executable, os.path.join(SCRIPTS, "gate.py"), "--faza", "audit",
              "--kat", os.path.join(d, ".katedra"), "--project-root", d,
              "--dopusti-preskok", "nepostojeci=razlog"],
-            capture_output=True, text=True)
+            capture_output=True, text=True, encoding="utf-8", errors="replace")
         check("G11: --dopusti-preskok s nepoznatim korakom vraća 2",
               p.returncode == 2, (p.returncode, p.stderr[-200:]))
 
@@ -126,7 +126,7 @@ def main() -> int:
             [sys.executable, os.path.join(SCRIPTS, "gate.py"), "--faza", "audit",
              "--kat", os.path.join(d, ".katedra"), "--project-root", d,
              "--dopusti-preskok", "bez-razloga"],
-            capture_output=True, text=True)
+            capture_output=True, text=True, encoding="utf-8", errors="replace")
         check("G12: --dopusti-preskok bez razloga vraća 2", p.returncode == 2,
               p.returncode)
 
@@ -174,7 +174,7 @@ def main() -> int:
         dd = Document(); dd.add_paragraph("Tekst rada u jednom odlomku."); dd.save(rad)
         izlaz_cp = subprocess.run(
             [sys.executable, os.path.join(SCRIPTS, "check_paragraphs.py"), rad,
-             "--profil", prof], capture_output=True, text=True)
+             "--profil", prof], capture_output=True, text=True, encoding="utf-8", errors="replace")
         check("Z1: profil bez format.odlomak daje kod 3 (preskoceno), ne 2",
               izlaz_cp.returncode == 3,
               (izlaz_cp.returncode, izlaz_cp.stderr[-160:]))

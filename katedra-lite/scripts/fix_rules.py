@@ -276,7 +276,7 @@ def _nalazi(rad, profil_put, tip):
         proc = subprocess.run(
             [sys.executable, os.path.join(HERE, "check_rules.py"), rad,
              "--profil", profil_put, "--tip", tip, "--json", izlaz],
-            capture_output=True, text=True)
+            capture_output=True, text=True, encoding="utf-8", errors="replace")
         if proc.returncode not in (0, 1):
             raise GreskaUlaza(f"check_rules.py nije mogao pročitati rad: {proc.stderr.strip()}")
         with open(izlaz, encoding="utf-8") as f:

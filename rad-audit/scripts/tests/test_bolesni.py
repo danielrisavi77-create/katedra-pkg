@@ -66,7 +66,7 @@ def main() -> int:
     r = subprocess.run(
         [sys.executable, os.path.join(SCRIPTS, "generate_report.py"), docx,
          "--out", os.path.join(radni, "izvjestaj.md"), "--json", izvjestaj],
-        capture_output=True, text=True, cwd=SCRIPTS)
+        capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=SCRIPTS)
 
     print("BOLESNI RAD — audit mora pasti")
     print("=" * 56)
@@ -98,7 +98,7 @@ def main() -> int:
     rz = subprocess.run(
         [sys.executable, os.path.join(SCRIPTS, "generate_report.py"), zdravi,
          "--out", os.path.join(radni, "zdravi.md"), "--json", izvjestaj_z],
-        capture_output=True, text=True, cwd=SCRIPTS)
+        capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=SCRIPTS)
     with open(izvjestaj_z, encoding="utf-8") as fh:
         dz = json.load(fh)
     kriticni_z = dz["findings"]["kritično"]
@@ -120,7 +120,7 @@ def main() -> int:
         subprocess.run(
             [sys.executable, os.path.join(SCRIPTS, "generate_report.py"), put,
              "--out", os.path.join(radni, ime + ".md"), "--json", izl],
-            capture_output=True, text=True, cwd=SCRIPTS)
+            capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=SCRIPTS)
         with open(izl, encoding="utf-8") as fh:
             dd = json.load(fh)
         tvrdi(dd["counts"]["kritično"] == 0,

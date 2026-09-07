@@ -80,6 +80,9 @@ ostaci_zakrpa() {
   echo "nema ostataka zakrpa među praćenim datotekama"
 }
 pokreni "paket: nema ostataka zakrpa" ostaci_zakrpa
+# Kvar 159: isti kvar (subprocess bez encoding=, cp1250) vraćao se sa svakom isporukom
+# (119, 152, 153, 155). AST pregled cijelog paketa; svaki novi poziv bez encoding= je crven.
+pokreni "paket: subprocess s encoding=" python3 "$KORIJEN/katedra/scripts/provjeri_subprocess.py" "$KORIJEN"
 # service/: verifikator za Katedra app. Testovi koji dižu FastAPI bez paketa fastapi su
 # PRESKOČENI i imenovani (-rs) — deklarirano ograničenje, ne prolaz.
 pokreni "servis: katedra-verifier" env KATEDRA_VERIFIER_TOKEN=dev python3 -m pytest -q -rs -p no:cacheprovider "$KORIJEN/service/tests"
