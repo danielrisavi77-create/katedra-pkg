@@ -36,7 +36,7 @@ def test_write_katedra_creates_state_profile_chapters():
         assert files == ["01-sazetak.md", "02-uvod.md", "03-teorijski-okvir.md", "04-zakljucak.md", "literatura.md"]
         assert open(os.path.join(kat, "poglavlja", "02-uvod.md"), encoding="utf-8").read().startswith("# Uvod\n")
         izv = json.load(open(os.path.join(kat, "izvori.json")))
-        assert izv["izvori"][0]["doi"] == "10.2307/2952255" and izv["izvori"][0]["status"] == "verified"
+        assert izv["izvori"][0]["doi"] == "10.2307/2952255" and izv["izvori"][0]["verification"]["status"] == "verified"
         assert len(out["poglavlja"]) == 5
     finally:
         shutil.rmtree(root)
@@ -108,4 +108,29 @@ def test_run_decodes_utf8_child_output(tmp_path):
     import app as A
     r = A._run([sys.executable, "-c", "print(chr(8216) + 'x')"], str(tmp_path))
     assert r.returncode == 0 and r.stdout is not None and r.stdout.strip() == chr(8216) + "x", (r.stdout, r.stderr)
+
+
+def test_claims_bridge_feeds_strict_evidence_gate():
+    """Druga linija, most: tvrdnja s potporom se poveže (linked 1), tvrdnja bez potpore blokira korak evidence."""
+    pytest.importorskip("fastapi")
+    from app import _verify_job, VerifyRequest
+    agent_result = {"agent": "writing", "output": "x", "citations": [], "provider": "p", "usage": {"inputTokens": 1, "outputTokens": 1},
+                    "claims": [{"id": "clm_app1", "text": "Odaziv u Belgiji premašuje 85 %.", "citationIds": ["src-1"],
+                                "support": [{"citationId": "src-1", "quote": "Turnout in Belgium exceeds 85 percent under compulsory voting.", "locator": "str. 4"}]},
+                               {"id": "clm_app2", "text": "Tvrdnja bez ikakve potpore.", "citationIds": [], "support": []}]}
+    res = _verify_job(VerifyRequest(runId="r", agent="writing", manuscript=FIX, profile=HINT, planApproved=True, plan=PLAN, agentResult=agent_result))
+    led = res["conversion"]["ledger"]
+    assert led.get("claims") == 2 and led.get("evidence", 0) >= 1 and led.get("linked") == 1, led
+    ev = next(i for i in res["issues"] if i["step"] == "evidence")
+    assert ev["code"] == "gate_finding" and ev["blocking"] is True   # nepoduprta tvrdnja blokira
+    # brojač `linked` je servisov; mjerodavan je GATE: poduprta tvrdnja ne smije biti u nalazu (mutacija bez `link` prošla je kroz brojač)
+    assert "clm_app2" in ev["message"] and "clm_app1" not in ev["message"], ev["message"]
+    assert res["status"] in ("needs_revision", "blocked")
+
+
+def test_bridge_run_decodes_utf8_child_output():
+    """claims_bridge je stigao s istim subprocess bez encoding= (kvar 119, treći put): U+2018 = E2 80 98."""
+    import claims_bridge as B
+    r = B._run([sys.executable, "-c", "print(chr(8216) + 'x')"], "proba")
+    assert r.stdout is not None and r.stdout.strip() == chr(8216) + "x", (r.stdout, r.stderr)
 

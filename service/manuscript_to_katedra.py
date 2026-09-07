@@ -119,11 +119,22 @@ def tiptap_to_markdown(doc: dict[str, Any] | None) -> str:
 
 # ---------------------------------------------------------------- izvori
 
-def sources_to_izvori(sources: list[dict[str, Any]]) -> dict[str, Any]:
+def sources_to_izvori(sources: list[dict[str, Any]], scripts_dir: str) -> dict[str, Any]:
+    """Isti oblik koji verify_sources.py --json piše, kroz iste pomoćnike (source_semantics), da ga
+    evidence_gate.py i claim_ledger.py čitaju bez iznimke. Status `verified` dolazi iz appa
+    (independent citation verifier), `unverified` inače; nikad se ne izmišlja identitet izvora."""
+    if scripts_dir not in sys.path:
+        sys.path.insert(0, scripts_dir)
+    from source_semantics import UNVERIFIED, VERIFIED, classify_quality, verification_record  # noqa: E402
     zapisi = []
     for s in sources:
         url = s.get("urlOrDoi") or ""
         doi = url.lower().replace("https://doi.org/", "") if "doi.org/" in url.lower() else (url if url.lower().startswith("10.") else "")
+        status = VERIFIED if s.get("verified") else UNVERIFIED
+        ver = verification_record(status, provider="katedra-app", scope="identity",
+                                  reason="ManuscriptV1.sources.verified iz Katedrinog citation verifiera" if s.get("verified")
+                                  else "app nije potvrdio izvor; ručno provjeriti")
+        source_type = "journal_article" if doi else "unknown"
         zapisi.append({
             "source_id": s.get("id"),
             "autori": s.get("authors") or "",
@@ -131,10 +142,12 @@ def sources_to_izvori(sources: list[dict[str, Any]]) -> dict[str, Any]:
             "naslov": s.get("title") or "",
             "doi": doi,
             "url": "" if doi else url,
-            "status": "verified" if s.get("verified") else "unverified",
+            "status": "✅" if s.get("verified") else "⚠️",
+            "obrazlozenje": ver["reason"],
+            "verification": ver,
+            "source_entity": {"kind": "bibliographic_source", "type": source_type},
+            "quality": classify_quality(source_type, status),
             "blocking": False,
-            "quality": "needs_classification",
-            "izvor_statusa": "katedra-app ManuscriptV1.sources.verified",
         })
     return {"verzija": "manuscript-v1", "izvori": zapisi}
 
@@ -274,7 +287,7 @@ def write_katedra(manuscript: dict[str, Any], project_root: str, profile_hint: d
         written.append({"file": name, "sectionId": s.get("id"), "status": s.get("status"), "chars": len(body)})
 
     with open(os.path.join(kat, "izvori.json"), "w", encoding="utf-8") as f:
-        json.dump(sources_to_izvori(manuscript.get("sources") or []), f, ensure_ascii=False, indent=1)
+        json.dump(sources_to_izvori(manuscript.get("sources") or [], scripts_dir), f, ensure_ascii=False, indent=1)
 
     return {"kat": kat, "poglavlja": written, "profil": profil["slug"], "tip": tip}
 
