@@ -793,6 +793,52 @@ def main():
     g = prored_greske("mult15", WD_LINE_SPACING.MULTIPLE, 1.5)
     check("K150: MULTIPLE 1,5 → nijedna greška o proredu", g == [], g)
 
+    # --- rad-docx 11: osnovica zaokruživanja -----------------------------------
+    # RD = katalog skilla rad-docx (vlastita numeracija), da se ne pomiješa s
+    # K-brojevima katedra-lite. Udio i zbroj moraju se računati iz PRIKAZANIH
+    # vrijednosti, inače recenzent koji podijeli dvije brojke iz tablice dobije
+    # drugu znamenku od one koja piše u istom retku.
+    _mp_put = os.path.join(os.path.dirname(KORIJEN), "rad-docx", "assets",
+                           "model_predlozak.py")
+    _mp_spec = importlib.util.spec_from_file_location("model_predlozak", _mp_put)
+    mp = importlib.util.module_from_spec(_mp_spec)
+    _mp_spec.loader.exec_module(mp)
+
+    # Zaokružuje se POLA GORE. Pythonov `round` to nije: round(1.8155, 3) = 1,815,
+    # jer je 1,8155 u dvojnom zapisu nešto ispod polovice. Otud nudge 1e-12.
+    check("RD11: r2 zaokružuje pola gore (2,155 → 2,16)", mp.r2(2.155) == 2.16, mp.r2(2.155))
+    check("RD11: r3 zaokružuje pola gore (1,8155 → 1,816)", mp.r3(1.8155) == 1.816, mp.r3(1.8155))
+
+    # `ale()` mora biti zbroj PRIKAZANIH doprinosa, da se stupac može provjeriti
+    # sabiranjem. Prva inačica ove ograde mjerila je to na SC iz predloška i
+    # mutacija ju je preživjela: gubici 6,856 / 24,66 / 77,94 su takvi da `r2` ne
+    # promijeni nijedan doprinos, pa se izbor osnovice ondje uopće ne vidi.
+    # Zato scenariji na kojima se vidi — `gubitak` se privremeno zamjenjuje da
+    # fixture zada iznos izravno.
+    def ale_nad(sc):
+        _stari_sc, _stara_g = mp.SC, mp.gubitak
+        mp.SC, mp.gubitak = sc, (lambda s, fd=1.0, fr=1.0: s["_g"])
+        try:
+            return mp.ale()
+        finally:
+            mp.SC, mp.gubitak = _stari_sc, _stara_g
+
+    # 2,1549 → prikazano 2,15; iz punog iznosa ispalo bi 2,155
+    check("RD11: ale() računa doprinos iz PRIKAZANOG iznosa, ne iz punog",
+          ale_nad({"a": {"freq": 1.0, "_g": 2.1549}}) == 2.15,
+          ale_nad({"a": {"freq": 1.0, "_g": 2.1549}}))
+    # dva doprinosa po 0,0005 → prikazano 0,001 + 0,001 = 0,002; nezaokruženo 0,001
+    check("RD11: ale() sabire ZAOKRUŽENE doprinose, ne nezaokružene",
+          ale_nad({"a": {"freq": 0.0005, "_g": 1.0},
+                   "b": {"freq": 0.0005, "_g": 1.0}}) == 0.002,
+          ale_nad({"a": {"freq": 0.0005, "_g": 1.0},
+                   "b": {"freq": 0.0005, "_g": 1.0}}))
+    # Primjer iz brojke.md mora ostati točan: prikazano 1,816, točan zbroj 1,8151.
+    check("RD11: primjer iz brojke.md stoji (1,816 naspram točnih 1,8151)",
+          mp.ale() == 1.816
+          and round(sum(_sc["freq"] * mp.gubitak(_sc) for _sc in mp.SC.values()), 4) == 1.8151,
+          (mp.ale(), sum(_sc["freq"] * mp.gubitak(_sc) for _sc in mp.SC.values())))
+
     print("=" * 70)
     print("REZULTATI TESTOVA: %d/%d prošlo"
           % (len(SVE) - len(PALO), len(SVE)))

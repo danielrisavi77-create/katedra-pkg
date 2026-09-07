@@ -176,9 +176,48 @@ POVRSINA_IZVOZ      = "#ffffff"   # facecolor u savefig — boja papira
 
 ## 11. Udio izračunan iz nezaokruženih vrijednosti ne poklapa se s tablicom
 
-Vidi `brojke.md`, odjeljak o osnovici zaokruživanja. Recenzent koji podijeli dvije brojke
-iz tablice dobije 31,5 %, a u tablici stoji 31,4 %. Nalaz je trivijalno izbjeći i
-neugodno objašnjavati.
+Tablica prikazuje zaokružene brojke, a udio uz nju izračunan je iz **punih**. Recenzent
+podijeli ono što vidi i dobije drugu znamenku od one koja piše u istom retku:
+
+```
+puni iznosi:      2,156 / 6,856 = 31,4 %   ← alat izračuna ovo
+prikazane brojke: 2,16  / 6,86  = 31,5 %   ← čitatelj izračuna ovo
+```
+
+Obje su brojke točne — razlikuje ih **osnovica**. Zato se nalaz ne da obraniti izračunom:
+tko god provjerava, provjerava iz tablice, jer puni iznosi nigdje ne stoje. Isto vrijedi
+za zbroj stupca: točan zbroj nezaokruženih doprinosa ne odgovara zbroju prikazanih, pa
+stupac koji je **točniji** izgleda kao greška.
+
+**Pravilo (željezno):** svaki izvedeni udio i zbroj računa se iz PRIKAZANIH vrijednosti.
+`assets/model_predlozak.py` to nosi u `r2`/`r3` i `ale()`; puni je opis u `brojke.md`,
+odjeljak „Osnovica zaokruživanja".
+
+Zaokruživanje mora biti **pola gore**, a Pythonov `round` to nije: `round(1.8155, 3)` daje
+1,815 jer je 1,8155 u dvojnom zapisu nešto ispod polovice. Otud nudge u pomoćnicima:
+
+```python
+def r3(x): return round(x + 1e-12, 3)      # r3(1,8155) = 1,816; bez nudgea 1,815
+```
+
+Izmjereno na predlošku: `ale()` daje **1,816** = zbroj prikazanih doprinosa
+(0,686 + 0,74 + 0,39), dok je točan zbroj **1,8151**. Ta se razlika ne skriva — ako se ne
+da izbjeći, piše se u izvoru pod tablicom.
+
+Stroj ovo ne hvata i ne može: obje osnovice daju uvjerljivu tablicu, a alat ne zna koju je
+autor mislio. `rad-audit/scripts/check_tablice.py` zato provjerava samo posljedicu (zbroj
+stupca, postoci do 100) i ima toleranciju baš zato što se udjeli po pravilu računaju iz
+zaokruženih vrijednosti — zbroj 99,9 ili 100,1 nije greška.
+
+**Zamka pri pisanju ograde:** predložak na VLASTITIM brojkama ne pokazuje vlastito pravilo.
+Gubici scenarija (6,856 · 24,66 · 77,94) takvi su da `r2` ne promijeni nijedan doprinos, pa
+prikazana i puna osnovica daju isti iznos (1,816). Prva inačica ograde mjerila je baš to i
+mutacija „računaj iz punog gubitka" ju je preživjela. Osnovica se vidi tek na scenariju
+gdje zaokruživanje mijenja znamenku, npr. iznos 2,1549: prikazano 2,15, iz punog 2,155.
+
+**Ograda:** `test_stari_kvarovi.py` RD11 (5 provjera). Mutacije, svaka obara samo svoju:
+`round(x + 1e-12, n)` → `round(x, n)` obara pola-gore; `r2(gubitak(...))` → `gubitak(...)`
+obara osnovicu; uklonjen unutarnji `r3` u `ale()` obara zbroj.
 
 ---
 
