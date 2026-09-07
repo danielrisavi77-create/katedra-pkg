@@ -450,6 +450,7 @@ sesije** i upućuje na tablicu, pa se popravak ne može opisati bez površine na
 Doktrina koja imenuje simptom, a promaši mehanizam, ista je klasa kao kvar 41 — samo na razini
 routera, gdje je nitko ne provjerava alatom.
 
+Ograda (strojna, uz onu u prozi iznad): `test_stari_kvarovi.py` K43 — router mora imenovati pojam `izvor sesije`, a uvod prije tablice ne smije slati korisnika u konkretnu postavku. Mutacija: vraćanje imena postavke u tu rečenicu obara test.
 ## 44. Čitač kriterija „zadatak" nije imao granu ispunjeno, pa je pojas 5 bio nedosežljiv svakom radu koji ima zadatak.json
 
 `citac_zadatak_komponente` u `rubrika.py` završavao je jednim bezuvjetnim `return`: čim
@@ -625,6 +626,7 @@ daje i kad se SKILL.md poklapa, a skripte ne. Ograda: § 0.0 već traži da se v
 ispiše u prvoj poruci; uz nju treba stajati i redak „skripte: kartica == repo" ili razlika,
 jer bez toga „paket 1.9.2" znači samo da je repo dohvaćen, a ne da se iz njega i radi.
 
+Ograda (strojna): `test_stari_kvarovi.py` K49 — uz zahtjev „ispiši u prvoj poruci" mora stajati i `drift.py --kratko`. Uzorak je usidren na sam zahtjev, ne na prvi spomen varijable: ista se riječ pojavljuje i u bash bloku iznad. Mutacija: brisanje tog dijela zahtjeva obara test.
 ## 50. Primjerak mjeri veličinu pisma iz natpisa prikaza, jer odlomci tijela nemaju izričitu veličinu
 
 `primjerci.py` uzima kao tijelo svaki odlomak koji nije naslov i dulji je od 80 znakova, a
@@ -644,8 +646,9 @@ a po željeznom pravilu 17 primjerak je jači od profila. U ovoj je sesiji 11 pt
 „11 pt", a autor je uskladio dokument prema krivoj mjeri. Popravak ima dva dijela: stilovi
 koji nisu tijelo (`Caption`, `table of figures`, `TOC*`, zaglavlja, fusnote) izbacuju se iz
 uzorka, a `None` se čita kao „nasljeđuje iz `docDefaults`" i zamjenjuje stvarnom zadanom
-veličinom. Ograda: mjeri se i dalje mod, pa dokument u kojem tijelo doista ima dvije
-veličine daje onu češću, bez upozorenja.
+veličinom. Ograda: nema — rečenica koja je ovdje stajala opisuje PREOSTALU GRANICU, ne
+ogradu: mjeri se i dalje mod, pa dokument u kojem tijelo doista ima dvije
+veličine daje onu češću, bez upozorenja. Granica nije provjera (kvar 144).
 
 ## 51. Redni broj pravne reference pred velikim slovom lomi rečenicu, pa se mjeri ritam kojega nema
 
@@ -714,8 +717,9 @@ Svaki seminarski s rokom kraćim od 14 dana, dakle gotovo svaki, dobivao je istu
 uz nju i `napredak.py` gasi cijelu procjenu tempa. Popravak je dvodijelan: overlay
 `efzg-rfir-seminarski` dobiva vlastiti blok `predaja` s repom 0 i dva stvarna koraka, a
 `tempo.py` uz brojku ispisuje i **odakle je uzeta** („profil" ili „zadano u tempo.py"),
-jer rep bez izvora ne da se provjeriti. Ograda: rep za druge vrste radova i dalje dolazi s
-razine fakulteta; overlay ga nadjačava samo ondje gdje je izmjeren ili izjavljen.
+jer rep bez izvora ne da se provjeriti. Ograda: nema — i ovdje je riječ o PREOSTALOJ GRANICI, ne o ogradi: rep za druge
+vrste radova i dalje dolazi s razine fakulteta, a overlay ga nadjačava samo ondje
+gdje je izmjeren ili izjavljen (kvar 144).
 
 ## 54. Kartica `katedra-lite` nosi samo `SKILL.md`, a router imenuje 44 datoteke koje ne nosi
 
@@ -3464,3 +3468,51 @@ usput.
 Ograda: `test_indeks.py` R75 — citat s trotočkom mora ostati dug, prava ograda mora
 ostati ograda. Mutacija: uklanjanje trotočke iz `NIJE_OGRADA_RE` obara prve dvije
 provjere.
+
+---
+
+## 144. Riječ „Ograda:” značila je tri različite stvari, a alat je sve tri brojio kao ogradu
+
+Kvar 143 je usput izmjerio da pet unosa ima ogradu koja ne imenuje nijedan
+artefakt. Čitanjem tih pet vidi se da se ista riječ koristila za tri različita
+posla:
+
+```
+kvar  43   promjena DOKTRINE u routeru (§ 0.0 imenuje pojam, ne klik)
+kvar  49   promjena DOKTRINE (uz verziju paketa ide i redak drift.py)
+kvar 134   promjena DOKTRINE (Cowork redak je ❌ bez uvjeta)
+kvar  50   PREOSTALA GRANICA („mjeri se i dalje mod, bez upozorenja")
+kvar  53   PREOSTALA GRANICA („rep i dalje dolazi s razine fakulteta")
+```
+
+Prva tri jesu obveza koja se **da** provjeriti; druga dva su opis onoga što alat
+i dalje ne radi. Granica nije provjera — a alat ih je brojio zajedno, pa je
+brojka „s ogradom" bila veća nego što stanje opravdava.
+
+Razdvojeno:
+
+- **50 i 53** dobivaju deklaraciju: `Ograda: nema — riječ je o preostaloj granici`.
+  Time izlaze iz „s ogradom" i ulaze u „deklarirano", što je istinito stanje.
+- **43, 49 i 134** dobivaju **strojnu** ogradu. Doktrina je artefakt kao i kod, pa
+  se smije mjeriti — ali samo **odlučujući token**, ne rečenica: preformulacija ne
+  smije rušiti test, brisanje odluke mora.
+
+```
+K43   router imenuje `izvor sesije`; uvod prije tablice ne šalje u postavku
+K49   uz „ispiši u prvoj poruci" stoji i `drift.py --kratko`
+K134  Cowork redak nosi ❌ i nema uvjetni izlaz („samo ako")
+```
+
+Sve tri mutirane u routeru, svaka obara točno svoju provjeru:
+
+```
+kvar 43  → K43: doktrina ne šalje korisnika u konkretnu postavku
+kvar 49  → K49: uz verziju paketa traži se i redak `drift.py --kratko`
+kvar 134 → K134: Cowork redak nosi ❌; nema uvjetni izlaz
+```
+
+K49 je usput morao biti usidren: prvi uzorak hvatao je `KATEDRA_PKG_VERZIJA` iz
+bash bloka iznad, gdje ta riječ također stoji, pa je test padao nad ispravnim
+routerom. Uzorak koji hvata prvo pojavljivanje mjeri mjesto, ne tvrdnju.
+
+Ograda: `test_stari_kvarovi.py` K43, K49, K134.

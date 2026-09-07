@@ -15,6 +15,7 @@ import importlib.util
 import io
 import json
 import os
+import re
 import sys
 import tempfile
 
@@ -165,6 +166,33 @@ def main():
     isti = [("korak", "od", "6", "7", "Rasprava", "šest od sedam"),
             ("korak", "od", "6", "7", "Zaključak", "šest od sedam")]
     check("K48: ista vrijednost dvaput NIJE nalaz", pb.proturjecja(isti) == [])
+
+    # --- doktrinarni kvarovi: 43, 49, 134 -------------------------------------
+    # Doktrina je artefakt kao i kod, pa ograda smije mjeriti njezin tekst — ali
+    # samo ODLUČUJUĆI token, ne rečenicu. Preformulacija ne smije rušiti test;
+    # brisanje odluke mora.
+    with io.open(os.path.join(KORIJEN, "SKILL.md"), encoding="utf-8") as f:
+        router = f.read()
+
+    # 43: 403 se rješava pojmom „izvor sesije", ne imenom klika u postavkama
+    check("K43: doktrina imenuje `izvor sesije`", "izvor sesije" in router)
+    check("K43: doktrina ne šalje korisnika u konkretnu postavku",
+          "Add from GitHub" not in router.split("| Površina |")[0])
+
+    # 49: uz verziju paketa u prvoj poruci mora stajati i redak drift.py
+    # Odlučujući token je zahtjev iz pravila (4), ne prvi spomen varijable:
+    # ista se riječ pojavljuje i u bash bloku iznad.
+    zahtjev = re.search(r"ispiši u prvoj poruci", router)
+    okolina = router[max(0, zahtjev.start() - 260):zahtjev.end()] if zahtjev else ""
+    check("K49: uz verziju paketa traži se i redak `drift.py --kratko`",
+          "drift.py --kratko" in okolina, okolina[-90:])
+
+    # 134: Cowork redak je ❌ BEZ uvjeta — uvjet koji se ne ispunjava nigdje
+    #      briše se, ne ublažava (issue #84581)
+    red = next((x for x in router.splitlines() if x.startswith("| Cowork")), "")
+    check("K134: Cowork redak postoji i nosi ❌", "❌" in red, red[:90])
+    check("K134: Cowork redak nema uvjetni izlaz („samo ako”)",
+          "samo ako" not in red, red[:90])
 
     print("=" * 70)
     print("REZULTATI TESTOVA: %d/%d prošlo"
