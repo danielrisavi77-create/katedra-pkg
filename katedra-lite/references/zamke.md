@@ -1459,8 +1459,8 @@ Dvije prve inačice ograda preživjele su mutaciju, a oko to nije vidjelo: K100 
 pa je „restart u sredini” ležao u zadnjoj (zamka za `docx_zamke.md`); K104 — ograda je gledala
 relacije, a mutacija je maknula relaciju i ostavila bajtove u `word/media/`. Obje prepisane.
 
-Usput izmjereno, nije popravljeno: uz `EXACTLY` prored `provjeri_format` javlja „prored je 152400,00, profil traži 1,50” —
-vrijednost u EMU, nečitljiva čovjeku. Zaseban kvar kad dođe na red.
+Usput izmjereno, popravljeno kao kvar 150: uz `EXACTLY` prored `provjeri_format` javljao je „prored je 152400,00, profil traži 1,50” —
+vrijednost u EMU, nečitljiva čovjeku.
 
 Ograda: `test_stari_kvarovi.py` K99, K100, K101, K104; `test_gate.py` Z1, Z2; rad-audit `test_all.py` R35 — sve mutirane, popis gore. Dug ograda je time 0.
 
@@ -3759,3 +3759,50 @@ Popravak: obrisane; `bin/testovi.sh` dobiva skupinu koja pada na svakoj praćeno
 `.diff/.bak/.orig/.rej` datoteci i imenuje je.
 
 Ograda: `bin/testovi.sh` skupina „paket: nema ostataka zakrpa” — `git ls-files` ne smije sadržavati `.diff/.bak/.orig/.rej`. Mutacija: staged `ostatak.bak` → skupina crvena i sažetak je imenuje.
+
+---
+
+## 150. Fiksan prored javljao se u EMU („prored je 152400,00”), pa je poruka skrivala baš onu činjenicu zbog koje pada
+
+Nađeno mjerenjem uz kvarove 98–104 (7. 9. 2026.), zapisano tamo kao otvoreno. python-docx
+vraća `paragraph_format.line_spacing` kao **`Length`** (EMU) kad je `line_spacing_rule`
+`EXACTLY` ili `AT_LEAST`, a kao **`float`** kad je `MULTIPLE`. Grana u
+`rad-docx/scripts/provjeri_predaju.py` (`provjeri_format`, blok „prored") gurala je oboje
+kroz isti `float()` i uspoređivala s višekratnikom iz profila.
+
+Fixture: pet odlomaka tijela (≥ 60 znakova) iza naslova „Uvod" (Heading 1), svaki
+`WD_LINE_SPACING.EXACTLY` + `Pt(12)`, profil `{"format": {"prored": 1.5}}`.
+
+```
+$ python repro_prored.py            # prije
+line_spacing: 152400 tip: Twips
+line_spacing_rule: EXACTLY (4)
+  G: prored je 152400,00, profil traži 1,50 (u 100 % odlomaka tijela)
+
+$ python repro_prored.py            # poslije
+  G: prored je fiksan 12 pt, profil traži višekratnik 1,5 (u 100 % odlomaka tijela)
+```
+
+`152400` je 12 pt u EMU. Broj je čovjeku nečitljiv, ali gore od toga: krio je pravu
+činjenicu. Prored nije „pogrešan višekratnik" koji se namjesti na 1,5 — zadan je u
+**točkama**, pa ga nijedan broj točaka ne može pretvoriti u višekratnik 1,5; treba
+promijeniti pravilo. Poruka je autora slala da traži krivu stvar.
+
+Popravak: grana za `Length` ide **ispred** usporedbe s višekratnikom, ispisuje `prored.pt`
+i imenuje pravilo. `EXACTLY` → „fiksan", `AT_LEAST` → „najmanje" (AT_LEAST je donja
+granica, ne fiksna vrijednost — ista bi riječ bila nova neistina u poruci koja postoji da
+prestane skrivati istinu). Pomoćnik `hr_kratko` reže suvišnu decimalnu nulu (12,0 → „12").
+Ostalo je netaknuto: `MULTIPLE 2,0` i dalje daje „prored je 2,00, profil traži 1,50”,
+`MULTIPLE 1,5` i dalje prolazi bez greške, a grana kvara 101 (slike u fiksno proređenim
+odlomcima) nije dirana.
+
+Uz to: ograda K101 filtrirala je nalaze po goloj riječi „fiksan”. Nova poruka nosi tu istu
+riječ, pa je K101 počeo hvatati tuđi nalaz i pao je na dokumentu bez ijedne slike — filtar
+je bio proxy za „poruka o slikama”, a ne to i sam. Stegnut na `"fiksan" in x and "slik" in x`;
+K150 zrcalno izuzima poruke o slikama, pa svaka mutacija obara samo svoju ogradu.
+
+Ograda: `test_stari_kvarovi.py` K150 (pet provjera: EXACTLY, nema EMU broja u poruci,
+AT_LEAST, MULTIPLE 2,0, MULTIPLE 1,5). Mutacija `elif isinstance(prored, docx.shared.Length):`
+→ `elif False:` obara tri K150 provjere i nijednu drugu; mutacija
+`pogodeni = [p for p in sa_slikom` → `[p for p in odlomci` i dalje obara dvije K101 provjere
+i nijednu K150 — stegnuti filtar nije oslabio K101.

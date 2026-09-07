@@ -701,7 +701,11 @@ def main():
     def fiksan(put):
         P101 = pp.Provjera()
         pp.provjeri_format(P101, put, Document(put), {"format": {"prored": 1.5}})
-        return ([x for x in P101.greske if "fiksan" in x], [x for x in P101.upozorenja if "fiksan" in x])
+        # Filtar mora pogoditi PORUKE O SLIKAMA, ne svaku koja sadrži "fiksan":
+        # od kvara 150 i poruka o proredu u točkama nosi tu riječ, pa je goli
+        # "fiksan" počeo hvatati tuđi nalaz i rušiti ovu ogradu.
+        return ([x for x in P101.greske if "fiksan" in x and "slik" in x],
+                [x for x in P101.upozorenja if "fiksan" in x and "slik" in x])
 
     g, u = fiksan(doc_prored("prored_bez.docx", False, False))
     check("K101: fiksan prored bez ijedne slike → ni greška ni upozorenje o slikama", not g and not u, (g, u))
@@ -746,6 +750,48 @@ def main():
                          mrtav, "--izlaz", mrtav], capture_output=True, text=True,
                         encoding="utf-8", errors="replace", env=dict(os.environ, PYTHONIOENCODING="utf-8"))
     check("K104: izlaz = ulaz odbija s kodom 2 (arhiva se ne prepisuje)", rr.returncode == 2, (rr.returncode, rr.stderr[-120:]))
+
+    # --- 150: fiksan prored se javlja u TOČKAMA, ne u EMU -----------------------
+    # python-docx vraća `line_spacing` kao Length kad je pravilo EXACTLY/AT_LEAST.
+    # Poruka je taj Length gurala kroz `float()` i ispisivala „prored je 152400,00,
+    # profil traži 1,50" — broj u EMU, nečitljiv, i k tome je skrivao pravu
+    # činjenicu: prored je zadan u točkama, pa višekratnik ne može ni pogoditi.
+    def prored_greske(ime, pravilo, vrijednost):
+        d = Document()
+        sec = d.sections[0]
+        sec.page_width, sec.page_height = Cm(21.0), Cm(29.7)
+        d.add_paragraph("Uvod", style="Heading 1")
+        for i in range(5):
+            p = d.add_paragraph(tijelo99 + " (%d)" % i)
+            if pravilo is not None:
+                p.paragraph_format.line_spacing_rule = pravilo
+            p.paragraph_format.line_spacing = vrijednost
+        put = os.path.join(mapa, "prored150_%s.docx" % ime)
+        d.save(put)
+        P150 = pp.Provjera()
+        pp.provjeri_format(P150, put, Document(put), {"format": {"prored": 1.5}})
+        # Poruke o slikama su predmet ograde K101, ne ove: bez tog izuzeća
+        # mutacija grane 101 obarala bi i K150 i zamutila tko što čuva.
+        return [x for x in P150.greske
+                if x.startswith("prored") and "slik" not in x]
+
+    g = prored_greske("exactly", WD_LINE_SPACING.EXACTLY, Pt(12))
+    check("K150: EXACTLY → poruka je u točkama i kaže da je prored fiksan",
+          g == ["prored je fiksan 12 pt, profil traži višekratnik 1,5 "
+                "(u 100 % odlomaka tijela)"], g)
+    check("K150: EXACTLY → u poruci nema sirovog EMU broja",
+          bool(g) and "152400" not in g[0], g)
+    g = prored_greske("atleast", WD_LINE_SPACING.AT_LEAST, Pt(12))
+    check("K150: AT_LEAST → najmanje 12 pt (nije fiksan, ne tvrdi se krivo)",
+          g == ["prored je najmanje 12 pt, profil traži višekratnik 1,5 "
+                "(u 100 % odlomaka tijela)"], g)
+    # Ostala logika ostaje netaknuta: višekratnik se i dalje uspoređuje brojem,
+    # a točan višekratnik i dalje prolazi bez greške.
+    g = prored_greske("mult20", WD_LINE_SPACING.MULTIPLE, 2.0)
+    check("K150: MULTIPLE 2,0 → stara poruka o višekratniku (provjera je živa)",
+          g == ["prored je 2,00, profil traži 1,50 (u 100 % odlomaka tijela)"], g)
+    g = prored_greske("mult15", WD_LINE_SPACING.MULTIPLE, 1.5)
+    check("K150: MULTIPLE 1,5 → nijedna greška o proredu", g == [], g)
 
     print("=" * 70)
     print("REZULTATI TESTOVA: %d/%d prošlo"
