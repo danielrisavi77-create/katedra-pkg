@@ -32,6 +32,7 @@ SCRIPTS = os.path.join(PKG, "katedra-lite", "scripts")
 sys.path.insert(0, HERE)
 from gate_mapping import map_gate  # noqa: E402
 from manuscript_to_katedra import write_katedra  # noqa: E402
+from claims_bridge import ingest_claims  # noqa: E402
 
 TOKEN = os.environ.get("KATEDRA_VERIFIER_TOKEN", "")
 MAX_BYTES = int(os.environ.get("KATEDRA_VERIFIER_MAX_BYTES", str(8 * 1024 * 1024)))
@@ -54,11 +55,10 @@ ISKLJUCENI_KORACI = {
     # privremeni projekt nema snimki: diff_versions.py bez dvije verzije izlazi s kodom 2 (izmjereno, predaja pukao=1)
     "izmjene": "privremeni projekt nema ranijih snimki; povijest verzija vodi app",
 }
-# Koraci kojima u v0 nedostaje ULAZ, pa smiju ostati nepokrenuti (gate.py --dopusti-preskok).
-DOPUSTENI_PRESKOCI = {
-    # v0: claims iz AgentResultV1 još nisu preslikani u claims.jsonl/evidence.jsonl (v1, vidi README §5)
-    "evidence": "v0: claim ledger iz appa nije ingestiran; strict evidence gate dolazi u v1",
-}
+# Koraci kojima nedostaje ULAZ, pa smiju ostati nepokrenuti (gate.py --dopusti-preskok). Od v1 prazno:
+# `evidence` dobiva ulaz iz claims_bridge (AgentResultV1.claims → claims.jsonl + evidence.jsonl).
+# Zahtjev BEZ claims ostavlja korak preskočenim i on blokira — to je nalaz o zahtjevu, ne o servisu.
+DOPUSTENI_PRESKOCI: dict[str, str] = {}
 
 app = FastAPI(title="katedra-verifier", version="0.1.0")
 _pool = ThreadPoolExecutor(max_workers=WORKERS)
@@ -78,6 +78,7 @@ class VerifyRequest(BaseModel):
     planApproved: bool = Field(default=False, description="iz appa: student je odobrio plan (planning korak verified)")
     plan: dict[str, Any] | None = Field(default=None, description="{thesis, question, perspectives:[{label,position,why}], chapters:[{sectionId,pages,content,sources}]} iz structure/planning koraka")
     mentorComments: list[dict[str, Any]] | None = Field(default=None, description="[{id,author,text,location,kind,resolved,resolvedWhere,date}]")
+    sectionId: str | None = Field(default=None, description="opcionalno: chapter za claim ledger (sekcija koju je agent pisao)")
 
 
 def _auth(token: str | None) -> None:
@@ -101,13 +102,14 @@ def _set_stanje(root: str, *postavke: str) -> None:
             raise RuntimeError(f"stanje_init.py --set {p} pao: {r.stdout[-400:]} {r.stderr[-400:]}")
 
 
-def _neuspjeh(faza: str, poruka: str, conv: dict[str, Any] | None, docx_err: str | None, kod: int | None = None) -> dict[str, Any]:
+def _neuspjeh(faza: str, poruka: str, conv: dict[str, Any] | None, docx_err: str | None, kod: int | None = None,
+              ledger: dict[str, Any] | None = None) -> dict[str, Any]:
     """Rezultat kad verifikator NIJE proveo gate: failed, nikad verified (pravilo 20 paketa)."""
     return {"status": "failed",
             "issues": [{"code": "verifier_error", "step": "build_docx", "blocking": True, "message": poruka[:300]}],
             "gate": {"faza": faza, "prolaz": False, "koraci": [], "sazetak": {}}, "gateExitCode": kod,
             "conversion": {"poglavlja": len(conv["poglavlja"]) if conv else 0, "profil": conv["profil"] if conv else None,
-                           "docxError": docx_err}}
+                           "docxError": docx_err, "ledger": ledger}}
 
 
 def _build_docx(root: str, manuscript: dict[str, Any], out: str) -> None:
@@ -134,6 +136,11 @@ def _verify_job(req: VerifyRequest) -> dict[str, Any]:
         mod_sada = mod if (faza == "plan" or (req.planApproved and faza == "pisanje")) else "novi-rad"
         conv = write_katedra(req.manuscript, root, req.profile, SCRIPTS, mod=mod_sada,
                              plan_approved=req.planApproved, plan=req.plan, mentor_comments=req.mentorComments)
+        # claims iz appa → claims.jsonl + evidence.jsonl (ulaz strict evidence gatea); pad se prijavljuje, ne skriva
+        try:
+            ledger = ingest_claims(req.agentResult, root, SCRIPTS, section_hint=req.sectionId)
+        except Exception as e:
+            ledger = {"error": str(e)[:300]}
         rad = os.path.join(root, "rad.docx")
         docx_err = None
         if faza != "plan":
@@ -145,7 +152,7 @@ def _verify_job(req: VerifyRequest) -> dict[str, Any]:
                 # Bez dokumenta koraci nad rad.docx se preskaču, a u fazi pisanje su savjetni — rezultat
                 # je bio `verified` uz 5 od 9 preskočenih koraka (izmjereno). Verifikator koji nije
                 # provjerio ne smije reći da je provjerio.
-                return _neuspjeh(faza, f"rad.docx nije izgrađen, gate nad rukopisom nije proveden: {docx_err}", conv, docx_err)
+                return _neuspjeh(faza, f"rad.docx nije izgrađen, gate nad rukopisom nije proveden: {docx_err}", conv, docx_err, ledger=ledger)
             if faza in ("audit", "predaja"):
                 _set_stanje(root, "datoteke.rad_docx=true", f"mod={faza}")
         gate_json = os.path.join(root, ".katedra", "gate.json")
@@ -169,11 +176,11 @@ def _verify_job(req: VerifyRequest) -> dict[str, Any]:
             return {"status": "failed", "issues": [{"code": "verifier_error", "step": "gate", "blocking": True,
                                                     "message": f"gate.py nije zapisao izvještaj (izlaz {r.returncode}): {(r.stderr or r.stdout)[-300:]}"}],
                     "gate": {"faza": faza, "prolaz": False, "koraci": [], "sazetak": {}}, "gateExitCode": r.returncode,
-                    "conversion": {"poglavlja": len(conv["poglavlja"]), "profil": conv["profil"], "docxError": docx_err}}
+                    "conversion": {"poglavlja": len(conv["poglavlja"]), "profil": conv["profil"], "docxError": docx_err, "ledger": ledger}}
         gate = json.load(open(gate_json, encoding="utf-8"))
         result = map_gate(gate, attempt=req.attempt)
         result["gateExitCode"] = r.returncode
-        result["conversion"] = {"poglavlja": len(conv["poglavlja"]), "profil": conv["profil"], "docxError": docx_err}
+        result["conversion"] = {"poglavlja": len(conv["poglavlja"]), "profil": conv["profil"], "docxError": docx_err, "ledger": ledger}
         return result
     finally:
         shutil.rmtree(root, ignore_errors=True)

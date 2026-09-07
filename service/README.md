@@ -21,7 +21,7 @@ katedra-packa, artefakte plana koje je student odobrio u appu i (opcionalno) zam
    (`issues[].code = gate_step_excluded`, `blocking: false`). Isporučena inačica slala je te korake
    kroz `--dopusti-preskok`, koji oprašta samo korak kojemu **fali ulaz** — s izgrađenim `rad.docx`
    forma se vrtjela, `literatura` je pukla i `audit`/`predaja` su bili `failed` (izmjereno 7. 9. 2026.).
-   `evidence` ostaje `--dopusti-preskok` (`DOPUSTENI_PRESKOCI`): njemu stvarno fali ulaz.
+   `evidence` od v1 dobiva ulaz iz `claims_bridge.py` (`DOPUSTENI_PRESKOCI` je prazan).
 4. `gate_mapping.py`: `gate.json` → `VerificationResultV1` (`verified | needs_revision | blocked | failed`,
    `issues[]` s `code`, `step`, `message`, `blocking`). Nikad tiho: svaki korak koji nije `ok` je issue.
    Bez `gate.json` rezultat je `failed`, nikad `verified`. Isto i kad `rad.docx` nije izgrađen u fazi
@@ -49,7 +49,8 @@ POST /v1/verify?wait=0|1        header: x-katedra-worker-token
   "plan": { "thesis", "question", "perspectives": [{label, position, why}],
             "chapters": [{sectionId, pages, content, sources: [sourceId]}] },
   "mentorComments": [{id, author, text, location, kind, resolved, resolvedWhere, date}],
-  "agentResult": AgentResultV1 | null
+  "agentResult": AgentResultV1 | null,          # claims[] hrani strict evidence gate
+  "sectionId": "s2"                              # opcionalno, chapter za claim ledger
 }
 -> 202 {"jobId"}  ili s wait=1 -> 200 {"status":"done","result":{...}}
 GET /v1/verify/{jobId} -> {"status":"queued|running|done","result"?}
@@ -83,9 +84,11 @@ za završni i diplomski radi u modu `novi-rad` i gate to prijavi.
 
 ## 5. v0 ograničenja (namjerna)
 
-- `evidence` (strict evidence gate) je dopušten preskok: `AgentResultV1.claims[].support[]` još nije
-  preslikan u `claims.jsonl` i `evidence.jsonl`. v1: `claim_ledger.py add` po tvrdnji + `evidence_ingest.py`
-  nad materijalima iz run-contexta. To je najjača provjera u paketu i prva na redu.
+- `evidence` (strict evidence gate) više NIJE preskok: `claims_bridge.py` uzima `AgentResultV1.claims[].support[].quote`
+  po izvoru kroz `evidence_ingest.py`, tvrdnje kroz `claim_ledger.py add/link`. Tvrdnja bez potpore blokira
+  korak. Ograda: quote koji je model napisao nije dokaz da izvor to kaže; to prije ovoga provjerava
+  Katedrin passage verifier (`passage-verification.ts`). Ovdje se samo prevodi u oblik gatea.
+  Zahtjev bez `agentResult.claims` ostavlja korak preskočenim i on blokira — nalaz o zahtjevu, ne o servisu.
 - `motor_audit` (rad-audit A do G) je isključen jer miješa formu (tipografija, polja) i sadržaj
   (citati, brojke). v1: `engine.py` s izborom faza B i C.
 - Jobovi su u memoriji procesa (kao field-renderer): jedan uvicorn worker, `--concurrency 1` na

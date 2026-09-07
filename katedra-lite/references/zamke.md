@@ -3925,3 +3925,58 @@ poslije: stanje=ok  izlaz='Čš ✔'
 Popravak: `encoding="utf-8", errors="replace"` i `PYTHONIOENCODING=utf-8` za dijete u `pokreni()`.
 
 Ograda: `test_gate.py` G15 — korak koji ispiše `Čš ✔` vraća točno taj izlaz s kodom 0. Mutacija: `encoding=` maknut → G15 pada s `'ÄŚĹˇ âś”'`. Provjera je stvarna samo na cp1250 konzoli (na UTF-8 sustavu prolazi i bez popravka, kao K148); suite se ovdje vrti na Windowsu.
+
+---
+
+## 154. Dvije sesije u istom radnom klonu: tuđi `checkout main` pomaknuo je HEAD, pa je commit sletio na main sa starom porukom
+
+7. 9. 2026., 20:14–20:47. Paralelna sesija (čip iz `spawn_task`, kvar 150) radila je u istom
+radnom klonu `Temp/kp3`. Dok sam ja mjerio servis, ona je napravila `checkout main`, granu,
+commit, `checkout main`, `pull`. Moja grana `service-katedra-verifier` ostala je gdje je bila, a
+HEAD radnog stabla je bio na `main`. Moj `git add -A && git commit` zato je sletio na lokalni `main`
+— i to s porukom iz prošlog kruga, jer je datoteka poruke pisana heredocom **iza** uvjetnog
+`exit 1` koji se u prvom prolazu okinuo, pa je `-F` pročitao staru datoteku.
+
+```
+$ git reflog
+77e6b475 HEAD@{20:46}: commit: v1.9.32: dug ograda 98–104 zatvoren …      ← moj commit, tuđa poruka, na main
+31d5487e HEAD@{20:22}: pull --ff-only -q: Fast-forward
+72adc57b HEAD@{20:22}: checkout: moving from kvar-rd11-osnovica to main   ← druga sesija
+72adc57b HEAD@{20:14}: checkout: moving from service-katedra-verifier to main
+$ gh pr create …
+GraphQL: No commits between main and service-katedra-verifier
+```
+
+Uhvatio ga je `gh`, ne ja: grana je bila prazna prema mainu. Popravak bez `--force`: `git branch -f`
+grane na commit, `main` vraćen na `origin/main`, poruka dopunjena `--amend` (commit nije bio ni na
+jednoj udaljenoj grani), push je bio fast-forward.
+
+Dvije lekcije: (1) sesija koja se pokreće za drugi posao dobiva **vlastiti klon** (ili `git
+worktree`), nikad isti radni direktorij; (2) `git branch --show-current` prije commita, i datoteka
+poruke se piše **prije** svakog uvjetnog izlaza u lancu.
+
+Ograda: nema — postupak dviju sesija nije u paketu ni u suiti; pravila su zapisana u memoriju sesije i ovdje.
+
+---
+
+## 155. `subprocess.run(text=True)` bez `encoding=` stigao je treći put, a paket ih ima još 19
+
+Most druge linije (`claims_bridge.py`, 7. 9.) donio je isti obrazac kao kvar 119 i kvar 152:
+`subprocess.run(cmd, capture_output=True, text=True)` — na cp1250 konzoli čitač izlaza pukne na
+bajtu koji cp1250 ne poznaje i `r.stdout` je `None`. Njihov test je prošao, jer je pad čitača samo
+upozorenje dok se `stdout` ne dotakne:
+
+```
+service/tests/test_service.py::test_claims_bridge_feeds_strict_evidence_gate
+  UnicodeDecodeError: 'charmap' codec can't decode byte 0x90 in position 26   (evidence_ingest.py)
+```
+
+Popravljeno u `_run` mosta i ograđeno (dijete ispiše U+2018 = E2 80 98). Ali isti AST pregled
+paketa daje **19** preostalih poziva s `text=True` bez `encoding=` (test_gate 4, test_bolesni 3,
+izmjeri 2, build_docx, check_paragraphs, fix_rules, mjera, upute_u_profil, test_all, gradi,
+provjeri_reference, dokaz, run_fixtures). Svaki je na Windowsu tihi izvor mojibakea ili praznog
+izlaza; na Linuxu nevidljiv. To je izmjeren dug, ne popravljen ovdje: pregled je jedna AST petlja
+(`ast.walk`, `Call` na `subprocess.run|Popen|check_output`, `text`/`universal_newlines` u kwargs bez
+`encoding`) i kandidat je za skupinu u suiti tek kad broj padne na nulu.
+
+Ograda: `service/tests/test_service.py` `test_bridge_run_decodes_utf8_child_output` — `claims_bridge._run` vraća točno U+2018. Mutacija: `encoding=` maknut → pada (na cp1250 konzoli). Za 19 preostalih mjesta ograde nema; broj je zapisan da ga sljedeći krug može usporediti.
