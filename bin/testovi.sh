@@ -10,6 +10,11 @@ set -uo pipefail
 # UnicodeEncodeError — svaka skupina tada „padne" iako je prošla, i jedini ulaz
 # javi „12 od 12 palo" nad zelenim repoom. Mjereno na ovom stroju.
 export PYTHONIOENCODING="${PYTHONIOENCODING:-utf-8}"
+# Kvar 145: .pyc se smatra valjanim ako se izvor slaze po velicini i sekundi
+# mtime-a. Dvije izmjene iste datoteke jednake velicine unutar iste sekunde
+# (mutacija, brz pull) zato mogu izvesti STARI bytecode nad novim izvorom.
+# Suite je malen; bytecode mu ne treba, a lazna zelena/crvena je skupa.
+export PYTHONDONTWRITEBYTECODE=1
 KORIJEN="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 UKUPNO=0
 PALO=0

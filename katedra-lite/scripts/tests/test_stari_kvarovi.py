@@ -194,6 +194,102 @@ def main():
     check("K134: Cowork redak nema uvjetni izlaz („samo ako”)",
           "samo ako" not in red, red[:90])
 
+    # --- fixture dokumenti: 40, 41, 45, 71 ------------------------------------
+    # Najmanji .docx koji kvar izaziva. Fixture je jeftiniji od cijelog rada i
+    # preživljava; gradi se ovdje, ne čuva u repou.
+    from docx import Document
+    from docx.shared import Cm
+    from PIL import Image
+    mapa = tempfile.mkdtemp()
+
+    # 40: slika koju je autor „povukao mišem" je <wp:anchor>, ne <wp:inline>,
+    #     i inline_shapes je ne vidi — alat je javljao „nema što mjeriti".
+    png = os.path.join(mapa, "s.png")
+    Image.new("RGB", (40, 40), "white").save(png)
+    p_inline = os.path.join(mapa, "inline.docx")
+    d = Document(); d.add_paragraph("Tekst."); d.add_picture(png, width=Cm(4)); d.save(p_inline)
+    pp = modul("provjeri_prikaze")
+    check("K40: inline slika se broji", len(pp._slike(p_inline)[1]) == 1)
+    p_anchor = os.path.join(mapa, "anchor.docx")
+    d2 = Document(p_inline)
+    WP = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+    for el in list(d2.element.body.iter("{%s}inline" % WP)):
+        el.tag = "{%s}anchor" % WP
+    d2.save(p_anchor)
+    d3 = Document(p_anchor)
+    check("K40: fixture doista zaobilazi inline_shapes", len(d3.inline_shapes) == 0)
+    check("K40: plutajuća slika se ipak broji", len(pp._slike(p_anchor)[1]) == 1,
+          pp._slike(p_anchor)[1])
+    check("K40: ograda protiv tihe nule — <w:drawing> u XML-u je 1",
+          pp._crteza_u_xml(d3) == 1, pp._crteza_u_xml(d3))
+
+    # 41: „Uvod" zabunom na Heading 2 → uvod je None → „rad nema tezu"
+    p41 = os.path.join(mapa, "uvod2.docx")
+    d = Document()
+    d.add_paragraph("Uvod", style="Heading 2")
+    d.add_paragraph("Ovaj rad tvrdi da je X posljedica Y, jer se Z pokazalo presudnim u tri slučaja.")
+    d.add_paragraph("Rasprava", style="Heading 1")
+    d.add_paragraph("Duga rečenica koja prelazi četrdeset znakova da bi bila odlomak, i završava točkom.")
+    d.add_paragraph("Zaključak", style="Heading 1")
+    d.add_paragraph("Još jedna dovoljno duga rečenica koja završava točkom za zaključak rada.")
+    d.save(p41)
+    ca.poglavlja(p41)
+    krivi = ca._uvod_na_krivoj_razini()
+    check("K41: „Uvod” na Heading 2 se prepoznaje kao kriva razina, ne kao odsutan",
+          krivi is not None and krivi[0] == 2, krivi)
+    p41b = os.path.join(mapa, "uvod1.docx")
+    d = Document(); d.add_paragraph("Uvod", style="Heading 1")
+    d.add_paragraph("Rečenica uvoda koja je dovoljno duga da bude odlomak i završava točkom.")
+    d.save(p41b)
+    ca.poglavlja(p41b)
+    check("K41: „Uvod” na Heading 1 nije kriva razina", ca._uvod_na_krivoj_razini() is None)
+
+    # 45: format papira — Letter je prolazio kao A4 jer ga nitko nije mjerio
+    cr = modul("check_rules")
+
+    class Iz:
+        def __init__(self):
+            self.r = []
+
+        def dodaj(self, pravilo, trazeno, nadjeno, stanje, detalji=None, **kw):
+            self.r.append((pravilo, stanje, kw.get("rule_id")))
+
+    def dokument_formata(w_cm, h_cm, ime):
+        p = os.path.join(mapa, ime)
+        dd = Document()
+        dd.sections[0].page_width = Cm(w_cm)
+        dd.sections[0].page_height = Cm(h_cm)
+        dd.add_paragraph("Tekst.")
+        dd.save(p)
+        return Document(p)
+
+    iz = Iz()
+    cr.provjeri_format_stranice(iz, dokument_formata(21.59, 27.94, "letter.docx"), {"format": {}})
+    check("K45: Letter uz očekivani A4 je KRŠENJE (format.stranica)",
+          any(st == cr.LOSE and rid == "format.stranica" for _p, st, rid in iz.r), iz.r)
+    iz = Iz()
+    cr.provjeri_format_stranice(iz, dokument_formata(21.0, 29.7, "a4.docx"), {"format": {}})
+    check("K45: A4 uz očekivani A4 prolazi",
+          any(st == cr.OK and rid == "format.stranica" for _p, st, rid in iz.r)
+          and not any(st == cr.LOSE for _p, st, _r in iz.r), iz.r)
+
+    # 71: faza A (placeholderi) mora imati izvršitelja. U predaji je to izravan
+    #     blokirajući korak; u auditu ide kroz motor (engine.py --audit →
+    #     rad-audit/generate_report.py:115, koji sam citira kvar 71), pa se ondje
+    #     mjeri da je motor blokirajući — bez toga bi faza A opet bila bez ruke.
+    g = modul("gate")
+    c = {"rad": "rad.docx", "pdf": None, "profil": "p.json", "tip": "diplomski",
+         "kat": ".katedra"}
+    k = next((x for x in g.koraci("predaja", c) if x.kid == "placeholderi"), None)
+    check("K71: predaja zove check_placeholders.py kao blokirajući korak",
+          k is not None and k.blokira
+          and any("check_placeholders.py" in str(a) for a in k.argv),
+          None if k is None else (k.blokira, [str(a) for a in k.argv][:3]))
+    m = next((x for x in g.koraci("audit", c) if x.kid == "motor_audit"), None)
+    check("K71: audit ima blokirajući motor koji nosi fazu A",
+          m is not None and m.blokira and any("--audit" in str(a) for a in m.argv),
+          None if m is None else (m.blokira, [str(a) for a in m.argv][:3]))
+
     print("=" * 70)
     print("REZULTATI TESTOVA: %d/%d prošlo"
           % (len(SVE) - len(PALO), len(SVE)))
