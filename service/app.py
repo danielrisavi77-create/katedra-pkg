@@ -21,6 +21,7 @@ import tempfile
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException, Query, Response
@@ -75,10 +76,57 @@ class VerifyRequest(BaseModel):
     profile: dict[str, Any] | None = None
     agentResult: dict[str, Any] | None = None
     phase: str | None = Field(default=None, description="prepiši fazu gatea; zadano po agentu")
-    planApproved: bool = Field(default=False, description="iz appa: student je odobrio plan (planning korak verified)")
+    planApproved: bool = Field(default=False, description="legacy advisory value; never approval authority")
+    planReady: bool | None = Field(default=None, description="advisory structural readiness, not user approval")
+    # Validate these as gate evidence below, so malformed records fail closed with plan_approval.
+    planRevision: Any = Field(default=None, description="trusted app SHA256 of current plan and verified artifact revision")
+    planApproval: Any = Field(default=None, description="server-stamped explicit user approval bound to run, project and planRevision")
     plan: dict[str, Any] | None = Field(default=None, description="{thesis, question, perspectives:[{label,position,why}], chapters:[{sectionId,pages,content,sources}]} iz structure/planning koraka")
     mentorComments: list[dict[str, Any]] | None = Field(default=None, description="[{id,author,text,location,kind,resolved,resolvedWhere,date}]")
     sectionId: str | None = Field(default=None, description="opcionalno: chapter za claim ledger (sekcija koju je agent pisao)")
+
+
+
+def _has_bound_plan_approval(req: VerifyRequest) -> bool:
+    """The authenticated app validates private artifacts; this service validates their binding.
+
+    Neither model output, structural readiness nor a legacy boolean is user consent.
+    The service has no authoritative run store and cannot independently recompute the
+    app's artifact revision. Existing plan_state gates still validate plan contents.
+    """
+    record = req.planApproval
+    if not isinstance(record, dict) or type(record.get("schemaVersion")) is not int or record["schemaVersion"] != 1:
+        return False
+    if not req.runId.strip() or record.get("runId") != req.runId:
+        return False
+    project_id = req.manuscript.get("projectId")
+    if not isinstance(project_id, str) or not project_id.strip() or record.get("projectId") != project_id:
+        return False
+    if not isinstance(req.planRevision, str) or not re.fullmatch(r"[0-9a-f]{64}", req.planRevision):
+        return False
+    if record.get("planRevision") != req.planRevision:
+        return False
+    actor = record.get("approvedBy")
+    if not isinstance(actor, str) or not actor.strip():
+        return False
+    stamp = record.get("approvedAt")
+    if not isinstance(stamp, str) or not re.fullmatch(
+        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})", stamp
+    ):
+        return False
+    try:
+        approved_at = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+        return approved_at <= datetime.now(timezone.utc)
+    except (ValueError, OverflowError):
+        return False
+
+
+def _plan_approval_blocked(phase: str) -> dict[str, Any]:
+    return {"status": "blocked",
+            "issues": [{"code": "gate_finding", "step": "plan_approval", "blocking": True,
+                        "message": "Current plan requires explicit user approval bound to this run, project and revision."}],
+            "gate": {"faza": phase, "prolaz": False, "koraci": [], "sazetak": {}},
+            "conversion": {"poglavlja": 0, "profil": None, "docxError": None, "ledger": None}}
 
 
 def _auth(token: str | None) -> None:
@@ -126,16 +174,19 @@ def _build_docx(root: str, manuscript: dict[str, Any], out: str) -> None:
 
 
 def _verify_job(req: VerifyRequest) -> dict[str, Any]:
+    faza = req.phase or GATE_PHASE_FOR_AGENT.get(req.agent, "pisanje")
+    plan_approved = _has_bound_plan_approval(req)
+    if faza != "plan" and not plan_approved:
+        return _plan_approval_blocked(faza)
     root = tempfile.mkdtemp(prefix="katedra-verify-")
     try:
-        faza = req.phase or GATE_PHASE_FOR_AGENT.get(req.agent, "pisanje")
         mod = {"plan": "novi-rad", "pisanje": "pisanje", "audit": "audit", "predaja": "predaja"}[faza]
         # mod=audit i mod=predaja traže da rad.docx POSTOJI (stanje_init: „mod=audit bez gotovog rada
         # nije stanje koje se može auditirati”), pa se u stanje upisuju tek nakon gradnje dokumenta.
         # Izmjereno 7. 9.: s mod= ovdje je agent `review` padao na svakom pozivu.
-        mod_sada = mod if (faza == "plan" or (req.planApproved and faza == "pisanje")) else "novi-rad"
+        mod_sada = mod if (faza == "plan" or (plan_approved and faza == "pisanje")) else "novi-rad"
         conv = write_katedra(req.manuscript, root, req.profile, SCRIPTS, mod=mod_sada,
-                             plan_approved=req.planApproved, plan=req.plan, mentor_comments=req.mentorComments)
+                             plan_approved=plan_approved, plan=req.plan, mentor_comments=req.mentorComments)
         # claims iz appa → claims.jsonl + evidence.jsonl (ulaz strict evidence gatea); pad se prijavljuje, ne skriva
         try:
             ledger = ingest_claims(req.agentResult, root, SCRIPTS, section_hint=req.sectionId)

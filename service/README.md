@@ -45,7 +45,11 @@ POST /v1/verify?wait=0|1        header: x-katedra-worker-token
   "attempt": 1,
   "manuscript": ManuscriptV1,
   "profile": DoctrineProfileHint | null,        # iz appa (planirano lib/agents/pack-profile.server.ts; u repou katedra 7. 9. 2026. te datoteke još nema)
-  "planApproved": bool,                          # planning korak verified + student odobrio
+  "planApproved": bool,                        # legacy advisory; record below is authority
+  "planReady": bool,                           # advisory only; never user approval
+  "planRevision": "<64 lowercase SHA256 hex>",
+  "planApproval": { "schemaVersion": 1, "runId", "projectId", "planRevision",
+                    "approvedBy": "<authenticated user id>", "approvedAt": "<ISO timestamp with timezone>" },
   "plan": { "thesis", "question", "perspectives": [{label, position, why}],
             "chapters": [{sectionId, pages, content, sources: [sourceId]}] },
   "mentorComments": [{id, author, text, location, kind, resolved, resolvedWhere, date}],
@@ -58,6 +62,21 @@ GET /v1/verify/{jobId} -> {"status":"queued|running|done","result"?}
 
 Faza gatea po agentu: intake/sources/structure/planning → `plan`; writing/citation → `pisanje`;
 review → `audit`; export → `predaja`. `phase` u zahtjevu prepisuje.
+
+Approval trust boundary: `planApproved` is retained for wire compatibility but is not an
+approval authority. Only `planApproval` from the authenticated app can authorize the
+existing `plan_state.py odobri --actor user` call. The app must stamp this record after an
+explicit authenticated user action, store it in private run context, and revalidate it
+against the current plan and verified artifact revision before every request. The service
+checks schema version, nonempty user, run/project binding, matching lowercase SHA256
+revision and a valid nonfuture timestamp with timezone. The revision is opaque to this
+stateless service; it cannot independently inspect the app's private authoritative artifacts.
+`planReady` is advisory; existing plan gates still check structural readiness before approval.
+Text in `agentResult` cannot supply consent. Missing, malformed or stale approval blocks
+all non-plan verification phases with `gate_finding`, `step: plan_approval`, before manuscript
+conversion or DOCX building. The plan phase remains available without approval and cannot
+stamp user approval in that case. `/v1/build` remains a format export endpoint; it does not
+approve a plan or grant project access. Lekta remains the technical DOCX/compliance authority.
 
 ## 3. Lokalno
 
