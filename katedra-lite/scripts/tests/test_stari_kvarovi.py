@@ -936,6 +936,28 @@ def main():
     check("K158: popis postoji, a jedinice se ne daju pročitati — druga poruka, ne „nije nađen”",
           "nijedno prezime nije pročitano" in out and "nije nađen" not in out, out[-300:])
 
+    # --- 160: slovni sufiks godine („2023a") rušio je pokrivenost (Lekta) -------------
+    # Kvar 157 je zatvorio sklonidbu, ali ovu granu nije dodirnuo: `GODINA_RE` je iza
+    # znamenke tražio granicu riječi, pa jedinica „Marić, L. (2023a)." nije dobila NIJEDNU
+    # godinu. Ključ jedinice bio je („marić", ""), ključ citata („marić", "2023a"), pa se ISTI
+    # rad prijavljivao istovremeno kao citat bez izvora I kao necitirana jedinica. Upravo
+    # radovi kojima sufiks TREBA (isti autor, ista godina) bili su jedini koje alat nije mogao
+    # spojiti. Uz čitanje je popravljena i usporedba, koja je sufiks skidala samo s citata.
+    vs160 = modul("verify_sources")
+    check("K160: godina sa slovnim sufiksom se cita: (2023a) daje 2023",
+          (vs160.GODINA_RE.search("Marić, L. (2023a). Naslov.") is not None)
+          and vs160.GODINA_RE.search("Marić, L. (2023a). Naslov.").group(1) == "2023")
+    check("K160: gola godina i rečenična godina i dalje rade",
+          vs160.GODINA_RE.search("Marić, L. (2023). Naslov.").group(1) == "2023"
+          and vs160.GODINA_RE.search("nakon 1990. godine").group(1) == "1990")
+    # Negativne kontrole: dopuštanje sufiksa ne smije proširiti pojam godine.
+    check("K160: 20231 i 2023x9 i dalje NISU godina",
+          vs160.GODINA_RE.search("broj 20231 nije godina") is None
+          and vs160.GODINA_RE.search("ISBN 2023x9") is None)
+    k, out, p160 = pokr(os.path.join(fx, "fpzg--project--diplomski--uskladjen.docx"))
+    check("K160: fpzg-project — rad s 2023a i 2023b nema ni citat bez izvora ni necitiranu jedinicu",
+          p160["bez_izvora"] == [] and p160["necitirani"] == [], (kratko(p160), out[-200:]))
+
     print("=" * 70)
     print("REZULTATI TESTOVA: %d/%d prošlo"
           % (len(SVE) - len(PALO), len(SVE)))
