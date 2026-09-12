@@ -70,7 +70,14 @@ _zadnji_zahtjev = [0.0]
 
 DOI_RE = re.compile(r"\b(10\.\d{4,9}/[-._;()/:A-Za-z0-9]+)")
 URL_RE = re.compile(r"https?://[^\s<>\"')\]]+")
-GODINA_RE = re.compile(r"\b(1[89]\d{2}|20\d{2})\b")
+# Slovni sufiks („2023a") se DOPUŠTA, ali NE ulazi u godinu. APA ga traži kad isti autor ima
+# dva rada iste godine, a `\b` iza znamenke ga je odbijao, pa jedinica „Marić, L. (2023a)."
+# nije dobila NIJEDNU godinu (`godina = None`). Ključ jedinice bio je („marić", ""), ključ
+# citata („marić", "2023a"), pa se ISTI rad prijavljivao istovremeno kao citat bez izvora I
+# kao necitirana jedinica. Upravo radovi kojima sufiks TREBA bili su jedini koje alat nije
+# mogao spojiti — kvar 157 (sklonidba) tu granu nije dodirnuo.
+# Petoznamenkasti broj („20231") i „2023x9" i dalje ne prolaze: lookahead traži granicu riječi.
+GODINA_RE = re.compile(r"\b(1[89]\d{2}|20\d{2})(?=[a-z]?\b)")
 PREFIKS_RE = re.compile(r"^\s*(?:[-*•]\s*|\[\d+\]\s*|\(?\d{1,3}[.)]\s+)")
 IZDAVAC_RE = re.compile(
     r"(?i)(:\s*[A-ZČĆŽŠĐ]|\bizd\.|\bnakladnik|\bpress\b|\bpublish|\buniversity\b|"
@@ -1040,12 +1047,17 @@ def pokrivenost(put, izvori, stil=None):
         citati = {(_korijen(kljuc_prvog_autora(a)), g)
                   for a, g in H.kljucevi_citata(H.bez_lokatora(tekst))}
         rez["citata_razlicitih"] = len(citati)
+        # Sufiks godine se skida na OBJE strane. Prije se skidao samo s citata, uz pretpostavku
+        # da jedinica popisa nosi golu godinu; kad ga `rastavi()` uhvati i u jedinici
+        # („Marić, L. (2023a)."), usporedba je mjerila „2023" protiv „2023a" i nikad se nije
+        # poklopila — isti simptom kao kvar 157, ali druga grana.
+        def _iste(ck, k):
+            return ck[0] == k[0] and ck[1].rstrip("abcdefg") == k[1].rstrip("abcdefg")
+
         rez["necitirani"] = [v[0] for k, v in kljucevi_izvora.items()
-                             if not any(ck[0] == k[0] and ck[1].rstrip("abcdefg") == k[1]
-                                        for ck in citati)]
+                             if not any(_iste(ck, k) for ck in citati)]
         rez["bez_izvora"] = sorted(c for c in citati
-                                   if not any(c[0] == k[0] and c[1].rstrip("abcdefg") == k[1]
-                                              for k in kljucevi_izvora))
+                                   if not any(_iste(c, k) for k in kljucevi_izvora))
     elif nacin == "numericki":
         brojevi = {int(ref.key) for ref in C.parse_vancouver(tekst) + C.parse_ieee(tekst)}
         rez["citata_razlicitih"] = len(brojevi)
