@@ -4155,3 +4155,22 @@ generalno: to je potrebno samo gdje dijete piše ✔/❌ na konzolu (gate ga ve�
 na roditeljskoj strani je ono što je rušilo.
 
 Ograda: `bin/testovi.sh` skupina „paket: subprocess s encoding=” — `katedra/scripts/provjeri_subprocess.py` (AST nad `katedra-lite/scripts`, `rad-audit/scripts`, `rad-docx/scripts`, `katedra/scripts`, `rad-orchestrator`, `service`, `bin`) vraća 1 i imenuje `datoteka:redak` za svaki poziv s `text=True`/`universal_newlines=True` bez `encoding=`. Mutacija: privremena datoteka s `subprocess.run(cmd, text=True)` u `service/` → skupina crvena i imenuje je.
+
+## 160. Slovni sufiks godine („2023a") rušio je pokrivenost izvora
+
+`GODINA_RE` je iza četveroznamenkaste godine tražio granicu riječi, pa jedinica
+„Marić, L. (2023a). …" nije dobila NIJEDNU godinu (`godina = None`). Ključ jedinice bio je
+(„marić", ""), a ključ citata („marić", "2023a"), pa se ISTI rad prijavljivao istovremeno kao
+citat bez izvora I kao necitirana jedinica — dakle kao dva različita problema. Upravo radovi
+kojima sufiks TREBA, jer isti autor ima dva rada iste godine, bili su jedini koje alat nije
+mogao spojiti.
+
+Kvar 157 je zatvorio sklonidbu i izgledao je kao isti simptom, ali ovu granu nije dodirnuo.
+Uz čitanje godine popravljena je i usporedba, koja je sufiks skidala samo s citatne strane
+(`rstrip("abcdefg")`), pa je „2023" mjerila protiv „2023a".
+
+Izmjereno na `fpzg--project--diplomski--uskladjen.docx`: `bez_izvora` 2 → 0, `necitirani` 1 → 0.
+Nalaz je došao iz usporedbe dvaju alata (Lekta protiv katedra-lite) nad istim dokumentom.
+
+Ograda: `tests/test_stari_kvarovi.py`, K160 (4 provjere, uključujući negativne kontrole da
+„20231" i „2023x9" i dalje nisu godina).
