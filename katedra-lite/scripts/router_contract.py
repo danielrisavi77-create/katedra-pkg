@@ -25,7 +25,7 @@ FORBIDDEN_ROUTER_FRAGMENTS = (
     "https://<token>@",
 )
 MAX_ROUTER_CHARS = 24000
-DESCRIPTION_VERSION_RE = re.compile(r"\\sv(\\d+\\.\\d+\\.\\d+)\\.\\\"?\\s*$", re.M)
+DESCRIPTION_VERSION_RE = re.compile(r"\sv(\d+\.\d+\.\d+)\.\"?\s*$", re.M)
 
 
 def validate(root: Path) -> list[str]:
