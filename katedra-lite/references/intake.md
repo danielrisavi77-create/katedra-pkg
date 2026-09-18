@@ -177,7 +177,7 @@ python3 <KATEDRA_SKILL>/scripts/evidence_gate.py \
 `strict` blokira `unsupported`, `conflicted`, `contradicted` i evidence vezan uz
 `conflict/invalid` source. `advisory` služi samo za dijagnostiku i ne zamjenjuje strict gate.
 
-Sve u `.katedra/` ide u git zajedno s radom. To je povijest odluka, ne privremene datoteke.
+`.katedra/` je trajno projektno stanje, ali ne ide automatski u javni git. Verzionaliziraj samo ono što korisnik želi i što ne izlaže osjetljive podatke; politika i preporučeni ignore obrasci su u `references/privatnost.md`.
 
 ### 0.7 Komentari mentora → trajna checklista
 
@@ -191,28 +191,21 @@ Svaka zamjerka dobiva `status: otvoreno`. **Self-check prije svake isporuke prol
 
 Zatvaranje i pregled ide preko `scripts/zamjerke.py`, ne ručnim pisanjem u JSON — v. `references/pisanje.md` § „Zatvaranje zamjerki, ne samo bilježenje".
 
-### 0.7a Neprihvaćene praćene izmjene → prihvati PRIJE bilo kakve dijagnoze
+### 0.7a Praćene izmjene → odaberi dokaziv pogled prije dijagnoze
 
-Ako priloženi rad ima **neprihvaćene Wordove praćene izmjene** (Track Changes: `<w:ins>`/
-`<w:del>`), pokreni ovo **prije** 0.7, prije `extract_comments.py`, prije `check_ai_style.py`,
-prije ručnog čitanja odlomaka — prije bilo koje radnje koja čita tekst dokumenta:
+Ako priloženi rad ima Wordove Track Changes (`<w:ins>`/`<w:del>`), prvo pokreni
+`revizije.py provjeri` i sačuvaj izvornik. `python-docx` ne daje pouzdan prikaz
+neprihvaćenog sloja, pa se za strojnu ekstrakciju po potrebi izrađuje **accepted-copy**:
 
 ```bash
+python3 <KATEDRA_SKILL>/scripts/revizije.py provjeri rad.docx
 python3 <KATEDRA_SKILL>/scripts/revizije.py prihvati rad.docx rad_prihvacen.docx
 ```
 
-**Zašto ovo nije kozmetika.** `python-docx`-ov `Paragraph.text` čita samo runove koji su
-izravna djeca `<w:p>` u XML-u. Umetnuti tekst živi unutar `<w:ins>`, obrisani unutar
-`<w:del>` — oboje jedan stupanj dublje, pa `.text` te dijelove **tiho preskače**, bez greške
-ili upozorenja. Rad s i najmanjom neprihvaćenom izmjenom kroz `python-docx` izgleda krnj:
-nedostaju riječi, rečenice se raspadaju usred misli, naslovi gube pola teksta — a svaka
-dijagnoza koja krene od takvog čitanja polazi od krivog polazišta i to se ne vidi dok se ne
-usporedi sa stvarnim dokumentom u Wordu. Skripta radi isto što i Wordov „Review → Accept All
-Changes", programatski, na razini XML-a: `<w:ins>`/`<w:moveTo>` raspakira (tekst ostaje),
-`<w:del>`/`<w:moveFrom>` briše zajedno sa sadržajem. **Wordovi komentari (`<w:comment...>`)
-nisu praćene izmjene i ovim se ne dirju** — `extract_comments.py` iz 0.7 radi jednako na
-izlazu ovog koraka kao i na izvorniku, samo sada nad **cjelovitim** tekstom. Nastavi rad s
-`rad_prihvacen.docx`, ne s izvornikom.
+Accepted-copy je tehnička normalizacija za čitanje, ne sadržajna odluka da korisnik prihvaća
+mentorove prijedloge. U izvještaju napiši koji je pogled analiziran. Ako zaključak o
+autorstvu, mentorovoj namjeri ili sadržaju materijalno ovisi o prihvaćanju izmjene, ne
+pretpostavljaj odgovor. Puni protokol: `references/revizije.md`.
 
 ### 0.7b Fiksni rječnik markera za nesigurno mjesto u tekstu
 
