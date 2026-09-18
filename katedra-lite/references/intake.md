@@ -75,8 +75,7 @@ python3 <KATEDRA_SKILL>/scripts/profile_registry.py --write
 
 `faculty_scale_gate.py` odbija fakultet bez dovoljno qualification caseva i **to je
 ispravno**. Ali dosad je posljedica bila da `check_rules.py` uopće ne može raditi,
-`stanje_init.py` odbija zapisati stanje, a formalne provjere se pišu rukom — što željezno
-pravilo 8 izrijekom ne dopušta. Gate zato ostaje binaran za **admisiju**, ali ne i za
+`stanje_init.py` odbija zapisati stanje, a formalne provjere se pišu rukom — što HARD transparentnost izrijekom ne dopušta. Gate zato ostaje binaran za **admisiju**, ali ne i za
 **uporabu**.
 
 ```bash
