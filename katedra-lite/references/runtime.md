@@ -40,3 +40,23 @@ Exit/greška alata je stanje okoline ili nalaz, ne prolaz. Push/read ovlasti se 
 ## Verzije
 
 `VERSION` je `package_version`. Certificirani frozen ugovor jezgre je zaseban `core_contract`. Aktivna kartica ne smije tvrditi drugi package version; provjera je `katedra/scripts/verzija.py --provjeri` i `katedra-lite/scripts/router_contract.py`.
+
+
+## Izvor sesije, Cowork i drift
+
+GitHub read/write pristup nije svojstvo URL-a nego aktualne sesije. Ako proxy odbije write ili
+repo nije autoriziran, rješenje je **izvor sesije** / autorizirana veza koju host stvarno
+nudi; ne pokušavaj tokenom u URL-u zaobići odluku politike.
+
+Cowork, Claude Code, Desktop i cloud chat nemaju nužno iste repo mogućnosti. Za Cowork
+posebno **ne pretpostavljaj** postojanje repo pickera ili write ovlasti: izmjeri što sesija
+stvarno može i prijavi ograničenje.
+
+Kad je Full path prvi put učitao runtime i paket je dostupan, korisniku jednom prikaži
+`KATEDRA_PKG_VERZIJA` i rezultat:
+
+```bash
+python3 "$KATEDRA_PKG/katedra-lite/scripts/drift.py" --kratko
+```
+
+To vrijedi za runtime/full-path sesiju, ne za Quick path koji uopće ne treba paket.
