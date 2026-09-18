@@ -83,7 +83,7 @@ podiže rad iz javnih politika. Dva pravila:
 
 * ispod prikaza ide `Izvor: vlastiti izračun prema [propis/izvor]`, ne samo „vlastiti izračun";
 * brojka se ne upisuje rukom nego iz jednog izvora, a aritmetika se potvrđuje programski —
-  željezno pravilo 13 i `references/izracuni.md`. Jedna kriva brojka ruši kredibilitet
+  HARD načelo jednog izvora izvedenih brojki i `references/izracuni.md`. Jedna kriva brojka ruši kredibilitet
   cijelog rada, i to je u praksi uhvaćeno (v. `replikacija-pspp`: KR-20 0,743 → 0,740).
 
 ## 5. Izvori koje FPZG ne prihvaća
