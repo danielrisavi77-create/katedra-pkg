@@ -201,31 +201,29 @@ def main():
     check("K48: ista vrijednost dvaput NIJE nalaz", pb.proturjecja(isti) == [])
 
     # --- doktrinarni kvarovi: 43, 49, 134 -------------------------------------
-    # Doktrina je artefakt kao i kod, pa ograda smije mjeriti njezin tekst — ali
-    # samo ODLUČUJUĆI token, ne rečenicu. Preformulacija ne smije rušiti test;
-    # brisanje odluke mora.
+    # Od v2.0 runtime/GitHub/Cowork detalji namjerno NE žive u studentskom
+    # routeru nego u references/runtime.md. Ograda zato provjerava pravo mjesto.
     with io.open(os.path.join(KORIJEN, "SKILL.md"), encoding="utf-8") as f:
         router = f.read()
+    with io.open(os.path.join(KORIJEN, "references", "runtime.md"), encoding="utf-8") as f:
+        runtime = f.read()
 
-    # 43: 403 se rješava pojmom „izvor sesije", ne imenom klika u postavkama
-    check("K43: doktrina imenuje `izvor sesije`", "izvor sesije" in router)
-    check("K43: doktrina ne šalje korisnika u konkretnu postavku",
-          "Add from GitHub" not in router.split("| Površina |")[0])
+    # 43: 403/politika se rješava pojmom „izvor sesije”, bez credential zaobilaznice.
+    check("K43: runtime doktrina imenuje `izvor sesije`", "izvor sesije" in runtime)
+    check("K43: runtime ne vraća token u URL kao rješenje",
+          "https://<token>@" not in runtime and "KATEDRA_PKG_URL_TOKEN" not in runtime)
 
-    # 49: uz verziju paketa u prvoj poruci mora stajati i redak drift.py
-    # Odlučujući token je zahtjev iz pravila (4), ne prvi spomen varijable:
-    # ista se riječ pojavljuje i u bash bloku iznad.
-    zahtjev = re.search(r"ispiši u prvoj poruci", router)
-    okolina = router[max(0, zahtjev.start() - 260):zahtjev.end()] if zahtjev else ""
-    check("K49: uz verziju paketa traži se i redak `drift.py --kratko`",
-          "drift.py --kratko" in okolina, okolina[-90:])
+    # 49: kad Full path učita runtime, uz verziju se mjeri i drift. Quick path
+    # ne mora učitati paket samo radi ove provjere.
+    check("K49: runtime traži `drift.py --kratko` uz package verziju",
+          "KATEDRA_PKG_VERZIJA" in runtime and "drift.py" in runtime and "--kratko" in runtime)
 
-    # 134: Cowork redak je ❌ BEZ uvjeta — uvjet koji se ne ispunjava nigdje
-    #      briše se, ne ublažava (issue #84581)
-    red = next((x for x in router.splitlines() if x.startswith("| Cowork")), "")
-    check("K134: Cowork redak postoji i nosi ❌", "❌" in red, red[:90])
-    check("K134: Cowork redak nema uvjetni izlaz („samo ako”)",
-          "samo ako" not in red, red[:90])
+    # 134: Cowork nije tvrdo mapiran na UI klik; njegova sposobnost se mjeri.
+    check("K134: runtime izrijekom imenuje Cowork", "Cowork" in runtime)
+    check("K134: Cowork sposobnosti se ne pretpostavljaju",
+          "ne pretpostavljaj" in runtime and "izmjeri" in runtime)
+    check("K134: Cowork/GitHub detalji nisu vraćeni u thin router",
+          "Cowork" not in router and "KATEDRA_PKG_URL_TOKEN" not in router)
 
     # --- fixture dokumenti: 40, 41, 45, 71 ------------------------------------
     # Najmanji .docx koji kvar izaziva. Fixture je jeftiniji od cijelog rada i
@@ -349,12 +347,15 @@ def main():
     vr2, opis2 = nap.komponenta_opseg(kat_sa({}), None, {})
     check("K34: bez plana i bez rada opseg se NE izmišlja", vr2 is None, (vr2, opis2))
 
-    # --- 56: doktrina o gateovima (pravila 33 i 34) mora stajati u routeru -------
-    # Odlučujući token je broj + naslov pravila, ne cijela rečenica.
-    check("K56: pravilo 33 „provjera koja ne može pasti” je u routeru",
-          bool(re.search(r"^33\. \*\*Provjera koja ne može pasti", router, re.M)))
-    check("K56: pravilo 34 „provjera se prima tek kad je pokazano da pada” je u routeru",
-          bool(re.search(r"^34\. \*\*Provjera se prima tek kad je pokazano da pada", router, re.M)))
+    # --- 56: razvojna doktrina o provjerama živi izvan studentskog routera -------
+    with io.open(os.path.join(KORIJEN, "references", "razvoj.md"), encoding="utf-8") as f:
+        razvoj = f.read()
+    check("K56: „provjera koja ne može pasti” je u razvojnoj doktrini",
+          "Provjera koja ne može pasti nije provjera" in razvoj)
+    check("K56: „provjera se prima tek kad je pokazano da pada” je u razvojnoj doktrini",
+          "Provjera se prima tek kad je pokazano da pada" in razvoj)
+    check("K56: razvojna doktrina nije vraćena u studentski router",
+          "Provjera koja ne može pasti nije provjera" not in router)
 
     # --- 72–73: provjera tvrdnji ne smije javiti ✓ nad skillom bez testova -------
     # SKILL.md tvrdi 12/12 testova i spominje test_all.py, a datoteke nema.
