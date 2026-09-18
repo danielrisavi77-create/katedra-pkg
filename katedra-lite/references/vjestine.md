@@ -59,8 +59,7 @@ To se kaže izrijekom, ne prešuti.
 ## `izrada.docx` i `stil.kucni` — motor i kućni stil (mod 2, mod 6)
 
 **Do kolovoza 2026. ove su dvije stvari bile jedna sposobnost, vezana na fakultet.** To je
-značilo da drugi fakultet zahtijeva kopiju motora izrade — točno ono što željezno pravilo
-10 zabraniti: *dvije kopije = dvije verzije istine unutar tjedna.* Sada su razdvojene:
+značilo da drugi fakultet zahtijeva kopiju motora izrade — točno ono što HARD granica vlasništva motora zabranjuje: *dvije kopije = dvije verzije istine unutar tjedna.* Sada su razdvojene:
 
 | Sposobnost | Što je | Vezano na fakultet |
 |---|---|---|

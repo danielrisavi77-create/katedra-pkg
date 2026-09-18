@@ -6,6 +6,11 @@
 ## 3. ŠTO JE GDJE
 
 ```
+references/runtime.md           runtime/bootstrap; učitaj samo kad treba paket, skripta ili satelit
+references/quick_path.md        Quick path naspram Full path; prag prelaska bez ceremonijalnog overkilla
+references/prioriteti.md        HARD/GATE/SIGNAL — koliko je koji nalaz ili pravilo snažno
+references/privatnost.md        što iz .katedra/ ostaje lokalno i što se ne commita automatski
+references/revizije.md          Track Changes view-policy: original naspram accepted-copyja
 references/dijelovi.md          OS DIJELOVA — od čega se rad sastoji, tko što provjerava;
                                 registar je references/dijelovi.json, alat scripts/dijelovi.py
 references/zasto.md             obrazloženja željeznih pravila 11–20 (stvarni radovi i kvarovi);

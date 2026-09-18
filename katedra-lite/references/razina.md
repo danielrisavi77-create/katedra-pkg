@@ -74,8 +74,8 @@ smjera, i obje se vide u prvom odlomku.
 ## Granice i sudari
 
 1. **Upute fakulteta pobjeđuju.** Ako profil traži nešto što se s razinom sudara, radi po
-   profilu i **javi sudar izrijekom** (željezno pravilo 17).
-2. **Glas autora pobjeđuje nad razinom, ali ne nad Uputama** (`stil_autora.md`, pravilo 16).
+   profilu i **javi sudar izrijekom** (hijerarhija autoriteta iz `SKILL.md`).
+2. **Glas autora pobjeđuje nad razinom, ali ne nad Uputama** (`stil_autora.md`; glas autora ostaje podređen službenim uputama).
 3. **Razina se ne zaključuje iz teksta.** Rad koji mnogo objašnjava može biti prvi semestar
    ili loš diplomski; alat tu razliku ne vidi i ne pretvara se da vidi. Deklarira se, kao
    citatni stil (SKILL.md § 0.8).
