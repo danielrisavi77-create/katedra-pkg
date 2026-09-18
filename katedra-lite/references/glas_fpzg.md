@@ -102,7 +102,7 @@ službeni dokumenti institucija, Eurostat/World Bank/OECD). Ono što se na FPZG-
 
 Kad student da stariji rad kao predložak, iz njega se preuzimaju **isključivo formalna
 pravila** — naslovnica, izjava o akademskoj čestitosti, font, prored, margine, citatni
-stil, redoslijed obveznih dijelova (željezno pravilo 17, `references/primjerci.md`).
+stil i redoslijed obveznih dijelova (obranjeni primjerci su signal prakse; autoritet određuje hijerarhija iz `SKILL.md`, v. `references/primjerci.md`).
 Rečenični obrasci nikad. Konstrukcije koje se prepisuju iz rada u rad i koje mentor
 prepoznaje na prvi pogled:
 
