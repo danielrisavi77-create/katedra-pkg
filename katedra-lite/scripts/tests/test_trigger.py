@@ -190,6 +190,42 @@ def main():
           rez["stopa"] == 1.0 and rez["izmjereno"] == 2 and rez["prolaza"] == 3, rez)
     check("R69: takav red se broji kao okinuo", rez["okinuo"] is True, rez)
 
+    # R69b: quota/weekly-limit bez ijednog modelskog odgovora nije routing
+    #        promašaj. Cijeli red mora ostati NEIZMJEREN, a main vratiti kod 2
+    #        (okolina), ne 1 (routing regresija).
+    mapa_q = tempfile.mkdtemp()
+    skup_q = os.path.join(mapa_q, "skup.json")
+    izlaz_q = os.path.join(mapa_q, "rez.json")
+    with open(skup_q, "w", encoding="utf-8", newline="\n") as f:
+        f.write(_js.dumps([{"query": "audit rada", "should_trigger": True}]))
+    quota_redak = _js.dumps({
+        "type": "result",
+        "is_error": True,
+        "result": "You've hit your weekly limit · resets 4am (UTC)",
+    })
+    pt.shutil.which = lambda ime: "/put/do/claude"
+    pt.subprocess.run = LazniNiz([
+        LazniIzlaz(quota_redak, returncode=1),
+        LazniIzlaz(quota_redak, returncode=1),
+        LazniIzlaz(quota_redak, returncode=1),
+    ])
+    sys.argv = ["pokreni_trigger.py", "--skup", skup_q, "--izlaz", izlaz_q,
+                "--mapa", mapa_q, "--ponavljanja", "3", "--radnika", "1", "--tiho"]
+    try:
+        kod_q = pt.main()
+    finally:
+        sys.argv = stari_argv
+        pt.shutil.which = stara_which3
+    with open(izlaz_q, encoding="utf-8") as f:
+        izv_q = _js.load(f)
+    rez_q = izv_q["redci"][0]
+    check("R69b: quota-only eval vraća kod 2 (okolina), ne routing fail",
+          kod_q == 2, kod_q)
+    check("R69b: quota-only red je neizmjeren, ne promašaj",
+          rez_q["izmjereno"] == 0 and rez_q["prolaz"] is None, rez_q)
+    check("R69b: ukupna točnost nema lažnih 0/1 kad nema mjerenja",
+          izv_q.get("izmjereno_pitanja") == 0 and izv_q.get("tocnost") is None, izv_q)
+
     pt.subprocess.run = stari
     print("=" * 70)
     print("REZULTATI TESTOVA: %d/%d prošlo"
