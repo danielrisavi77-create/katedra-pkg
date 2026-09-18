@@ -8,7 +8,7 @@
 Cijeli je paket optimiran prema petici, a nigdje nije stajalo **prema čemu se ta petica
 mjeri**. Posljedica: „rad je spreman" značilo je „prošao je formalne provjere" — što nije
 isto. Rad koji prođe svih dvanaest provjera `check_rules.py`, a nema tezu, i dalje ne nosi
-peticu (željezno pravilo 11). Student je to čuo tek od mentora, i tek na kraju.
+peticu (GATE načelo: formalni prolaz nije isto što i jak argument). Student je to čuo tek od mentora, i tek na kraju.
 
 Os dijelova (`references/dijelovi.md`) odgovara na pitanje *ima li rad sve dijelove*.
 Rubrika odgovara na drugo: *vrijede li ti dijelovi nešto*.
