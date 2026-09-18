@@ -118,7 +118,7 @@ Autoritet za format i lokalnu praksu ide ovim redom:
 4. izmjereni obranjeni primjerci;
 5. heuristike i drugi SIGNAL-i.
 
-Obranjeni primjerak je dokaz prakse, ne formalno pravilo sam po sebi.
+Obranjeni primjerak je dokaz prakse, ne formalno pravilo sam po sebi. Korisnikov izričito zadani opseg jači je od nepotvrđenog raspona iz profila; pisana mentorova uputa i potvrđeni službeni minimum ipak imaju prednost.
 
 ### 3.3 Projektno stanje
 
@@ -150,10 +150,11 @@ Na novom Full-path projektu zatim zasij os dijelova i razinu rada prema referenc
 9. Spremnost za fazu dokazuje `gate.py`, ne dojam. Opravdani preskok mora imati imenovan korak i razlog.
 10. Predaja zahtijeva završno ljudsko čitanje tijela rada; zeleni strojni gate znači samo da ništa izmjereno nije palo.
 11. Dokument s Track Changes prvo dobiva eksplicitno odabran/izveden pogled za analizu; politika je `references/revizije.md`.
+12. Odstupanje od odobrenog plana zapisuje se u project state s razlogom; ne smije postati tiha promjena strukture.
 
 ### SIGNAL
 
-12. AI-style, ritam, sličnost s uzorkom, napredak-score, rubrika i slične heuristike služe za pregled. Same ne dokazuju akademski kvar niti formalno pravilo.
+13. AI-style, ritam, sličnost s uzorkom, napredak-score, rubrika i slične heuristike služe za pregled. Same ne dokazuju akademski kvar niti formalno pravilo.
 
 Puna semantika HARD/GATE/SIGNAL: `references/prioriteti.md`.
 
