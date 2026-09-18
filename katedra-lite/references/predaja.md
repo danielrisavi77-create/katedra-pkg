@@ -263,7 +263,7 @@ python3 <RAD_DOCX>/scripts/provjeri_predaju.py rad.docx \
     --zadatak .katedra/zadatak.json
 ```
 
-- **`model.json`** — jedini izvor izvedenih brojki (željezno pravilo 13). `model.prije.json`
+- **`model.json`** — jedini izvor izvedenih brojki (HARD: jedan izvor izvedenih brojki). `model.prije.json`
   je prethodna verzija i bez nje **nema crne liste**: vrijednost koja je promijenjena, a
   ostala negdje u tekstu, prolazi nezapaženo. To je najskuplja tiha greška u ovom modu.
 - **`zadatak.json`** — komponente koje uputa predmeta izrijekom traži, zapisane u modu 1
