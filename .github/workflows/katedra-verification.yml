@@ -3,6 +3,8 @@ name: Katedra Verification
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [refactor/katedra-lite-2-thin-router-clean]
   workflow_dispatch:
     inputs:
       allow_api_billing:
