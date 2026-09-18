@@ -142,7 +142,7 @@ Stroga i namjerna:
 | `dijelovi.py` | **koje dijelove rad uopće treba, tko ih radi, tko ih provjerava?** | os dokumenta |
 
 `dijelovi.py` **uvozi** `norm`, `SINONIMI` i `je_neobavezan_dio` iz `check_rules.py`.
-Ne prepisuje ih. Dva popisa sinonima razišla bi se unutar tjedna — to je željezno pravilo 13
+Ne prepisuje ih. Dva popisa sinonima razišla bi se unutar tjedna — isti podatak ne smije imati dvije konkurentske istine
 primijenjeno na tekst umjesto na brojke.
 
 ## Sedam dijelova koje nitko ne provjerava
