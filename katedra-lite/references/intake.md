@@ -208,7 +208,7 @@ pretpostavljaj odgovor. Puni protokol: `references/revizije.md`.
 
 ### 0.7b Fiksni rječnik markera za nesigurno mjesto u tekstu
 
-Kad tekst treba označiti kao nesigurno umjesto izmisliti ili prešutjeti (željezno pravilo 2),
+Kad tekst treba označiti kao nesigurno umjesto izmisliti ili prešutjeti (HARD: ne izmišljaj),
 koristi **točno ove** oznake — dosljedan, grepable vokabular, ne ad hoc fraze koje se
 razlikuju iz pasusa u pasus i onda ništa ne pronađe self-check ni finalna tablica „RUČNO
 PROVJERI":
@@ -221,7 +221,7 @@ PROVJERI":
 | `[PROVJERI NN BR.]` | Broj Narodnih novina (ili drugog službenog glasila) naveden „iz sjećanja", nije provjeren na propisi.hr ili ekvivalentu. |
 
 Svaki marker mora ostati **pretraživ grepom** (`grep -n "\[PROVJERI" rad_tekst.md`) do
-predaje — finalna tablica „RUČNO PROVJERI" (željezno pravilo 7) i mod 6 preflight (`predaja.md`)
+predaje — finalna tablica „RUČNO PROVJERI" i mod 6 preflight (`predaja.md`)
 oslanjaju se na to da se markeri ne preformuliraju u prozu usred pisanja.
 
 ### 0.8 Defaulti (samo kad profila fakulteta nema)
