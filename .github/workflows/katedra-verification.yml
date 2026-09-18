@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [refactor/katedra-lite-2-thin-router-clean]
+    branches: [main]
   workflow_dispatch:
     inputs:
       allow_api_billing:
@@ -17,62 +17,13 @@ permissions:
   contents: read
 
 jobs:
-  refresh-generated:
-    name: Refresh generated registries
-    if: github.event_name == 'push' && github.ref_name == 'refactor/katedra-lite-2-thin-router-clean'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout branch
-        uses: actions/checkout@v4
-        with:
-          ref: refactor/katedra-lite-2-thin-router-clean
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install generator dependency
-        run: python -m pip install jsonschema
-
-      - name: Refresh generated files
-        run: |
-          python3 katedra-lite/scripts/profile_registry.py --write --bez-admisije
-          python3 katedra-lite/scripts/indeks_zamki.py --upisi
-          git diff --check
-
-      - name: Commit generated changes
-        shell: bash
-        run: |
-          if git diff --quiet --             katedra-lite/references/fakulteti/_support_catalog.json             katedra-lite/references/fakulteti/index.json             katedra-lite/references/zamke_indeks.md; then
-            echo "Generated files already current."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add             katedra-lite/references/fakulteti/_support_catalog.json             katedra-lite/references/fakulteti/index.json             katedra-lite/references/zamke_indeks.md
-          git commit -m "chore: refresh generated Katedra registries"
-          git push
-
   package-tests:
     name: Full package test suite
-    needs: refresh-generated
-    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
-      - name: Checkout latest branch after generated refresh
-        if: github.event_name == 'push'
-        uses: actions/checkout@v4
-        with:
-          ref: refactor/katedra-lite-2-thin-router-clean
-
-      - name: Checkout PR/event ref
-        if: github.event_name != 'push'
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up Python
@@ -98,7 +49,7 @@ jobs:
           if-no-files-found: ignore
 
   claude-trigger-eval:
-    name: Live Claude trigger eval
+    name: Live Claude trigger eval (auth-gated)
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
