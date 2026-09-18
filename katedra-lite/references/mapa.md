@@ -41,6 +41,7 @@ scripts/ucitavanje.py           izračunaj popis štiva za OVAJ projekt i mod; u
                                 evaluiraju protiv .katedra/, nepoznat uvjet NE izbacuje
                                 referencu (preskočeno štivo skuplje je od suvišnog)
 scripts/primjerci.py            izmjeri/upisi/popis: mjeri obranjeni rad i uspoređuje ga
+scripts/slicnost.py            preklapanje rada s obranjenim primjerkom; advisory SIGNAL, ne formalno pravilo
                                 s profilom; ne skida ništa s interneta
 scripts/provjeri_izracune.py    izbor formule: postotni bod, osnovica, CAGR, bazni vs
                                 lančani indeks, nominalno vs realno, zbroj udjela
