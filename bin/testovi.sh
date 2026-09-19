@@ -62,6 +62,7 @@ pokreni "katedra: verzija i oznake" python3 "$KORIJEN/katedra/scripts/tests/test
 pokreni "katedra: oznaka verzije = VERSION" python3 "$KORIJEN/katedra/scripts/verzija.py" --provjeri
 pokreni "katedra-lite: indeks zamki" python3 "$KORIJEN/katedra-lite/scripts/tests/test_indeks.py"
 pokreni "katedra-lite: mjerilo usmjeravanja" python3 "$KORIJEN/katedra-lite/scripts/tests/test_trigger.py"
+pokreni "katedra-lite: thin-router contract" python3 "$KORIJEN/katedra-lite/scripts/tests/test_router_contract.py"
 pokreni "katedra-lite: pretraga ranijih verzija" python3 "$KORIJEN/katedra-lite/scripts/tests/test_drift.py"
 pokreni "katedra-lite: stari kvarovi" python3 "$KORIJEN/katedra-lite/scripts/tests/test_stari_kvarovi.py"
 # Kvar 32: registry je bio stale od v1.9.3 i nitko nije primijetio, jer --check nije

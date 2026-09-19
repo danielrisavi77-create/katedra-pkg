@@ -121,3 +121,17 @@ trajnog stanja; forma se ne provjerava (`gate.py --iskljuci`, forma je Lekta). U
 (korak kojemu fali ulaz smije ostati nepokrenut) i `--iskljuci korak=razlog` (korak se namjerno ne
 pokreće; stanje `iskljuceno`, ne blokira; kvar 152). Nepoznato ime je u oba slučaja kod 2.
 
+
+
+## Release pravila koja ne pripadaju studentskom routeru
+
+Ova pravila upravljaju razvojem Katedre i zato od v2.0 žive ovdje, ne u
+`katedra-lite/SKILL.md` koji se učitava tijekom studentskog rada.
+
+1. **Provjera koja ne može pasti nije provjera.** Svaki nalaz koji nosi sud mora utjecati
+   na izlaz/status, a nova provjera mora imati ulaz na kojem dokazivo pada.
+2. **Provjera se prima tek kad je pokazano da pada.** Prije ulaska u gate napravi
+   negativni slučaj, pokaži izlaz ≠ 0, zatim ispravan slučaj i izlaz 0. Gate ne smije
+   samo ponoviti isti izračun iz alata koji provjerava.
+3. **Mjerenje prvo kalibriraj poznatim ishodom.** Broj iz evala ne smije postati sud
+   dok barem jedan kontrolni slučaj ručno ne potvrdi da harness mjeri ono što tvrdi.

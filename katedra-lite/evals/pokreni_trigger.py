@@ -156,7 +156,7 @@ def main() -> int:
     for i, odg in odgovori:
         po_upitu.setdefault(i, []).append(odg)
 
-    redci, tocno = [], 0
+    redci, tocno, izmjereno_pitanja = [], 0, 0
     for i, stavka in enumerate(skup):
         prolazi = po_upitu.get(i, [])
         # Kvar 131: prolaz koji je pukao (timeout, pad sesije) nije prolaz u
@@ -164,17 +164,25 @@ def main() -> int:
         # spušta stopu i pretvara kvar okoline u nalaz o opisu — isti oblik
         # kao kvarovi 121, 124 i 128. U nazivnik ulaze samo IZMJERENI prolazi.
         izmjereni = [o for o in prolazi if not o.get("greska") or o.get("skill")]
-        okidanja = [(o["skill"] in OBITELJ) if o["skill"] else False
-                    for o in izmjereni]
-        stopa = sum(okidanja) / len(okidanja) if okidanja else 0.0
-        okinuo = stopa > 0.5 and bool(izmjereni)
-        ok = okinuo == stavka["should_trigger"]
-        tocno += ok
+        if izmjereni:
+            okidanja = [(o["skill"] in OBITELJ) if o["skill"] else False
+                        for o in izmjereni]
+            stopa = sum(okidanja) / len(okidanja)
+            okinuo = stopa > 0.5
+            ok = okinuo == stavka["should_trigger"]
+            tocno += bool(ok)
+            izmjereno_pitanja += 1
+        else:
+            # Nula modelskih odgovora nije stopa od 0 %, nego odsutno mjerenje.
+            # Tipični uzroci: timeout, autentikacija, quota/rate limit ili pad CLI-ja.
+            stopa = None
+            okinuo = None
+            ok = None
         redci.append({
             "upit": stavka["query"],
             "ocekivano": stavka["should_trigger"],
             "okinuo": okinuo,
-            "stopa": round(stopa, 2),
+            "stopa": round(stopa, 2) if stopa is not None else None,
             "prolaza": len(prolazi),
             "izmjereno": len(izmjereni),
             "skill": next((o["skill"] for o in prolazi if o["skill"]), None),
@@ -184,11 +192,15 @@ def main() -> int:
         })
 
     ukupno = len(redci)
+    nemjereno_pitanja = ukupno - izmjereno_pitanja
     izv = {
         "ukupno": ukupno,
         "ponavljanja": a.ponavljanja,
         "tocno": tocno,
-        "tocnost": round(tocno / ukupno, 3) if ukupno else 0.0,
+        "izmjereno_pitanja": izmjereno_pitanja,
+        "nemjereno_pitanja": nemjereno_pitanja,
+        "tocnost": (round(tocno / izmjereno_pitanja, 3)
+                    if izmjereno_pitanja else None),
         "napomena": (
             "Mjeri opis KARTICE koja je instalirana u sesiji, ne onaj u repou. "
             "Ako se verzije razlikuju, broj vrijedi za karticu."
@@ -204,8 +216,9 @@ def main() -> int:
              "pa je odziv usporediv sa stvarnim radom, ne donja granica."
              % (mapa, len(list(Path(mapa).glob("*.docx")))))
         ) + (
-            " Redak s 33 % nije „ne okida”, nego „okida nepouzdano”; sud o opisu "
-            "nose samo retci s 0 %."
+            " Redak s 33 % nije „ne okida”, nego „okida nepouzdano”. Redak s "
+            "0/N izmjerenih prolaza nema stopu uopće: to je kvar/ograničenje "
+            "okoline, ne nalaz o opisu skilla."
         ),
         "redci": redci,
     }
@@ -215,15 +228,22 @@ def main() -> int:
 
     if not a.tiho:
         for r in redci:
-            znak = "✅" if r["prolaz"] else "❌"
+            znak = "⏸" if r["prolaz"] is None else ("✅" if r["prolaz"] else "❌")
             koji = r["skill"] or "—"
             poz = f"#{r['pozicija']}" if r.get("pozicija") else "  "
             mjera = ("" if r.get("izmjereno") == r.get("prolaza")
                      else f" [{r.get('izmjereno')}/{r.get('prolaza')} izmjereno]")
+            stopa_txt = "—" if r["stopa"] is None else f"{r['stopa']:.0%}"
             print(f"{znak} [{'DA ' if r['ocekivano'] else 'NE '}] {koji:<18} "
-                  f"{poz:<4} {r['stopa']:.0%}{mjera}  {r['upit'][:56]}")
+                  f"{poz:<4} {stopa_txt}{mjera}  {r['upit'][:56]}")
         print()
-    print(f"{tocno}/{ukupno} točno ({izv['tocnost']:.0%}) → {a.izlaz}")
+    if izmjereno_pitanja:
+        print(f"{tocno}/{izmjereno_pitanja} izmjerenih pitanja točno "
+              f"({izv['tocnost']:.0%}); {nemjereno_pitanja} neizmjereno → {a.izlaz}")
+    else:
+        print(f"0/{ukupno} pitanja izmjereno — routing se ne može ocijeniti → {a.izlaz}")
+    if nemjereno_pitanja:
+        return 2
     return 0 if tocno == ukupno else 1
 
 

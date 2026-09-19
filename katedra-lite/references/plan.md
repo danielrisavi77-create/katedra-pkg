@@ -84,8 +84,7 @@ python3 <KATEDRA_SKILL>/scripts/primjerci.py upisi rad.docx --vrsta <tip> \
     --izvor "repozitorij <ustanova>, odsjek <X>, obranjen 2025."
 ```
 
-Razlika prema profilu **nije kršenje** nego opservacija (željezno pravilo 17), a dva rada
-koja se međusobno slažu jači su dokaz od jednoga. Protokol: `references/primjerci.md`.
+Razlika prema profilu **nije automatski kršenje** nego opservacija prakse. Pisana mentorova uputa, službene upute i potvrđeni profil imaju prednost; dva međusobno suglasna obranjena rada jači su signal prakse od jednoga. Protokol: `references/primjerci.md`.
 
 ### 1.2b Zabilježi pretragu DOK traje
 
