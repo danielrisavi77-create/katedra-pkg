@@ -49,16 +49,17 @@ def main() -> int:
     )
 
     # R71: live Claude routing 2026-09-19 measured all 24 prompts. Citation
-    # coverage and DOCX metadata only triggered 1/3 times, so the description
-    # must state those as explicit REVIEW ACTIONS, not only as nearby nouns.
-    # Mentor/version and contradiction intents stay pinned because they were the
-    # other weak edges found by the first live pass. Unrelated negative controls
-    # are intentionally not broadened.
+    # coverage and DOCX metadata first triggered only 1/3 times; after making
+    # those review actions explicit, the hypotheses-adjudication intent became
+    # the only remaining 1/3 failure. Keep all observed academic-review edges
+    # explicit in the card description while unrelated negative controls stay
+    # out of scope.
     opis = _frontmatter_description(SKILL)
     sidra = {
         "provjera citata/literature": ("provjer", "citat", "literatur"),
         "mentorove povratne izmjene": ("mentor",),
         "provjera DOCX metapodataka": ("provjer", "docx", "metapod"),
+        "provjera/presuda hipoteza": ("hipotez",),
         "unutarnja proturječja rada": ("proturječ",),
     }
     nedostaje = [
