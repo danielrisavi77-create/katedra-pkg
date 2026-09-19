@@ -48,15 +48,17 @@ def main() -> int:
         (p.stdout + "\n" + p.stderr)[-1800:],
     )
 
-    # R71: live Claude routing 2026-09-19 measured all 24 prompts and found four
-    # academic review intents that only triggered 1/3 times. Keep those concepts
-    # explicit in the card description so future shortening does not erase the
-    # routing evidence while unrelated negative controls stay out of scope.
+    # R71: live Claude routing 2026-09-19 measured all 24 prompts. Citation
+    # coverage and DOCX metadata only triggered 1/3 times, so the description
+    # must state those as explicit REVIEW ACTIONS, not only as nearby nouns.
+    # Mentor/version and contradiction intents stay pinned because they were the
+    # other weak edges found by the first live pass. Unrelated negative controls
+    # are intentionally not broadened.
     opis = _frontmatter_description(SKILL)
     sidra = {
-        "citati/literatura": ("citat", "literatur"),
+        "provjera citata/literature": ("provjer", "citat", "literatur"),
         "mentorove povratne izmjene": ("mentor",),
-        "DOCX metapodaci": ("metapodat",),
+        "provjera DOCX metapodataka": ("provjer", "docx", "metapod"),
         "unutarnja proturječja rada": ("proturječ",),
     }
     nedostaje = [
@@ -64,7 +66,7 @@ def main() -> int:
         if not all(token in opis for token in tokeni)
     ]
     ok &= check(
-        "R71: kartica eksplicitno pokriva četiri live-routing rubna slučaja",
+        "R71: kartica eksplicitno pokriva live-routing akademske review namjere",
         not nedostaje,
         "nedostaju sidra: " + ", ".join(nedostaje) if nedostaje else "",
     )
