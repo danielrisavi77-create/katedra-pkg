@@ -10,6 +10,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 SCRIPT = ROOT / "katedra-lite" / "scripts" / "router_contract.py"
+SKILL = ROOT / "katedra-lite" / "SKILL.md"
 
 
 def check(name: str, condition: bool, detail="") -> bool:
@@ -17,6 +18,14 @@ def check(name: str, condition: bool, detail="") -> bool:
     if not condition and detail:
         print(f"           detalj: {detail}")
     return condition
+
+
+def _frontmatter_description(path: Path) -> str:
+    text = path.read_text(encoding="utf-8")
+    for line in text.splitlines():
+        if line.startswith("description:"):
+            return line.split(":", 1)[1].strip().strip('"').lower()
+    return ""
 
 
 def main() -> int:
@@ -37,6 +46,27 @@ def main() -> int:
         "R70: stvarni repo zadovoljava thin-router contract",
         p.returncode == 0,
         (p.stdout + "\n" + p.stderr)[-1800:],
+    )
+
+    # R71: live Claude routing 2026-09-19 measured all 24 prompts and found four
+    # academic review intents that only triggered 1/3 times. Keep those concepts
+    # explicit in the card description so future shortening does not erase the
+    # routing evidence while unrelated negative controls stay out of scope.
+    opis = _frontmatter_description(SKILL)
+    sidra = {
+        "citati/literatura": ("citat", "literatur"),
+        "mentorove povratne izmjene": ("mentor",),
+        "DOCX metapodaci": ("metapodat",),
+        "unutarnja proturječja rada": ("proturječ",),
+    }
+    nedostaje = [
+        naziv for naziv, tokeni in sidra.items()
+        if not all(token in opis for token in tokeni)
+    ]
+    ok &= check(
+        "R71: kartica eksplicitno pokriva četiri live-routing rubna slučaja",
+        not nedostaje,
+        "nedostaju sidra: " + ", ".join(nedostaje) if nedostaje else "",
     )
 
     # Contract must detect a stale package tag independently of the real repo.
