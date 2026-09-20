@@ -3,9 +3,10 @@
 
 Zašto postoji
 -------------
-Željezno pravilo 17 kaže da je **uzorak jači od profila**: rad koji je mentor dao
-kao mjerilo mjeri se i upisuje u profil kao `primjerak`, pa gate javlja „odstupa
-od primjerka X”, a ne „krši pravilo” za pravilo kojega u službenim Uputama nema.
+Katedra v2.0 tretira obranjeni rad kao dokaz PRAKSE, ne kao normu iznad službenih
+uputa. Primjerak je jači od nepotvrđene procjene lokalnog običaja; pisana mentorova
+uputa, službene upute i potvrđeni profil imaju prednost. Gate zato javlja „odstupa
+od primjerka X”, a ne „krši pravilo” kad takvo pravilo nije službeno.
 
 Pravilo je postojalo, a **nabava uzorka nije**: ovisila je o tome ima li student
 slučajno rad koji mu je netko dao. A obranjeni radovi hrvatskih ustanova javno

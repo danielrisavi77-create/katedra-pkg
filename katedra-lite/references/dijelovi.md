@@ -31,7 +31,7 @@ novi uvid postajao je novi odlomak u referenci moda, pa je `SKILL.md` narastao n
 | 👁 `rucno` | alat ne može zaključiti iz teksta | postupak je u registru, u polju `provjera.kako` |
 | ❗ `nepokriveno` | **nitko ovaj dio ne provjerava** | ide u tablicu RUČNO PROVJERI, uvijek |
 
-Treća razina nije propust nego **deklarirana granica**. Željezno pravilo 8 traži da se
+Treća razina nije propust nego **deklarirana granica**. HARD transparentnost traži da se
 granica kaže; registar je oblik u kojem se to može prebrojati umjesto obećati.
 
 ## Kako se koristi
@@ -142,7 +142,7 @@ Stroga i namjerna:
 | `dijelovi.py` | **koje dijelove rad uopće treba, tko ih radi, tko ih provjerava?** | os dokumenta |
 
 `dijelovi.py` **uvozi** `norm`, `SINONIMI` i `je_neobavezan_dio` iz `check_rules.py`.
-Ne prepisuje ih. Dva popisa sinonima razišla bi se unutar tjedna — to je željezno pravilo 13
+Ne prepisuje ih. Dva popisa sinonima razišla bi se unutar tjedna — isti podatak ne smije imati dvije konkurentske istine
 primijenjeno na tekst umjesto na brojke.
 
 ## Sedam dijelova koje nitko ne provjerava

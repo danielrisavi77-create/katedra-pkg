@@ -159,16 +159,20 @@ Puni postupak i način čitanja nalaza: `references/vjestine.md`.
 
 ## 4. Redoslijed
 
-0. **snapshot + `revizije.py prihvati`** — dokument s `w:ins`/`w:del` ne čita se prije
-   prihvaćanja (SKILL.md § 0.7a, željezno pravilo 30). Faza A/F u koraku 3 broji izmjene,
-   ali dotad je ekstrakcija već prošla; zato je provjera i ovdje, na početku:
+0. **snapshot + dokaziv view** — dokument s `w:ins`/`w:del` ne čita se kao običan
+   konačni tekst. Prvo provjeri tracked layer i sačuvaj izvornik; za strojnu ekstrakciju
+   po potrebi napravi accepted-copy:
 
    ```bash
    python3 <KATEDRA_SKILL>/scripts/diff_versions.py --snapshot ./rad.docx --biljeska "prije audita"
+   python3 <KATEDRA_SKILL>/scripts/revizije.py provjeri ./rad.docx
    python3 <KATEDRA_SKILL>/scripts/revizije.py prihvati ./rad.docx ./rad_prihvaceno.docx
    ```
 
-   Sve naredbe niže rade nad `rad_prihvaceno.docx`. Izvornik ostaje netaknut.
+   Naredbe niže tada rade nad `rad_prihvaceno.docx`, a izvornik ostaje netaknut.
+   Accepted-copy je tehnički pogled za pouzdanu ekstrakciju, ne automatska odluka autora
+   da prihvaća mentorove izmjene. U izvještaju navedi analizirani view; v.
+   `references/revizije.md`.
 1. `engine.py --provjeri`
 2. `check_rules.py` — usklađenost s fakultetom
 3. `engine.py --audit … --json …` — motorni nalaz preko contracta

@@ -94,7 +94,7 @@ python3 <KATEDRA_SKILL>/scripts/provjeri_engleski.py ./rad.docx \
 | hrvatske riječi u engleskom tekstu | ⚠️ | riječi s velikim slovom se ne prijavljuju (imena) |
 
 **Kvaliteta prijevoda se ne ocjenjuje.** Alat mjeri suglasje s izvornikom, i to je sve što
-može pošteno tvrditi (željezno pravilo 8). Crveno je rezervirano za ono što se ne da
+može pošteno tvrditi (HARD: alat smije tvrditi samo ono što je izmjerio). Crveno je rezervirano za ono što se ne da
 drukčije protumačiti — lažni nalaz uči korisnika da ignorira crvenu boju, pa promašeni
 nalaz poslije prođe neopaženo.
 

@@ -1,3 +1,14 @@
+# v2.0.0 — thin router, dvije brzine i jasna snaga pravila (18. 9. 2026.)
+
+* **Router 43 175 → 10 742 znakova, 648 → 232 retka.** Runtime/GitHub/Claude bootstrap, privatnost i Track Changes politika više se ne učitavaju u svakoj studentskoj poruci; žive u zasebnim referencama.
+* **Quick path / Full path.** Mali zahvat nad pruženim tekstom više ne mora prolaziti puni projektni intake. Novi završni/diplomski rad, novo poglavlje velikog rada, izvori, brojke, dokument, audit, obrana i predaja ostaju Full path.
+* **HARD / GATE / SIGNAL.** Integritet i sigurnost više nisu u istoj ravnini s heuristikama poput AI-stylea, ritma ili n-gram sličnosti. Signal traži pregled; ne glumi formalni kvar.
+* **Privatnost.** Uklonjena globalna naredba da sve iz `.katedra/` ide u git. Projektno stanje je trajno, ali osjetljivi artefakti ostaju lokalni osim svjesne korisnikove odluke.
+* **Track Changes.** `accepted-copy` je tehnički view za pouzdanu ekstrakciju, ne automatska odluka autora da prihvaća mentorove izmjene. Analizirani view mora se imenovati.
+* **Autoritet pravila.** Pisana mentorova uputa za konkretan projekt → službene upute → potvrđeni profil → obranjeni primjerci → heuristike. Primjerak je opservacija prakse, ne norma.
+* **Verzije.** Aktivna package verzija je `2.0.0`; frozen `core_contract` ostaje `1.0.1`. `router_contract.py` i postojeći `verzija.py --provjeri` čuvaju te dvije tvrdnje od drifta.
+* **Nova release ograda.** `scripts/router_contract.py` provjerava veličinu routera, obavezne policy reference, zabranu runtime/credential detalja u routeru i usklađenost frontmatter oznake s `VERSION`; test je uključen u `bin/testovi.sh`.
+
 # v1.9.6 — registar kvarova postaje provjerljiv (kvarovi 113 i 114)
 
 Dva otvorena pitanja iz PR-a #10, oba riješena tako da se **alat proširi, a sadržaj ne dira**.
