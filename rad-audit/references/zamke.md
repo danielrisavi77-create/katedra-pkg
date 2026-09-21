@@ -402,3 +402,112 @@ nalaza; kratica (pun naziv) + kratica → 0; kratica (pun naziv) + pun naziv u t
 Peti slučaj, onaj koji **mora** pasti (pravilo 34): stvarno nedostajuća referenca
 `(Kovač, 2020)` i dalje se prijavljuje, izlaz 1. Suite 82 → **87 testova**, pet novih pokriva
 oba smjera, izostanak drugog unosa i dvije granice (zagrada bez slova, osobni autor).
+
+## 13. Statistička zagrada nije citat, ali nedostajuća referenca ne smije nestati
+
+`common.py` dobiva strukturne zaštite za statistički simbol i vodeću nulu.
+Ne preuzima se predloženi filter prema najvećoj referenci: postojanje reference
+nije kriterij kojim smije nestati nalaz o nepostojećoj referenci.
+
+```text
+t(106,08): lažni citati 106 i 8 -> bez citata
+(99), (1,99), (1–5) uz 3 reference: kod 0 u prilogu -> kod 1
+```
+
+Ograda: `scripts/tests/test_zakrpa_release.py`, sintetički pozitivni i negativni
+slučajevi. Rezultati se odnose na ove fixturee, ne na neovisno provjeren stvarni rad.
+
+## 14. Množina uputnice propuštala je drugi prikaz
+
+`check_uputnice.py` čita nizove i kratke raspone brojeva. Prikaz koji nije
+spomenut i uputnica na nepostojeći prikaz i dalje su nalazi.
+
+```text
+Tablice 5,7,8; tekst "u Tablicama 7. i 8.": nespomenute [5,8] -> [5]
+"Vidi Tablice 1 i 99" uz samo Tablicu 1: 99 ostaje nedostajući cilj
+```
+
+Ograda: `scripts/tests/test_zakrpa_release.py`, sintetički pozitivni i negativni
+slučajevi. Rezultati se odnose na ove fixturee, ne na neovisno provjeren stvarni rad.
+
+## 15. Rječnik presuda propuštao je podržanu hipotezu
+
+`check_hipoteze.py` prepoznaje podržana/poduprta/potkrijepljena.
+Sama riječ hipoteza ili opis rezultata bez presude ne postaju presuda.
+
+```text
+"H1 je podržana": 0 prepoznatih presuda -> 1
+"H4 odnosi se na radni staž": 0 -> 0
+```
+
+Ograda: `scripts/tests/test_zakrpa_release.py`, sintetički pozitivni i negativni
+slučajevi. Rezultati se odnose na ove fixturee, ne na neovisno provjeren stvarni rad.
+
+## 16. Prag značajnosti imao je preuzak jezični uzorak
+
+`check_statistika.py` prepoznaje 4 oblika deklaracije. Gola p-vrijednost
+ostaje rezultat, ne deklaracija praga.
+
+```text
+"Razina statističke značajnosti postavljena je na p < 0,05": None -> 0.05
+"p = 0,190" bez deklaracije: None -> None
+```
+
+Ograda: `scripts/tests/test_zakrpa_release.py`, sintetički pozitivni i negativni
+slučajevi. Rezultati se odnose na ove fixturee, ne na neovisno provjeren stvarni rad.
+
+## 17. Cijeli dio decimale postajao je pribrojnik kategorije
+
+`numbers_inventory.py` ne rastavlja decimalu niti zbraja krajeve raspona.
+Pravi zbroj kategorija ostaje prepoznat. Testovi koriste sintetički tekst,
+ne uvjetni prolaz kad privatni dokument nedostaje.
+
+```text
+"129 ispitanika (63,5 %)": pribrojnici [129,63] -> [129]
+"100: 40 muškaraca, 35 žena i 25 ostalih": svi 4 broja ostaju
+```
+
+Ograda: `scripts/tests/test_zakrpa_release.py`, sintetički pozitivni i negativni
+slučajevi. Rezultati se odnose na ove fixturee, ne na neovisno provjeren stvarni rad.
+
+## 18. Izvorni naslov reference narušavao je dijalekt navodnika tijela
+
+`check_typography.py` iz provjere dijalekta izuzima popis literature.
+Provjera navodnika u tijelu rada ostaje uključena.
+
+```text
+Engleski navodnici samo u bibliografiji: 1 lažno odstupanje -> 0
+Ravni navodnici u tijelu: nalaz ostaje 1
+```
+
+Ograda: `scripts/tests/test_zakrpa_release.py`, sintetički pozitivni i negativni
+slučajevi. Rezultati se odnose na ove fixturee, ne na neovisno provjeren stvarni rad.
+
+## 19. Faza fakultetskih uputa birala je HKS bez odabranog fakulteta
+
+`generate_report.py` poziva samo izričito odabranu skriptu. Nepoznat
+fakultet daje deklariranu granicu (3), nepostojeća eksplicitna skripta ili
+pad/timeout daju pogrešku (2), bez preusmjeravanja. Oba toka subprocessa
+ose se u izvještaj. Adapter čuva fazu, kod i nalaz u JSON-u.
+
+```text
+Bez odabira, HKS instaliran: implicitno izvršavanje kod 0 -> neizmjereno kod 3
+Pogrešna eksplicitna putanja: HKS fallback kod 0 -> pogreška kod 2
+```
+
+Ograda: `scripts/tests/test_zakrpa_release.py`, sintetički pozitivni i negativni
+slučajevi. Rezultati se odnose na ove fixturee, ne na neovisno provjeren stvarni rad.
+
+## 20. Inventar tvrdnji čitao je IEEE citate bez IEEE bibliografije
+
+`inventar_tvrdnji.py` bira parser bibliografije prema numeričkom dijalektu.
+Broj serije mora biti pozitivan prije nastanka izlaza. Inventar je popis posla,
+ne verifikacija izvora.
+
+```text
+"42 ispitanika [1]" + "[1] Autor...": 0 jedinica -> 1 jedinica s brojčanom tvrdnjom
+--po-seriji 0: traceback -> izlaz 2 bez dosjea
+```
+
+Ograda: `scripts/tests/test_zakrpa_release.py`, sintetički pozitivni i negativni
+slučajevi. Rezultati se odnose na ove fixturee, ne na neovisno provjeren stvarni rad.

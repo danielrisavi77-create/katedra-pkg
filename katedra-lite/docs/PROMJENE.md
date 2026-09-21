@@ -2063,3 +2063,20 @@ poruka koju je lanac proizveo bila je lažna.
 - `_rukopis_ima`: svaki „popis*" prolazio je kao popis literature → popis tablica se nikad nije gradio, `check_rules` blokirao na „obavezni dijelovi". Sad: natpisi prikaza su `SEQ` polja, POPIS TABLICA je `TOC \c` polje, popis prikaza kojih u rukopisu nema se ne gradi prazan (⚠ na stderr).
 - `docDefaults` i stil `Caption` dobivaju font/veličinu profila (tema Cambria/Calibri više ne „curi" u tablice i polja) — `check_rules` font ⚠→✅.
 - `citiranje.razmak_izmedu_jedinica` → 12 pt među jedinicama literature; navodnik u generiranoj izjavi hrvatski. Popravak je napisao audit-agent unutar workflowa (rad-orchestrator §3 sada to zabranjuje — nalazi paketa idu u `.katedra/nalazi_paketa.md`).
+
+
+## 2026-09-21 — 2.0.1: selektivna integracija zakrpe s provjerenim ogradama
+
+Baza je main 14c339ba (nakon PR-a #51). Originalni prilog nije kopiran preko
+kartica, profila, kataloga ili postojećeg `test_all.py`. Zadržani su korisni
+popravci statistike, uputnica, presuda, praga, kategorija i tipografije.
+Nepostojeće reference ostaju nalazi; HKS nije zadani fakultet. Inventar čita
+Vancouver i IEEE bibliografiju; nevaljana veličina serije ne proizvodi dosjee.
+
+Nove provjere: `test_zakrpa_release.py` (40 testova s podslučajevima i stvarnim
+adapter subprocessima), `test_hks_fzs.py` (9 provjera). Oba ulaza dodana su u
+`bin/testovi.sh`: svih 26 prethodnih skupina ostaje, ukupno 28. Brojevi se
+odnose na izvršive provjere, ne tvrdnju o dostupnosti privatnog dokumenta.
+Postojeći K160 nije prepisan; HKS promjene nose K161/K162. HKS profil ostaje
+`nepotvrdeno` jer izvorni PDF nije provjeren u ovoj integraciji. Stari 24×3
+live artefakt nije dokaz za ovaj kod; potreban je novi exact-head rezultat.

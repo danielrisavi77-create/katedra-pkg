@@ -4174,3 +4174,32 @@ Nalaz je došao iz usporedbe dvaju alata (Lekta protiv katedra-lite) nad istim d
 
 Ograda: `tests/test_stari_kvarovi.py`, K160 (4 provjere, uključujući negativne kontrole da
 „20231" i „2023x9" i dalje nisu godina).
+
+## 161. Uputnica na tablicu prelazila je granicu odlomka
+
+U dostavljenoj zakrpi popravak je pogrešno nosio zauzeti broj 160. Postojeći
+unos o sufiksu godine ostaje netaknut. `provjeri_hks_fzs.py` sada traži po
+odlomku te prepoznaje množinu; kraj rečenice nije redna točka u uputnici.
+
+```text
+"u Tablici 1." + novi odlomak "n – broj": 1 lažni nalaz -> 0
+"u Tablicama 7. i 8. pokazuju": 0 nalaza -> 1 stvaran nalaz
+```
+
+Ograda: `scripts/tests/test_hks_fzs.py` (K161) i
+`rad-audit/scripts/tests/test_zakrpa_release.py` nad sintetičkim dokumentima.
+
+## 162. Redoslijed dijelova nije koristio pravila profila, a neizmjereno je bilo zeleno
+
+Izvorna zakrpa duplicirala je redoslijed u kodu i vraćala `ok=True` čak i kad
+nije našla 2 dijela. Brojevi se sada čitaju iz `hks-fzs.json`; nedostatni ili
+nevaljani podaci daju `ok=None`. Status profila nije ovom zakrpom promoviran.
+
+```text
+0 prepoznatih dijelova: ok=True -> ok=None; CLI 0 -> 3
+mutirani profil (kratice prije sadržaja): krivo odbijeno -> prihvaćeno prema JSON-u
+```
+
+Ograda: `scripts/tests/test_hks_fzs.py` (K162) i mutacijski/negativni testovi u
+`rad-audit/scripts/tests/test_zakrpa_release.py`. Izvještaj odvaja broj izmjerenih
+od broja neizmjerenih kontrola. Nije potvrda da su Upute provjerene iz izvornika.

@@ -218,6 +218,19 @@ IEEE_CITE_RE = re.compile(r"\[\d{1,3}(?:[\s,–\-]+\d{1,3})*\]")
 # ---------------------------------------------------------------------------
 VANCOUVER_CITE_RE = re.compile(r"(?<![\d])\((\d{1,3}(?:\s*[,;–\-]\s*\d{1,3})*)\)")
 
+# Kvar R42: hrvatski decimalni zarez u zagradi izgleda isto kao Vancouverov
+# grupirani citat. Dva strukturna traga razlikuju ih pouzdano:
+#   1. statistički simbol neposredno ispred zagrade — "t(106,08)", "F(4; 44,89)",
+#      "r(58)", "U(…)", "H(…)", "Z(…)", "χ(…)", "ρ(…)". Jedno samostalno
+#      latinično ili grčko slovo prilijepljeno na "(" nikad ne uvodi citat;
+#      u citatu ispred zagrade stoji razmak ili interpunkcija.
+#   2. vodeća nula u članu grupe — "08" je decimalni dio broja 106,08,
+#      nijedna referenca u popisu nije numerirana s vodećom nulom.
+_STAT_SIMBOL_RE = re.compile(
+    r"(?:^|[^0-9A-Za-zČĆŠŽĐĆčćšžđ\u0370-\u03FF\u0400-\u04FF])"
+    r"[A-Za-z\u0370-\u03FF]$")
+_VODECA_NULA_RE = re.compile(r"(?:^|[,;–\-]\s*)0\d")
+
 
 def find_vancouver_citations(text, u_tablici=False):
     """Vraća [(pozicija, [brojevi])] za Vancouver citate, redom pojavljivanja.
@@ -226,6 +239,23 @@ def find_vancouver_citations(text, u_tablici=False):
     "158 (77,8)" je n (%), ne citat. U prozi ista zaštita ubija STVARAN citat
     iza broja — "korelacija iznosi 0,53 (21)" — pa se ondje odbacuje samo
     zagrada zalijepljena uz znamenku ("53(3-4)" = svezak(broj)).
+
+    Kvar R42 — hrvatski decimalni zarez. Na diplomskom radu (Vancouver, 79
+    referenci) baseline je iz "t(106,08)" izvukao citate 106 i 8, iz
+    "t(173,59)" citate 173 i 59, iz "F(4; 44,89)" citat 89, a iz "(15,96)"
+    citate 15 i 96: 4 lažna KRITIČNA nalaza "citat bez reference" i 24 lažna
+    prekršaja rastućeg redoslijeda, uz stvarno stanje 0 i 0. Ovdje se odbacuju
+    dva strukturno prepoznatljiva slučaja: zagrada iza statističkog simbola i
+    grupa s vodećom nulom.
+
+    POZNATA GRANICA (svjesno neriješena): "(12,32)" — decimalni broj kojemu su
+    OBA člana unutar raspona popisa literature — strukturno se ne razlikuje od
+    stvarnoga para citata "(12,32)". Nema traga u nizu znakova koji bi ih
+    razdvojio; tu razliku nosi pravilo pisanja (decimalni broj u tekstu treba
+    uvesti oznakom, npr. "M = 12,32"), ne alat. Na spomenutom radu upravo je
+    takav slučaj "(12,77)" popunio referencu 77, koja je stvarno siroče, pa
+    alat i nakon ove zakrpe javlja "SIROČAD: nema". Ne pokušavati heuristikom:
+    svaka bi heuristika ovdje bacala stvarne citate.
     """
     out = []
     for m in VANCOUVER_CITE_RE.finditer(text):
@@ -233,6 +263,10 @@ def find_vancouver_citations(text, u_tablici=False):
         if re.search(r"\d$", prije):                       # 53(3-4), 106(12)
             continue
         if u_tablici and re.search(r"\d\s+$", prije):      # 158 (77,8)
+            continue
+        if _STAT_SIMBOL_RE.search(prije):                  # t(106,08), F(4; 44,89)
+            continue
+        if _VODECA_NULA_RE.search(m.group(1).replace(" ", "")):   # (106,08)
             continue
         nums = parse_citation_group(m.group(1))
         if not nums or any(n > 999 for n in nums):

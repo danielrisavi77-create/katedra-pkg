@@ -10,7 +10,7 @@ NBSP, 10° vs 20 °C.
 import re
 import sys
 from collections import Counter
-from common import load_docx_text
+from common import load_docx_text, LIT_HEADING_RE
 
 
 # Kvar 102 (audit Znahor, B4): provjera je bezuvjetno tražila zatvarajući
@@ -36,9 +36,30 @@ def _dijalekt_navodnika(t, zadan=None):
     return "ihjj", f"rad pretežno koristi „…” ({n_ihjj} naspram {n_njem})"
 
 
+# Kvar R47 (nađen na HKS-FZS diplomskom, rujan 2026.): jedini „odmak od
+# dijalekta" u cijelom radu bila je bibliografska jedinica 75 —
+#   Nursing and PharmD undergraduate students' attitude toward the
+#   "do not resuscitate" order for children with terminally ill diseases.
+# — engleski naslov s engleskim navodnicima (U+201C … U+201D), što je ISPRAVNO:
+# naslov se u popisu literature prenosi onako kako je objavljen, i hrvatski ga
+# pravopis ne prekraja. Provjera dijalekta je ondje bezpredmetna, jednako kao
+# što je apostrof u „students’" bio bezpredmetan (kvar 77/90).
+#
+# Popis literature se stoga izuzima iz PROVJERE DIJALEKTA i iz brojanja parova;
+# ostale provjere (crtica, postotak, stupanj) ostaju na cijelom tekstu, jer se
+# one na naslovima referenci ne lome.
+def _bez_literature(body: str, cells) -> str:
+    """Tijelo rada bez popisa literature (+ ćelije tablica, koje su uvijek tijelo)."""
+    ml = list(LIT_HEADING_RE.finditer(body or ""))
+    tijelo = body[:ml[-1].start()] if ml else (body or "")
+    return tijelo + "\n" + "\n".join(cells or [])
+
+
 def main(path, navodnici=None):
     body, cells, _ = load_docx_text(path, include_tables=True)
     t = body + "\n" + "\n".join(cells)
+    t_nav = _bez_literature(body, cells)
+    lit_izuzet = len(t_nav) < len(t)
 
     print("=" * 56)
     print("TIPOGRAFIJA —", path)
@@ -46,16 +67,17 @@ def main(path, navodnici=None):
 
     findings = []
 
-    straight = t.count('"')
+    straight = t_nav.count('"')
     if straight:
         findings.append(f"⚠ ravni navodnici (\"): {straight} — zamijeni hrvatskima „…\"")
-    open_hr = t.count("„")            # U+201E
-    close_ihjj = t.count("\u201d")
-    close_njem = t.count("\u201c")
-    dijalekt, razlog = _dijalekt_navodnika(t, navodnici)
+    open_hr = t_nav.count("„")            # U+201E
+    close_ihjj = t_nav.count("\u201d")
+    close_njem = t_nav.count("\u201c")
+    dijalekt, razlog = _dijalekt_navodnika(t_nav, navodnici)
     ocekivan = ZATVARAJUCI[dijalekt]
     drugi = close_njem if dijalekt == "ihjj" else close_ihjj
-    print(f"navodnici: otvarajući „={open_hr}, „…”={close_ihjj}, „…“={close_njem}")
+    print(f"navodnici: otvarajući „={open_hr}, „…”={close_ihjj}, „…“={close_njem}"
+          + ("   (popis literature izuzet)" if lit_izuzet else ""))
     print(f"   dijalekt: {dijalekt} ({razlog})")
     if drugi:
         findings.append(f"⚠ dva oblika zatvarajućeg navodnika u istom radu: "

@@ -60,6 +60,10 @@ pokreni "katedra: registar kvarova" python3 "$KORIJEN/katedra/scripts/tests/test
 pokreni "katedra: provjera tvrdnji" python3 "$KORIJEN/katedra/scripts/tests/test_zakrpa.py"
 pokreni "katedra: verzija i oznake" python3 "$KORIJEN/katedra/scripts/tests/test_verzija.py"
 pokreni "katedra: oznaka verzije = VERSION" python3 "$KORIJEN/katedra/scripts/verzija.py" --provjeri
+pokreni "zakrpa: regresije citata, profila i inventara" \
+  python3 "$KORIJEN/rad-audit/scripts/tests/test_zakrpa_release.py"
+pokreni "katedra-lite: HKS-FZS regresije" \
+  python3 "$KORIJEN/katedra-lite/scripts/tests/test_hks_fzs.py"
 pokreni "katedra-lite: indeks zamki" python3 "$KORIJEN/katedra-lite/scripts/tests/test_indeks.py"
 pokreni "katedra-lite: mjerilo usmjeravanja" python3 "$KORIJEN/katedra-lite/scripts/tests/test_trigger.py"
 pokreni "katedra-lite: thin-router contract" python3 "$KORIJEN/katedra-lite/scripts/tests/test_router_contract.py"
