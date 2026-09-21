@@ -1,7 +1,7 @@
 # PRIMJERCI — obranjeni rad kao mjerilo oblika
 
 > Alat je `scripts/primjerci.py`, stanje `.katedra/primjerci.json`.
-> Provodi željezno pravilo 17: **uzorak je jači od profila.**
+> Mjeri stvarnu praksu: primjerak je jači od **nepotvrđene procjene**, ali nije norma iznad pisane mentorove upute, službenih uputa ili potvrđenog profila.
 
 ## Zašto postoji
 

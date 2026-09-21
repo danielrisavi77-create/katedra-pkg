@@ -14,7 +14,7 @@ poruku „ne mogu”. Dobivao je **nalaze**, i svi su bili krivi: svaka rečenic
 pogreška”, nijedna kohezijska veza prepoznata, popis presložen po hrvatskoj abecedi.
 
 To nije rupa nego **generator lažnih nalaza**, a lažni nalaz je kvar jednake težine kao
-promašeni (željezno pravilo 18).
+promašeni (HARD: lažni nalaz ne smije se predstaviti kao sigurna presuda).
 
 ## Kako se ponaša
 

@@ -45,7 +45,7 @@ Minimum koji svaki rad treba: razdoblje, jezici, tip izvora koji ulazi, tip koji
 | **Dabar** | završni i diplomski radovi hrvatskih ustanova — **i kao sadržajni i kao tehnički uzorak** (v. §6) |
 | **NSK / knjižnica fakulteta** | knjige i monografije kojih nema u digitalnim bazama |
 | **Scopus / Web of Science / EBSCO** | strana recenzirana literatura; pristup ide preko fakulteta |
-| **Google Scholar** | **discovery, nikad izvor** — nađeni članak se citira sam, kanal se bilježi kao `discovered_via` (željezno pravilo 3) |
+| **Google Scholar** | **discovery, nikad izvor** — nađeni članak se citira sam, kanal se bilježi kao `discovered_via` (HARD: discovery servis nije bibliografski izvor) |
 | **Eurostat / DZS / HNB / registri** | primarni podaci; kvaliteta A |
 
 Svaki upit se bilježi, s brojem pogodaka i brojem zadržanih:

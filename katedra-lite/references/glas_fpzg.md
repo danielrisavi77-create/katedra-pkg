@@ -83,7 +83,7 @@ podiže rad iz javnih politika. Dva pravila:
 
 * ispod prikaza ide `Izvor: vlastiti izračun prema [propis/izvor]`, ne samo „vlastiti izračun";
 * brojka se ne upisuje rukom nego iz jednog izvora, a aritmetika se potvrđuje programski —
-  željezno pravilo 13 i `references/izracuni.md`. Jedna kriva brojka ruši kredibilitet
+  HARD načelo jednog izvora izvedenih brojki i `references/izracuni.md`. Jedna kriva brojka ruši kredibilitet
   cijelog rada, i to je u praksi uhvaćeno (v. `replikacija-pspp`: KR-20 0,743 → 0,740).
 
 ## 5. Izvori koje FPZG ne prihvaća
@@ -102,7 +102,7 @@ službeni dokumenti institucija, Eurostat/World Bank/OECD). Ono što se na FPZG-
 
 Kad student da stariji rad kao predložak, iz njega se preuzimaju **isključivo formalna
 pravila** — naslovnica, izjava o akademskoj čestitosti, font, prored, margine, citatni
-stil, redoslijed obveznih dijelova (željezno pravilo 17, `references/primjerci.md`).
+stil i redoslijed obveznih dijelova (obranjeni primjerci su signal prakse; autoritet određuje hijerarhija iz `SKILL.md`, v. `references/primjerci.md`).
 Rečenični obrasci nikad. Konstrukcije koje se prepisuju iz rada u rad i koje mentor
 prepoznaje na prvi pogled:
 
