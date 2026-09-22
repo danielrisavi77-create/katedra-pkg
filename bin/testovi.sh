@@ -64,6 +64,14 @@ pokreni "zakrpa: regresije citata, profila i inventara" \
   python3 "$KORIJEN/rad-audit/scripts/tests/test_zakrpa_release.py"
 pokreni "katedra-lite: HKS-FZS regresije" \
   python3 "$KORIJEN/katedra-lite/scripts/tests/test_hks_fzs.py"
+pokreni "katedra-lite: review status" \
+  python3 "$KORIJEN/katedra-lite/scripts/tests/test_review_status.py"
+pokreni "katedra-lite: review coverage" \
+  python3 "$KORIJEN/katedra-lite/scripts/tests/test_review_coverage.py"
+pokreni "katedra-lite: bound review receipt" \
+  python3 "$KORIJEN/katedra-lite/scripts/tests/test_review_receipt.py"
+pokreni "katedra-lite: bound review gate" \
+  python3 "$KORIJEN/katedra-lite/scripts/tests/test_gate_bound_review.py"
 pokreni "katedra-lite: indeks zamki" python3 "$KORIJEN/katedra-lite/scripts/tests/test_indeks.py"
 pokreni "katedra-lite: mjerilo usmjeravanja" python3 "$KORIJEN/katedra-lite/scripts/tests/test_trigger.py"
 pokreni "katedra-lite: thin-router contract" python3 "$KORIJEN/katedra-lite/scripts/tests/test_router_contract.py"

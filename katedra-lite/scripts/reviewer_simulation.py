@@ -12,6 +12,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from review_contracts import load_report, validate_report
+
 LENS_ORDER = ("argument", "evidence", "consistency", "mentor")
 
 
@@ -58,6 +60,10 @@ def simulate(
     consistency: dict[str, Any] | None = None,
     mentor_feedback: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    if evidence_gate is not None:
+        validate_report("evidence", evidence_gate)
+    if consistency is not None:
+        validate_report("consistency", consistency)
     per_lens: dict[str, list[dict[str, str]]] = {k: [] for k in LENS_ORDER}
 
     if argument is not None:
@@ -76,7 +82,31 @@ def simulate(
             })
 
     if evidence_gate is not None:
-        for row in evidence_gate.get("matrix", []):
+        if not evidence_gate["passed"]:
+            per_lens["evidence"].append({
+                "priority": "high",
+                "code": "evidence:gate_failed",
+                "question": "Strict evidence gate nije prošao; odsutnost retka u matrici nije dokaz prolaza.",
+            })
+        for i, reason in enumerate(evidence_gate["preconditions"], 1):
+            per_lens["evidence"].append({
+                "priority": "high",
+                "code": f"evidence:precondition:{i}",
+                "question": f"Neispunjen preduvjet evidence gatea: {reason}",
+            })
+        if evidence_gate["policy"] == "advisory":
+            per_lens["evidence"].append({
+                "priority": "medium",
+                "code": "evidence:advisory_only",
+                "question": "Evidence provjera je advisory; ne predstavlja strict prolaz.",
+            })
+            if evidence_gate["summary"]["would_block"] > 0:
+                per_lens["evidence"].append({
+                    "priority": "high",
+                    "code": "evidence:would_block",
+                    "question": "Advisory provjera sadrži tvrdnje koje bi strict politika blokirala.",
+                })
+        for row in evidence_gate["matrix"]:
             if isinstance(row, dict) and row.get("gate_status") == "block":
                 cid = str(row.get("claim_id") or "claim")
                 reasons = "; ".join(str(x) for x in row.get("reasons", []))
@@ -167,8 +197,8 @@ def main() -> int:
     try:
         payload = simulate(
             argument=_load_optional(args.argument, "argument report"),
-            evidence_gate=_load_optional(args.evidence_gate, "evidence gate report"),
-            consistency=_load_optional(args.consistency, "consistency report"),
+            evidence_gate=(load_report(args.evidence_gate, "evidence") if args.evidence_gate else None),
+            consistency=(load_report(args.consistency, "consistency") if args.consistency else None),
             mentor_feedback=_load_optional(args.mentor_feedback, "mentor feedback"),
         )
     except (OSError, ValueError) as exc:

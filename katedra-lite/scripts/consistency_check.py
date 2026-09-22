@@ -132,6 +132,16 @@ def _read_claims(path: str | Path) -> list[dict[str, Any]]:
 
 
 def evaluate_claims(claims: list[dict[str, Any]]) -> dict[str, Any]:
+    seen_ids: set[str] = set()
+    for row in claims:
+        cid = str(row.get("claim_id") or "").strip()
+        text = str(row.get("text") or "").strip()
+        chapter = str((row.get("location") or {}).get("chapter") or "").strip()
+        if not cid or not text or not chapter:
+            raise ValueError("svaki claim treba neprazne claim_id, text i location.chapter")
+        if cid in seen_ids:
+            raise ValueError(f"duplikat claim_id: {cid}")
+        seen_ids.add(cid)
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
     chapter_counts: dict[str, int] = defaultdict(int)
     for row in claims:
@@ -186,7 +196,7 @@ def evaluate_claims(claims: list[dict[str, Any]]) -> dict[str, Any]:
 
     findings.sort(key=lambda f: (f["type"], f["anchor"]))
     blocking = sum(1 for f in findings if f["severity"] == "blocking")
-    coverage_status = "sufficient" if len(nodes) >= 2 else "insufficient"
+    coverage_status = "sufficient" if len(nodes) >= 2 and bool(edges) else "insufficient"
     return {
         "schema_version": 1,
         "check_kind": "deterministic_claim_consistency",
