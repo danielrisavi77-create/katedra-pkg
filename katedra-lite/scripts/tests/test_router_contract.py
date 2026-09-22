@@ -132,7 +132,7 @@ def main() -> int:
                          'export KATEDRA_PKG_URL_TOKEN="x"\n', encoding="utf-8")
         q = pokreni()
         ok &= check("R72: vjerodajnica u URL-u u kartici satelita pada",
-                    q.returncode == 1 and "satelit/SKILL.md" in q.stdout, q.stdout)
+                    q.returncode == 1 and "satelit/SKILL.md" in q.stdout.replace("\\\\", "/"), q.stdout)
 
         karta.write_text('---\nname: satelit\ndescription: "' + "x" * 501 + ' v2.0.0."\n---\n',
                          encoding="utf-8")
