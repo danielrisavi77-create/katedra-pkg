@@ -28,14 +28,14 @@ def test_write_katedra_creates_state_profile_chapters():
         out = write_katedra(FIX, root, HINT, SCRIPTS, mod="pisanje", plan_approved=True, plan=PLAN)
         kat = os.path.join(root, ".katedra")
         assert os.path.exists(os.path.join(kat, "stanje.json"))
-        st = json.load(open(os.path.join(kat, "stanje.json")))
+        with open(os.path.join(kat, "stanje.json"), encoding="utf-8") as handle:\n            st = json.load(handle)
         assert st["mod"] == "pisanje" and st["plan_odobren"] is True and st["tip"] == "diplomski" and st["citatni_stil"] == "autor-godina" and st["fakultet_admisija"] == "nije-admitiran"
-        prof = json.load(open(os.path.join(kat, "resolved_profile.json")))
+        with open(os.path.join(kat, "resolved_profile.json"), encoding="utf-8") as handle:\n            prof = json.load(handle)
         assert prof["status"] == "nepotvrdeno" and prof["provenance"]["default"] == "katedra-pack"
         files = sorted(os.listdir(os.path.join(kat, "poglavlja")))
         assert files == ["01-sazetak.md", "02-uvod.md", "03-teorijski-okvir.md", "04-zakljucak.md", "literatura.md"]
         assert open(os.path.join(kat, "poglavlja", "02-uvod.md"), encoding="utf-8").read().startswith("# Uvod\n")
-        izv = json.load(open(os.path.join(kat, "izvori.json")))
+        with open(os.path.join(kat, "izvori.json"), encoding="utf-8") as handle:\n            izv = json.load(handle)
         assert izv["izvori"][0]["doi"] == "10.2307/2952255" and izv["izvori"][0]["verification"]["status"] == "verified"
         assert len(out["poglavlja"]) == 5
     finally:
