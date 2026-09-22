@@ -152,7 +152,11 @@ def main(path, domain_override=None):
     # Kvar 65: zbroj_kategorija() i uzorak_nalazi() bile su definirane ISPOD
     # bloka `if __name__ == "__main__"`, pa ih ni main() ni generate_report
     # nikad nisu pozvali. Opisane su u pipeline.md kao aktivne faze.
-    recenice = [r for r in _re.split(r"(?<=[.!?])\s+", text) if r.strip()]
+    # Kvar 22: popis literature nije tekst rada; zbrojevi se traže samo iznad njega.
+    from common import LIT_HEADING_RE as _LIT
+    _m = list(_LIT.finditer(body))
+    tekst_rada = (body[:_m[-1].start()] if _m else body) + "\n" + "\n".join(cells)
+    recenice = [r for r in _re.split(r"(?<=[.!?])\s+", tekst_rada) if r.strip()]
     zbrojevi = zbroj_kategorija(recenice)
     print("\nSkupovi kategorija koji tvore cjelinu:")
     if zbrojevi:
@@ -257,7 +261,13 @@ def zbroj_kategorija(recenice: list[str], tolerancija: int = 0) -> list[dict]:
     """
     nalazi = []
     for r in recenice:
-        brojevi = _pribrojnici(r)
+        # Kvar 22 (rad-audit): bibliografski zapis „Suvremena psihologija, 16(1),
+        # 95–112." daje „ukupno 112 = 16 + 1 + 95". Svezak(broj) nije kategorija;
+        # briše se razmacima iste duljine da _pribrojnici zadrži pozicije (raspone
+        # i decimale on već izuzima, kvar 17).
+        r_cist = _re.sub(r"\d+\s*\(\s*\d+(?:\s*[–-]\s*\d+)?\s*\)",
+                         lambda x: " " * len(x.group(0)), r)
+        brojevi = _pribrojnici(r_cist)
         if len(brojevi) < 4:
             continue
         ukupno = max(brojevi)

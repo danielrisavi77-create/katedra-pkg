@@ -429,6 +429,15 @@ def parse_ay_segment(seg):
     # Podobnik, 2026)" ili „(autorska analiza prema: Porter, 2008)". Uzorak je
     # skidao samo golo „prema" na početku, pa je ključ ispadao „autorski" i
     # svaki takav izvor prijavljivan kao citat bez reference.
+    # Kvar 21 (rad-audit): posredni citat „(izvorno Salovey i Mayer, 1990,
+    # citirano prema Takšić i sur., 2006, str. 731)" daje ključ „izvorno" i
+    # lažni KRITIČNI „citat bez reference". Po APA-i se u popis stavlja samo
+    # SEKUNDARNI izvor, pa je on jedini ključ koji se smije provjeravati.
+    posredno = re.search(r"\b(?:citirano|cit\.|navedeno|preuzeto)\s+(?:prema|u|iz)\s*:?\s*(.+)$",
+                         seg, flags=re.IGNORECASE)
+    if posredno:
+        seg = posredno.group(1)
+    seg = re.sub(r"^\s*(?:izvorno|originalno)\s+", "", seg, flags=re.IGNORECASE)
     seg = re.sub(r"^.{0,60}?\bprema\s*:\s*", "", seg.strip(), flags=re.IGNORECASE)
     seg = re.sub(r"^(?:izvor|izrada|obrada|prilagođeno|prilagodeno|autorski|autorska|"
                  r"autorsko|vlastita|vlastiti)\b[^:]{0,40}:\s*", "", seg,

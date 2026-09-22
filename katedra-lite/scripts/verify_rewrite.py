@@ -287,7 +287,7 @@ def _citati(put, stil, odlomci, celije, fusnote):
     return _nfc_counter(c)
 
 
-def usporedi(prije_p, poslije_p, zahvat='geometrija', citatni_stil='autor-godina'):
+def usporedi(prije_p, poslije_p, zahvat='geometrija', citatni_stil='autor-godina', namjerno=None):
     o_a, m_a = H.ucitaj(prije_p, ukljuci_tablice=True)
     o_b, m_b = H.ucitaj(poslije_p, ukljuci_tablice=True)
     o_a, m_a = [_nfc(x) for x in o_a], [_nfc(x) for x in m_a]
@@ -344,6 +344,19 @@ def usporedi(prije_p, poslije_p, zahvat='geometrija', citatni_stil='autor-godina
     # --- brojke
     ba, bb = brojke(t_a), brojke(t_b)
     izg, dod = ba - bb, bb - ba
+    # Kvar (katedra-lite, 22. 9. 2026.): ispravak brojke po mentorovu zahtjevu
+    # (p < 0,10 → p = 0,02; str. 497–504 → 496–503; cijeli raspon „str. 729–745"
+    # uklonjen iz citata) jednako je blokirao kao tiha izmjena, pa se jedini
+    # ishod bio „zanemari ✗". Namjerna izmjena se sada NAVODI, uz razlog, i
+    # tek tada ne blokira; sve što nije navedeno i dalje blokira.
+    namjerno = namjerno or {}
+    oprosteno = sorted(k for k in set(izg) | set(dod) if k in namjerno)
+    for k in oprosteno:
+        izg.pop(k, None)
+        dod.pop(k, None)
+    if oprosteno:
+        nalazi.append(("info", f"namjerne izmjene brojki: {len(oprosteno)}",
+                       [f"{k}: {namjerno[k]}" for k in oprosteno[:12]]))
     if izg or dod:
         det = ([f"izgubljeno: {dict(list(izg.items())[:12])}"] if izg else []) + \
               ([f"dodano: {dict(list(dod.items())[:12])}"] if dod else [])
@@ -355,6 +368,13 @@ def usporedi(prije_p, poslije_p, zahvat='geometrija', citatni_stil='autor-godina
     ca = _citati(prije_p, citatni_stil, par_a, cel_a, fus_a)
     cb = _citati(poslije_p, citatni_stil, par_b, cel_b, fus_b)
     izg_c, dod_c = ca - cb, cb - ca
+    opr_c = sorted(k for k in set(izg_c) | set(dod_c) if str(k) in namjerno)
+    for k in opr_c:
+        izg_c.pop(k, None)
+        dod_c.pop(k, None)
+    if opr_c:
+        nalazi.append(("info", f"namjerne izmjene citata: {len(opr_c)}",
+                       [f"{k}: {namjerno[str(k)]}" for k in opr_c]))
     if izg_c or dod_c:
         det = ([f"izgubljeno: {dict(izg_c)}"] if izg_c else []) + \
               ([f"dodano: {dict(dod_c)}"] if dod_c else [])
@@ -459,6 +479,9 @@ def main():
     ap.add_argument("--sources", help="optional verify_sources JSON; default <state>/.katedra/izvori.json ako postoji")
     ap.add_argument("--require-snapshot", action="store_true",
                     help="blokiraj rewrite ako pre-rewrite hash nije u verzije.json")
+    ap.add_argument("--namjerno", action="append", default=[], metavar="TOKEN=RAZLOG",
+                    help="brojka ili citatni ključ (npr. 0,02 ili trisa:2024) čija je promjena "
+                         "namjerna — ispravak po mentoru/izvoru; razlog je obavezan. Može više puta.")
     ap.add_argument("--kat", help="eksplicitna .katedra mapa")
     ap.add_argument("--project-root", help="korijen projekta za .katedra state")
     args = ap.parse_args()
@@ -493,6 +516,14 @@ def main():
             print("REZULTAT: ✗ evidence precondition nije zadovoljen — NE primjenjuj prepisano")
             return 1
 
+    namjerno = {}
+    for stavka in args.namjerno:
+        token, _, razlog = stavka.partition("=")
+        if not token.strip() or not razlog.strip():
+            sys.exit(f"❌ --namjerno traži TOKEN=RAZLOG, dobiveno „{stavka}\" — "
+                     "namjerna izmjena bez razloga nije namjerna nego neobjašnjena.")
+        namjerno[token.strip()] = razlog.strip()
+
     blokira = 0
     gubitak = 0
     for i in range(0, len(args.datoteke), 2):
@@ -500,7 +531,7 @@ def main():
         print("=" * 72)
         print(f"{os.path.basename(a)}  →  {os.path.basename(b)}   [zahvat: {args.zahvat}]")
         print("=" * 72)
-        for razina, poruka, det in usporedi(a, b, args.zahvat, citatni_stil):
+        for razina, poruka, det in usporedi(a, b, args.zahvat, citatni_stil, namjerno):
             znak = {"ok": "✓", "!": "⚠", "x": "✗", "info": "·"}[razina]
             print(f"  {znak} {poruka}")
             for d in det:

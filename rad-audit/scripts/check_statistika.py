@@ -113,6 +113,29 @@ TESTOVI = re.compile(
     r"korelacij\w+|regresij\w+|Shapiro-?Wilk|Kolmogorov|Levene\w*|z-?test|F-?test)")
 
 
+# Granica surečenica: suprotni ili dopusni veznik iza zareza, ili točka-zarez
+# IZVAN zagrade („(r = 0,384; p = 0,002)" je jedan navod, ne dvije surečenice).
+_GRANICA = re.compile(r",\s*(?=(?:dok|a|ali|no|međutim|dočim|nego|pri\s+čemu)\b)|\s(?=dok\b)")
+
+
+def _segmenti(r: str) -> list[tuple[int, int, str]]:
+    """[(početak, kraj, tekst)] surečenica; `;` unutar zagrada se ne reže."""
+    granice, dubina = [], 0
+    for i, ch in enumerate(r):
+        if ch == "(":
+            dubina += 1
+        elif ch == ")":
+            dubina = max(0, dubina - 1)
+        elif ch == ";" and dubina == 0:
+            granice.append(i + 1)
+    for m in _GRANICA.finditer(r):
+        prije = r[:m.start()]
+        if prije.count("(") == prije.count(")"):
+            granice.append(m.end())
+    tocke = [0] + sorted(set(granice)) + [len(r)]
+    return [(a, b, r[a:b]) for a, b in zip(tocke, tocke[1:]) if b > a]
+
+
 def _broj(s: str) -> float:
     return float(s.replace(",", "."))
 
@@ -142,10 +165,18 @@ def analiziraj(put: str, alfa: float | None = None) -> dict:
         # p < 0,05") nije tvrdnja o pojedinom rezultatu i ne smije se uspoređivati
         # s pragom: p tamo JEST jednak pragu, po definiciji.
         deklaracija = bool(ALFA_DEKLARACIJA.search(r))
-        tvrdi_ne = bool(NIJE_ZNACAJNO.search(r))
-        tvrdi_da = bool(ZNACAJNO.search(r)) and not tvrdi_ne and not deklaracija
+        segmenti = _segmenti(r)
 
         for mm in pogoci:
+            # Kvar 23 (rad-audit): opis se čita iz SUREČENICE u kojoj p stoji,
+            # ne iz cijele rečenice. „…korelaciju (r = 0,384; p = 0,002), dok
+            # ostale dimenzije nisu bile značajne" prije je davalo proturječje:
+            # „nisu značajne" pripada drugoj surečenici. Rečenica s jednim
+            # segmentom ponaša se kao i prije.
+            seg = next((t for a, b, t in segmenti if a <= mm.start() < b), r)
+            opis = seg if (ZNACAJNO.search(seg) or len(segmenti) == 1) else ""
+            tvrdi_ne = bool(NIJE_ZNACAJNO.search(opis))
+            tvrdi_da = bool(ZNACAJNO.search(opis)) and not tvrdi_ne and not deklaracija
             op, sirovi = mm.group(1), mm.group(2)
             try:
                 v = _broj(sirovi)

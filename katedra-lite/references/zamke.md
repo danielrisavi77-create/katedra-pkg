@@ -4265,3 +4265,113 @@ Dodatak A: // rad-orchestrator v1.2.1 · paket: // rad-orchestrator v1.3.0 · di
 Popravak: dodatak uklonjen (router 10 122 znaka); bez skripte u paketu ili synced kopiji
 orkestrator staje i traži paket. Ograda: `katedra/scripts/router_granice.py` u suiti
 drži svaki SKILL.md paketa ispod 24 000 znakova (`test_router_granice.py`).
+
+---
+
+## 167. Fakultet izvan registryja ruši pun init jer se isti slug traži dvaput
+
+`rad-orchestrator` za fakultet izvan registryja šalje `stanje_init.py … --fakultet-izvan-registryja
+<slug>` (to je `fakultetFlag` u `rad-orchestrator.js`). Pun init je među obaveznima tražio i
+`--fakultet`, pa je Setup svakog takvog rada padao prije ijednog koraka:
+
+```
+$ stanje_init.py --mod audit --tip zavrsni --tema "…" --fakultet-izvan-registryja bak-zapresic --ogranicenje "…"
+❌ za pun init nedostaje: --fakultet                                       izlaz 2
+```
+
+Izmjereno na završnom radu (Veleučilište Baltazar Zaprešić, 22. 9. 2026.). Zaobilaženje je
+bilo ponoviti isti slug dvaput, a skripta tada provjerava da su jednaki: dvije zastavice za
+jednu vrijednost, od kojih orkestrator zna samo za jednu.
+
+Popravak: bez `--fakultet` slug se uzima iz `--fakultet-izvan-registryja`. `--ogranicenje`
+ostaje obavezno (izlaz 2 bez njega). Ograda: `test_ucenje_2026_09_22.py`, K1 (3 provjere).
+
+## 168. Primjedbe mentora poslane mailom nisu imale ulaz u zamjerke.json
+
+`extract_comments.py` čita samo komentare i praćene izmjene iz `.docx`-a. Mentorica je 12
+numeriranih primjedbi poslala u tijelu maila. Da bi `zamjerke.py provjeri` uopće znao za njih,
+morale su biti upisane kao Word-komentari u pomoćni dokument (`mentor_komentari.docx`) i
+provučene kroz alat. Primjedba koja ne uđe u trag je upravo „komentar koji se spomene u
+intakeu pa zaboravi" (intake 0.7). Mail je u praksi češći od komentara u .docx-u.
+
+```
+$ extract_comments.py mail.txt --out .katedra/zamjerke.json      # prije
+❌ … nije valjan .docx                                             (0 zamjerki)
+$ extract_comments.py mail.txt --autor "…" --out .katedra/zamjerke.json   # poslije
+ukupno 12 · otvorenih 12 · citiranje 3 · sadrzaj 6 · stil 2 · struktura 1
+```
+
+Popravak: `--iz-teksta` (zadano za .txt/.md/.eml) čita stavke „1. …/2) …" s početka retka.
+Stavka traje do sljedeće, do citiranog retka, potpisa ili zaglavlja prosljeđenog maila. Broj
+koji ne nastavlja niz (datum „22. ruj") nije stavka. `izvor_id` je `tekst:<datoteka>:<broj>`,
+pa ponovno čitanje istog maila ne udvostručuje zamjerke. Ograda: K2 (4 provjere, fixture
+`tests/fixtures/ucenje_2026_09_22/mail_mentorice.txt`).
+
+## 169. Gomilanje ograda nije se mjerilo, pa je dorada „povezanost, a ne uzročnost" zvučala obrambeno
+
+Mentorica je tražila da se razlika između povezanosti i utjecaja provede dosljedno. Dorada ju
+je provela rečenicu po rečenicu, pa je gotovo svaki odlomak završio odricanjem. Nezavisni
+recenzent izbrojao je 24 „…, a ne …" i 12 „ne dokazuje / nije dokaz". `check_ai_style` je
+prolazio čist, jer nijedan prag to ne gleda:
+
+```
+izvornik prije dorade        2,0 ograda / 1000 riječi
+nakon dorade (v4)            5,5  → ✓ tragovi generiranog teksta (ništa)
+nakon prorjeđivanja (v5)     2,9
+```
+
+Popravak: metrika `ograde_na_1000` (sedam uzoraka ograde) i upozorenje iznad 4,0. Poslije
+je v4 `⚠ ograde 43× (6.4/1000)`, a v5 bez nalaza. Savjet uz nalaz kaže da se ograde koje
+mentor traži ne brišu. Uz to savjet za nisku koheziju izrijekom kaže da se prag ne gura
+ubacivanjem „doduše", „utoliko" ili „nasuprot tome": u istoj sesiji dosizanje praga 15/1000
+dodalo je upravo takve šavove, i recenzent ih je čitao kao strojne. Ograda: K3 (2 provjere,
+oba smjera).
+
+## 170. `revizije.py toc` na Wordovu sadržaju tiho ne radi ništa, a JMBAG čita kao redak sadržaja
+
+Word sprema sadržaj u content control (`w:sdt` s `docPartObj`), a `doc.paragraphs` vidi samo
+izravnu djecu tijela. `_find_toc_paragraphs` zato na Wordovu sadržaju nije našao nijedan
+redak. Jedini „redci sadržaja" koje je vidio bili su popis tablica i redak naslovnice
+„Naziv kolegija<TAB>JMBAG":
+
+```
+redaka sadržaja nađeno: 4 od 39
+  Tablica 1. … · Tablica 2. … · Grafikon 1. … · „Bihevioralni aspekti poslovanja" (0123456789)
+✅ TOC redci procijenjeni i upisani
+```
+
+Izlaz je bio ✅ uz nepromijenjen sadržaj. Da se naziv kolegija pojavio u tekstu, alat bi
+JMBAG prepisao brojem stranice. Posljedica u sesiji: sadržaj se usklađivao ručnim skriptama
+izvan paketa, jer je paketni alat izgledao kao da radi.
+
+Dva sporedna kvara iste funkcije:
+- Fiksnim „preskoči prve 4 stranice" preskočio se i Sažetak (4. stranica PDF-a na radu
+  gdje je sadržaj na trećoj).
+- Pomak brojeva računao se iz zapisanog broja prvog retka, a zapisani brojevi su upravo ono
+  što je zastarjelo.
+
+Popravak: retci se traže u svim `w:p` tijela, uključujući `w:sdt` i `w:hyperlink`, a mijenja
+se samo zadnji `w:t` retka, pa oblikovanje ostaje netaknuto. Broj stranice ima najviše 4
+znamenke. Kad postoje stilovi sadržaja (TOC1…), broje se samo oni. Stranice sadržaja
+preskaču se po sadržaju, a broj stranice čita se iz podnožja renderirane stranice.
+
+Dokaz na stvarnom radu: 35 od 36 brojeva sadržaja postavljeno na 99. Staro: 35 ostaje 99.
+Novo: 36/36 vraćeno točno. Ograda: K4 (2 provjere, SDT fixture gradi se u testu).
+
+## 171. Namjerni ispravak brojke u `verify_rewrite` blokira jednako kao tiha izmjena
+
+Ispravci koje je mentorica tražila (komentar 7) mijenjaju brojke:
+- Levitats i sur. 2019: `p < 0,10` → `p = 0,02` / `0,06`
+- Lopez-Zafra: stranice 497–504 → 496–503
+- APA: uklonjen raspon cijelog članka (`str. 729–745`) iz citata
+
+`verify_rewrite` je svaku promjenu brojke prijavljivao kao ✗ i „NE primjenjuj prepisano".
+Nije imao način razlikovati ispravak od kvara, pa je jedini ishod bio „zanemari crveno", a to
+je navika koju alat mora sprječavati. Uz to je ispis „izgubljeno" rezan na 12 stavki, pa se
+sedam promjena (Bačić 69–84, Bar-On 29–50, Gutić 13–189, p < 0,10) vidjelo tek kad su
+navedene prve.
+
+Popravak: `--namjerno TOKEN=RAZLOG` (ponovljivo, za brojke i citatne ključeve). Navedeni
+token ne blokira i ispisuje se s razlogom. Nenavedeni i dalje blokira. Token bez razloga se
+odbija. Na stvarnom paru: 20 brojki i 4 citatna ključa navedena s razlogom, preostalih 7
+ostaje ✗ dok se ne navedu. Ograda: K5 (3 provjere).

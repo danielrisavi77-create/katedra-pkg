@@ -712,6 +712,12 @@ def main():
         return 0
 
     # ---- pun init
+    # Kvar (katedra-lite, 22. 9. 2026.): rad-orchestrator za fakultet izvan
+    # registryja šalje SAMO --fakultet-izvan-registryja <slug>, a pun init je
+    # tražio i --fakultet istog sluga, pa je Setup svakog takvog rada padao na
+    # „za pun init nedostaje: --fakultet". Slug je jedan; drugi se izvodi.
+    if a.fakultet_izvan and not a.fakultet:
+        a.fakultet = a.fakultet_izvan
     obavezno = {"--mod": a.mod, "--tip": a.tip, "--tema": a.tema, "--fakultet": a.fakultet}
     fale = [k for k, v in obavezno.items() if not v]
     if fale:

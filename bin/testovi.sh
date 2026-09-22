@@ -85,6 +85,7 @@ pokreni "katedra-lite: mjerilo usmjeravanja" python3 "$KORIJEN/katedra-lite/scri
 pokreni "katedra-lite: thin-router contract" python3 "$KORIJEN/katedra-lite/scripts/tests/test_router_contract.py"
 pokreni "katedra-lite: pretraga ranijih verzija" python3 "$KORIJEN/katedra-lite/scripts/tests/test_drift.py"
 pokreni "katedra-lite: stari kvarovi" python3 "$KORIJEN/katedra-lite/scripts/tests/test_stari_kvarovi.py"
+pokreni "katedra-lite: učenje 22. 9. 2026." python3 "$KORIJEN/katedra-lite/scripts/tests/test_ucenje_2026_09_22.py"
 # Kvar 32: registry je bio stale od v1.9.3 i nitko nije primijetio, jer --check nije
 # bio u suiti. Zakrpa profila bez ponovne admisije od sada je crvena skupina.
 pokreni "katedra-lite: registar fakulteta" python3 "$KORIJEN/katedra-lite/scripts/profile_registry.py" --check
