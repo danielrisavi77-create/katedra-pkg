@@ -60,7 +60,9 @@ scripts/provjeri_prikaze.py     slike i grafikoni kao SLIKE: efektivni dpi, šir
                                 mijenja veličinu pisma u grafikonu
 scripts/rubrika.py
 references/plan.md              mod 1 — Plan i program, sekcije 0–11
-references/pisanje.md           mod 2, 3 — akademsko pisanje, struktura odlomka, self-check
+references/pisanje.md           mod 2, 3 — jezgra: rukopis, odlomak, citatni oblik, stil, self-check
+references/pisanje_dokument.md  mod 2, 3 na okidač — tko radi .docx, karta premještanja, sažetak, redline, lanac zahvata
+references/pisanje_dokazi.md    mod 2, 3 na okidač — verify_sources statusi, evidence/claim ledger, strict gate, B13
 references/stil_pipeline.md     mod 2, 3 — stilski pipeline, pragovi, harness za subagenta
 references/audit.md             mod 4 — adapter na rad-audit (motor), NE kopija pipelinea
 references/vjestine.md          mod 2/4/6 — satelitski skillovi: kada se zovu i kako se čita

@@ -2,6 +2,13 @@
 
 > Mod 2 piše po odobrenom planu. Mod 3 popravlja postojeći tekst i vodi ga
 > `references/stil_pipeline.md`. Zajedničko im je sve ispod.
+>
+> **Jezgra (v2.4).** Ovo je dio koji treba svako pisanje. Dva dodatka se otvaraju na okidač
+> (`ucitavanje.py` ih navodi pod NE UČITAVAJ SADA):
+> `references/pisanje_dokument.md` (sastavljanje .docx, tko radi dokument, karta premještanja,
+> sažetak, redline, lanac zahvata) i `references/pisanje_dokazi.md` (verifikacija izvora,
+> evidence/claim ledger, strict gate, produbljivanje bez izmišljanja, B13 rewrite gate).
+> Pravilo ostaje isto: dvojba znači otvori, preskočeno štivo je skuplje od suvišnog.
 
 ---
 
@@ -19,61 +26,9 @@ python3 <KATEDRA_SKILL>/scripts/build_docx.py --fakultet <slug> --tip <tip> \
     --rukopis --out ./rad.docx --provjeri
 ```
 
-Zašto tako: upis u markdown je običan zapis datoteke — verzionira se u gitu, diff
-se vidi, a prekinuta sesija nastavlja se ondje gdje je stala. Upis u `.docx` bi za
-svako poglavlje morao naći mjesto u tuđem XML-u i ne razbiti unakrsne reference, a
-to puca na svakom ručnom oblikovanju.
-
-**Cijenu reci studentu izrijekom, ne prešuti je:** ono što dotjera rukom u Wordu
-gubi se pri sljedećem sastavljanju. Word je za čitanje i mentora; pisanje ide kroz
-rukopis. Ako student inzistira na Wordu kao izvoru istine, to je legitimno — ali
-tada se poglavlja ne generiraju nego se dokument samo provjerava i popravlja
-(`check_rules.py`, `fix_rules.py`).
-
-Konvencije rukopisa (iste kao u skillu `fpzg-diplomski`, pa se isti rukopis može
-predati i njemu): `# Naslov` je poglavlje, `## ` potpoglavlje, `**podebljano**` i
-`*kurziv*`, `- ` i `1. ` popisi, `> ` blok-citat, markdown tablica s natpisom
-IZNAD i retkom `Izvor:` ISPOD, `[[PB]]` prijelom stranice. Redoslijed poglavlja
-dolazi iz broja u imenu datoteke — bez njega bi abeceda stavila zaključak pred uvod.
-
-## 0b. Tko radi dokument
-
-**Prvo pitaj tko radi dokument.** Za fakultet koji ima vlastiti skill za izradu
-(FPZG → `fpzg-diplomski`) dokument radi TAJ skill — on zna kućni stil, unakrsne
-reference, popise prikaza i grafikone. Katedrin generator je rezerva:
-
-```bash
-python3 <KATEDRA_SKILL>/scripts/vjestine.py --sposobnost izrada.docx --fakultet <slug>
-```
-
-Granica i razlog: `references/vjestine.md`. Dvije skripte koje rade `.docx` postoje
-namjerno; ono što ne smije postojati je nezapisana granica među njima.
-
-Katedra do audita nije proizvodila `.docx`, samo ga je ocjenjivala: student je
-dokument slagao ručno, a alat mu je poslije govorio što nije u redu. Šest od
-četrnaest blokirajućih stavki iz `references/predaja.md` §2 su čisto mehaničke i
-jeftinije ih je proizvesti ispravno nego naknadno prijavljivati.
-
-```bash
-python3 <KATEDRA_SKILL>/scripts/build_docx.py --fakultet <slug> --tip <tip> \
-  --tema "..." --autor "..." --mentor "..." --godina 2026 \
-  --plan ./.katedra/plan.json --out ./rad.docx --provjeri
-```
-
-Dobiva se naslovnica s podacima iz stanja, izjava, sažetak/summary, **sadržaj kao
-Wordovo POLJE** (ne natipkan popis), rimska numeracija do Uvoda pa arapska od 1,
-prijelom pred poglavljem ako ga profil traži, i primjer prikaza s ispravnim
-sklopom natpis + tablica (`cantSplit`) + „Izvor:". Poglavlja dolaze iz
-`plan.json` ako je predan.
-
-`--provjeri` odmah pokrene `check_rules.py` nad vlastitim izlazom. Ako to padne,
-ili generator ne poštuje profil ili ga provjera krivo čita — u oba slučaja se ne
-nastavlja dalje.
-
-**Student i dalje piše sadržaj.** Kostur ne piše nijednu rečenicu rada: sve
-sadržajne pozicije su uglate zagrade koje `check_placeholders.py` pred predajom
-mora naći praznima.
-
+Konvencije rukopisa, cijena ručnog uređivanja u Wordu i **tko radi dokument** (FPZG →
+`fpzg-diplomski`): `references/pisanje_dokument.md` §0 i §0b. Otvori prije prvog sastavljanja
+`.docx`-a. **Student i dalje piše sadržaj:** kostur ne piše nijednu rečenicu rada.
 
 ## 1. Kako se piše (mod 2)
 
@@ -147,22 +102,10 @@ Nakon svakog gotovog dijela upiši status:
 python3 <KATEDRA_SKILL>/scripts/dijelovi.py --set <dio>=napravljeno
 ```
 
-### 1.5 Karta premještanja — kad mentor traži hrpu strukturnih pomaka
+### 1.5 Karta premještanja
 
-Zamjerke tipa „ovo pripada u poglavlje 3, ne 2" rijetko dolaze pojedinačno — obično ih je
-odjednom šest do deset. Izvođenje jedne po jedne, redoslijedom iz dokumenta, stvara novu
-zbrku: premještanje #3 mijenja kontekst koji je #1 već pretpostavljao. Prije nego što se
-dirne ijedan odlomak, napravi kartu premještanja:
-
-```bash
-python3 <KATEDRA_SKILL>/scripts/zamjerke.py grupiraj --po mjesto
-```
-
-Iz toga se vidi obrazac (npr. „četiri zamjerke traže da se poglavlje 2 preseli u 4") koji se
-rješava jednim prolazom kroz strukturu, ne kroz izolirana uređivanja koja se međusobno
-poništavaju. Kod opsežnog restrukturiranja često je jeftinije poglavlje prepisati iz
-`.katedra/poglavlja/*.md` iznova, s odlukom o mjestu svakog dijela unaprijed, nego raditi
-kirurgiju nad postojećim odlomcima — v. §0 o rukopisu kao izvoru istine.
+Kad mentor traži hrpu strukturnih pomaka (šest do deset odjednom): **prvo karta, pa tek
+onda zahvat** — `references/pisanje_dokument.md` §1.5.
 
 ---
 
@@ -195,125 +138,11 @@ Pravila koja vrijede svugdje:
   HTML članke, institucijske objave i svaki `.txt`/`.md` bez tiskanog prijeloma.
 - Tvrdnja koje nema u priloženoj građi → `[TREBA IZVOR]`. **Ništa se ne izmišlja.**
 
-Dozvoljeni izvori su konkretne bibliografske jedinice: recenzirani članci, knjige i
-monografije, službeni dokumenti institucija te relevantni datasetovi/statistike. HRČAK i
-JSTOR mogu hostati konkretan rad; **Google Scholar je discovery servis, ne izvor**. Ako je
-članak pronađen preko Scholara, u bibliografiji se navodi članak, a discovery kanal se po
-potrebi bilježi kao `discovered_via: google_scholar`.
-
-Kod `legal-footnote` profila first-class su i propisi, sudske odluke i EU akti. B10 ih
-tipizira (`law`, `regulation`, `court_decision`, `eu_act`); B11 provjerava identitet i
-source-quality metadata. Citation parser sam ne potvrđuje da izvor postoji.
-
-`verify_sources.py` koristi stabilne semantičke statuse:
-
-- `verified` — automatika je potvrdila identitet/lokator u deklariranom scopeu;
-- `unverified` — automatika nema dovoljno dokaza ili je provider nedostupan; **nije dokaz da izvor ne postoji**;
-- `conflict` — postoji kontradiktoran dokaz (npr. DOI vodi na očito drugo djelo); blokira do razrješenja;
-- `invalid` — negativno potvrđen/nevaljan source entity; blokira do ispravka ili zamjene.
-
-Quality taxonomy: **A/B/C/D/E/X** = A primarni/službeni/peer-reviewed · B akademski
-sekundarni · C institucionalni izvještaj · D reputabilni kontekstualni/novinarski · E
-samo discovery · X neprihvatljiv ili kontradiktoran. Klasa se automatski dodjeljuje samo
-kad postoje dovoljni dokazi; inače ostaje `needs_classification`.
-
-```bash
-python3 <KATEDRA_SKILL>/scripts/verify_sources.py ./literatura.md
-python3 <KATEDRA_SKILL>/scripts/verify_sources.py ./literatura.md --discovered-via "Google Scholar" --json ./.katedra/izvori.json
-```
-
-`conflict` i `invalid` ne ulaze u rad dok se problem ne razriješi. `unverified` ide u
-**RUČNO PROVJERI** (npr. hrvatska knjiga bez Crossref zapisa, katalog NSK/Hrčak/službeni
-katalog), ali se ne briše samo zato što automatika nije pronašla potvrdu.
-
-### 2.0b Produbljivanje bez izmišljanja
-
-Zamjerka „ovo poglavlje je plitko, produbi" ne rješava se izmišljanjem detalja (datuma,
-brojki članaka, imena studija) da tekst zvuči uvjerljivije. Prvo provjeri već citirane izvore
-u poglavlju — autor citiran za jednu tvrdnju često ima i druge, dobro poznate nalaze koji
-izravno produbljuju istu temu bez novog izvora (npr. Cook i sur. 2005 već citiran za
-definiciju kompleksne traume redovito nudi i tipologiju domena oštećenja iz istog rada). Tek
-ako produbljenje traži nešto čega nema u `izvori.json`, stavi `[TREBA IZVOR]` i idi dalje —
-ne izmišljaj broj da praznina ne bude vidljiva. Brojevi propisa, članaka i NN-oznaka posebno
-su rizični jer zvuče provjerljivo dok sjećanje o točnom broju vara: „iz sjećanja" ide pod
-`[PROVJERI ČL.]` / `[PROVJERI NN BR.]` (vokabular: `references/intake.md` § 0.7b), nikad kao
-gotova tvrdnja. Rad koji tiho nosi krivi broj NN je gora šteta od rada koji priznaje da nešto
-nije provjereno — primjena željeznog pravila 2 na najčešću strukturnu zamjerku mentora.
-
-### 2.1 Page-level evidence i Claim Ledger
-
-`verify_sources.py --json .katedra/izvori.json` svakom izvoru dodjeljuje stabilni
-`source_id`. Kad je PDF/TXT/MD stvarno dostupan, ingestiraj ga iz korijena projekta:
-
-```bash
-python3 <KATEDRA_SKILL>/scripts/evidence_ingest.py ./izvori/autor2024.pdf \
-  --source-id src_... --source-verification ./.katedra/izvori.json \
-  --out ./.katedra/evidence.jsonl
-```
-
-Svaka izvučena jedinica ima `evidence_id` i locator `page + passage + char range`.
-Tvrdnju zapiši i zatim poveži samo s dokazom koji je stvarno podupire:
-
-```bash
-python3 <KATEDRA_SKILL>/scripts/claim_ledger.py add \
-  --claims ./.katedra/claims.jsonl --text "…" --chapter 2.1
-python3 <KATEDRA_SKILL>/scripts/claim_ledger.py link \
-  --claims ./.katedra/claims.jsonl --evidence ./.katedra/evidence.jsonl \
-  --claim-id clm_... --evidence-id ev_... --relation supports
-python3 <KATEDRA_SKILL>/scripts/claim_ledger.py validate \
-  --claims ./.katedra/claims.jsonl --evidence ./.katedra/evidence.jsonl
-```
-
-**Izvor bez tiskane paginacije.** `page_label` je TISKANA oznaka stranice, ne redni broj
-koji bi alat sam dodijelio. Kad je izvor `.txt`/`.md` bez prijeloma stranice ili PDF bez
-oznaka, `evidence_ingest.py` upisuje `page_label: null` i `passage: N` — i tu ne nedostaje
-ništa. Redni broj koji bi alat izmislio student bi prepisao u citat, a čitatelj ga ne bi
-mogao naći ni u jednom otisku; zato je `null` točan podatak, a ne rupa.
-
-```
-$ evidence_ingest.py assets/fixture_izvor_bez_paginacije.txt --source-id src_test --out ev.jsonl
-[evidence → ev.jsonl] dodano 5 passage(s), zamijenjeno 0, source=src_test
-$ grep -c 'page_label": null' ev.jsonl
-5
-```
-
-Odlomak je stabilna jedinica: granice se izvode iz praznih redaka u normaliziranom tekstu,
-ne iz prijeloma retka, pa dva ingesta iste datoteke daju iste granice i isti `evidence_id`.
-Citat po odlomku zato je provjerljiv jednako kao citat po stranici, i evidence gate ga
-prihvaća bez iznimke. `[PROVJERI STR.]` na takvom izvoru je nalaz o doktrini, ne o izvoru.
-
-`contextualizes` nije isto što i `supports`; `contradicts` se čuva, ne briše.
-`claim_ledger.py report` samo opisuje ledger. Prije nego claim uđe u tekst, napravi
-**Source Analysis Matrix** i strict evidence gate:
-
-```bash
-python3 <KATEDRA_SKILL>/scripts/evidence_gate.py \
-  --claims ./.katedra/claims.jsonl --evidence ./.katedra/evidence.jsonl \
-  --sources ./.katedra/izvori.json --policy strict --out ./.katedra/evidence_gate.json
-```
-
-`unsupported`, `conflicted`, `contradicted` i evidence iz `conflict/invalid` izvora blokiraju
-strict gate. `advisory` je samo dijagnostika.
-
----
-
-### 2.1 B13 rewrite safety gate
-
-Prije izmjene cijelog `.docx` dokumenta napravi strict evidence gate i snapshot. Nakon rewritea
-ne prihvaćaj datoteku bez oba safety checka:
-
-```bash
-python3 <KATEDRA_SKILL>/scripts/evidence_gate.py \
-  --claims ./.katedra/claims.jsonl --evidence ./.katedra/evidence.jsonl \
-  --sources ./.katedra/izvori.json --policy strict
-python3 <KATEDRA_SKILL>/scripts/diff_versions.py --snapshot ./rad.docx --biljeska "prije rewritea"
-python3 <KATEDRA_SKILL>/scripts/verify_rewrite.py ./rad_prije.docx ./rad_poslije.docx \
-  --zahvat stil --profil ./.katedra/resolved_profile.json \
-  --evidence-gate --require-snapshot
-```
-
-Za privremene tekstualne fragmente bez dokument-snapshota koristi `--evidence-gate`;
-`--require-snapshot` je gate za stvarnu izmjenu dokumenta.
+Dopušteni izvori, statusi `verify_sources.py` (`verified/unverified/conflict/invalid`),
+taksonomija A–X, produbljivanje bez izmišljanja, evidence i claim ledger te B13 rewrite gate:
+`references/pisanje_dokazi.md`. **Otvori ga prije nego ijedna nova tvrdnja s izvorom uđe u
+tekst** i prije svake izmjene cijelog `.docx`-a. Ukratko: Google Scholar je discovery
+servis, ne izvor; `conflict`/`invalid` ne ulaze u rad; `unverified` ide u RUČNO PROVJERI.
 
 ## 3. Stil
 
@@ -366,24 +195,8 @@ rečenica nije smetala.
 
 ### 3.0b Sažetak se piše zadnji i provjerava protiv rada
 
-Sažetak nastaje rano i poslije se ne dira, a rad se u međuvremenu mijenja. Prije predaje
-provjeri izrijekom:
-
-* **broj poglavlja iz sažetka = broj naslova prve razine.** Na jednom je radu sažetak
-  tvrdio „pet cjelina koje zauzimaju šest poglavlja", a rad ih je imao osam;
-* **nijedna tvrdnja sažetka ne smije biti opovrgnuta u tijelu.** Isti je sažetak nudio
-  terminal za ukapljeni plin kao dokaz da je anticipacija bila moguća, dok ga je šesto
-  poglavlje u međuvremenu razložilo u suprotno;
-* svaka rečenica sažetka koja imenuje nalaz mora imati parnjaka u zaključku.
-
-Mentor sažetak čita prvi. Aritmetička netočnost na prvoj stranici skuplja je od bilo koje
-u tijelu rada.
-
-Strojno: `python3 <KATEDRA_SKILL>/scripts/provjeri_sazetak.py ./rad.docx --tablica`. Alat
-mjeri ono što se dade izmjeriti (broj poglavlja, pojmove, brojke, ključne riječi, parnjaka
-u zaključku), a **proturječje ne vidi** — za to ispisuje paritetnu tablicu: svaka tvrdnja
-sažetka uz dva mjesta u tijelu koja govore o istome, s brojem poglavlja. Duge se rečenice
-sažetka pritom razlažu na tvrdnje, jer bi inače pogodak uvijek padao na prvu i najčešću.
+Postupak i paritetna tablica: `references/pisanje_dokument.md` §3.0b
+(`provjeri_sazetak.py ./rad.docx --tablica`).
 
 ### 3.1 Radni modovi
 
@@ -468,24 +281,9 @@ Na kraju svake veće isporuke — tablica **„RUČNO PROVJERI"**:
 Tekst gotov → mod 4 (`references/audit.md`). Odstupanja od plana upiši prije toga:
 `plan_state.py odstupanje --sto … --zasto …`.
 
-**Kad korisnik traži vizualni prikaz svega što je promijenjeno** (npr. „obojaj crveno što si
-promijenio") — to nije `diff_versions.py`, koji radi interni tekstualni sažetak i ne
-proizvodi dokument za čitanje:
-
-```bash
-python3 <KATEDRA_SKILL>/scripts/revizije.py redline rad_prije.docx rad_poslije.docx redline.docx
-```
-
-Rezultat je treći `.docx`: izbrisan tekst crven i precrtan, dodan/izmijenjen tekst crven bez
-precrtavanja, bojano izravno preko fonta (ne Wordov `<w:ins>`/`<w:del>`, čija boja ovisi o
-recenzentu). Premješteni odlomci pojavljuju se dva puta (brisanje na starom mjestu, dodavanje
-na novom) — očekivano ponašanje diffa na razini teksta, ne bug; reci to korisniku uz isporuku.
-
-> Backward compatibility: ako rad ima samo faculty-level pravila i nema programme/work-type/
-> course/mentor overlaya, dopušten je i izravni poziv
-> `check_paragraphs.py ../rad.docx --profil ../references/fakulteti/<slug>.json`.
-> Za RFIR i druge specifične kontekste koristi resolved profil iz `profile_resolver.py`.
-
+Obojani prikaz izmjena (`revizije.py redline`) i lanac redoslijeda zahvata nad tekstom
+(renumeracija literature → tekst → tipografija → naslovnice → sekcije → polja):
+`references/pisanje_dokument.md`.
 
 ---
 
@@ -495,29 +293,3 @@ na novom) — očekivano ponašanje diffa na razini teksta, ne bug; reci to kori
 > Tijek jednog moda ne treba biti u datoteci koja se učitava u svakoj poruci.
 
 `pisanje.md`. `nastavi rad` = uzmi prvo potpoglavlje iz `plan.json` sa `status: nije-napisano` (`python3 <KATEDRA_SKILL>/scripts/plan_state.py next`), ne pitaj gdje smo stali. Self-check nakon svakog potpoglavlja, pa upiši status i broj riječi.
-
----
-
-## Redoslijed zahvata nad tekstom je lanac ovisnosti, ne preporuka
-
-Empirijski utvrđeno na stvarnom radu; obrnuti redoslijed je razbio numeraciju i
-tražio ponavljanje cijelog kruga.
-
-```
-renumeracija literature
-        ↓            (markdown nosi KONAČNE brojeve citata)
-zamjena / skraćivanje teksta
-        ↓
-tipografija
-        ↓
-naslovnice
-        ↓
-sekcije i numeracija stranica
-        ↓
-Wordova polja (TOC, SEQ, REF)
-```
-
-Zamjena teorijskog dijela mora ići **poslije** prenumeriranja literature: ako se
-tekst zamijeni prije, novi tekst nosi stare brojeve citata i numeracija se raspadne.
-Isto vrijedi nizvodno — polja se osvježavaju zadnja jer ovise o svemu iznad.
-

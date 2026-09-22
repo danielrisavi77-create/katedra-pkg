@@ -102,6 +102,59 @@ def main() -> int:
             q.stdout,
         )
 
+    # R72/R73 (kvar 173, v2.4): vjerodajnica u URL-u i predug opis provjeravaju se na
+    # SVIM karticama paketa. Do v2.4 provjera je gledala samo katedra-lite router, pa je
+    # rad-orchestrator/SKILL.md nosio KATEDRA_PKG_URL_TOKEN uz zeleni contract.
+    with tempfile.TemporaryDirectory() as d:
+        r = Path(d)
+        (r / "katedra-lite" / "references").mkdir(parents=True)
+        for ref in ("runtime.md", "quick_path.md", "prioriteti.md", "privatnost.md", "revizije.md"):
+            (r / "katedra-lite" / "references" / ref).write_text("# x\n", encoding="utf-8")
+        (r / "VERSION").write_text("2.0.0\n", encoding="utf-8")
+        (r / "katedra-lite" / "SKILL.md").write_text(
+            '---\nname: katedra-lite\ndescription: "router v2.0.0."\n---\n'
+            'package_version: VERSION · core_contract: 1.0.1\n'
+            'Quick path Full path HARD GATE SIGNAL\n'
+            'references/runtime.md references/quick_path.md references/prioriteti.md '
+            'references/privatnost.md references/revizije.md\n',
+            encoding="utf-8",
+        )
+        (r / "satelit").mkdir()
+        karta = r / "satelit" / "SKILL.md"
+
+        def pokreni():
+            return subprocess.run(
+                [sys.executable, str(SCRIPT), "--root", str(r)],
+                capture_output=True, text=True, encoding="utf-8", errors="replace",
+            )
+
+        karta.write_text('---\nname: satelit\ndescription: "kratko v2.0.0."\n---\n'
+                         'export KATEDRA_PKG_URL_TOKEN="x"\n', encoding="utf-8")
+        q = pokreni()
+        ok &= check("R72: vjerodajnica u URL-u u kartici satelita pada",
+                    q.returncode == 1 and "satelit/SKILL.md" in q.stdout, q.stdout)
+
+        karta.write_text('---\nname: satelit\ndescription: "' + "x" * 501 + ' v2.0.0."\n---\n',
+                         encoding="utf-8")
+        q = pokreni()
+        ok &= check("R73: opis kartice dulji od 500 znakova pada",
+                    q.returncode == 1 and "description ima" in q.stdout, q.stdout)
+
+        karta.write_text('---\nname: satelit\ndescription: "kratko v2.0.0."\n---\n', encoding="utf-8")
+        q = pokreni()
+        ok &= check("R72/R73: uredna kartica satelita prolazi", q.returncode == 0, q.stdout)
+
+    # R74 (kvar 172, v2.4): Workflow skripta smije zvati samo skillove koji postoje u paketu.
+    # rad-orchestrator.js je u fazi pisanja zvao 'fpzg-skill-pisanje', alias uklonjen u v1.9.
+    import re as _re
+    korijen = SKILL.parents[1]
+    js = korijen / "rad-orchestrator" / "scripts" / "rad-orchestrator.js"
+    if js.is_file():
+        zvani = set(_re.findall(r"Skill tool sa skill='([^']+)'", js.read_text(encoding="utf-8")))
+        mrtvi = sorted(x for x in zvani if not (korijen / x / "SKILL.md").is_file())
+        ok &= check("R74: orkestrator zove samo skillove koji postoje u paketu",
+                    not mrtvi, "nepostojeći: " + ", ".join(mrtvi))
+
     print("=" * 66)
     print("ROUTER CONTRACT:", "PASS" if ok else "FAIL")
     print("=" * 66)

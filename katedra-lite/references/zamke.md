@@ -4375,3 +4375,52 @@ Popravak: `--namjerno TOKEN=RAZLOG` (ponovljivo, za brojke i citatne ključeve).
 token ne blokira i ispisuje se s razlogom. Nenavedeni i dalje blokira. Token bez razloga se
 odbija. Na stvarnom paru: 20 brojki i 4 citatna ključa navedena s razlogom, preostalih 7
 ostaje ✗ dok se ne navedu. Ograda: K5 (3 provjere).
+
+## 172. Orkestrator u fazi pisanja zove skill koji ne postoji od v1.9
+
+**Simptom.** Agent faze PISANJE u `rad-orchestrator.js` (redak 166) dobiva uputu
+„Pozovi Skill tool sa skill='fpzg-skill-pisanje'". Taj alias je u v1.9 pretvoren u
+`references/glas_fpzg.md` i `references/pisanje.md` i više ne postoji kao skill, pa svaki
+agent pisanja troši poziv na pogrešku i onda nagađa što je trebao pročitati.
+
+```
+$ grep -o "skill='[^']*'" rad-orchestrator/scripts/rad-orchestrator.js | sort -u
+skill='fpzg-skill-pisanje'      ← nema fpzg-skill-pisanje/SKILL.md u paketu
+skill='katedra-lite'
+skill='rad-audit'
+skill='replikacija-pspp'
+```
+
+**Uzrok.** Preimenovanje aliasa (v1.9) mijenjalo je reference i `mapa.md`, ali ništa nije
+provjeravalo stringove u Workflow skripti.
+
+**Popravak.** Korak 2 faze pisanja čita točno ono što `ucitavanje.py --mod 2` ispiše pod
+MORA SE PROČITATI (za FPZG to uključuje `glas_fpzg.md`). R74 u `test_router_contract.py`
+pada ako skripta zove skill kojeg nema u paketu. Mjera: sa starom skriptom R74 ✗, s novom ✓.
+
+**Gdje.** `rad-orchestrator/scripts/rad-orchestrator.js` (v1.4.0), `katedra-lite/scripts/tests/test_router_contract.py`.
+
+## 173. Vjerodajnica u URL-u prolazila je contract jer je provjera gledala samo router
+
+**Simptom.** `runtime.md` zabranjuje GitHub token u URL-u, naredbi ili skillu, a
+`router_contract.py` to provjerava. Ipak je `rad-orchestrator/SKILL.md` nosio
+`export KATEDRA_PKG_URL_TOKEN="UPIŠI_URL_S_TOKENOM"   # https://<token>@github.com/...`
+uz zeleni contract, i to u bloku bootstrapa od ~1,5 KB koji se učitavao pri svakom
+pokretanju skilla.
+
+**Uzrok.** `FORBIDDEN_ROUTER_FRAGMENTS` se primjenjivao samo na `katedra-lite/SKILL.md`.
+
+**Popravak.** Zabrana vjerodajnice i granica opisa (≤ 500 znakova, jer se opis učitava u
+svakoj sesiji) vrijede za svaki `*/SKILL.md` paketa. Bootstrap je premješten u
+`rad-orchestrator/scripts/bootstrap.sh`, koji URL s vjerodajnicom odbija:
+
+```
+$ KATEDRA_PKG_URL="https://abc@github.com/x/y.git" . bootstrap.sh
+⛔ KATEDRA_PKG_URL nosi vjerodajnicu u URL-u; ne koristi se (runtime.md)
+```
+
+Mjera: na 2.3.0 contract s proširenom provjerom daje 6 nalaza (opisi 550–738 znakova) i
+token u kartici; poslije 0. R72/R73 u `test_router_contract.py`.
+
+**Gdje.** `katedra-lite/scripts/router_contract.py`, `rad-orchestrator/SKILL.md`,
+`rad-orchestrator/scripts/bootstrap.sh`.

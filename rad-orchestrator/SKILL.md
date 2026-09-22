@@ -1,6 +1,6 @@
 ---
 name: rad-orchestrator
-description: "Orkestrator faza rada (plan → pisanje → audit → predaja) koji kroz Workflow tool pokreće STVARNE katedra-lite skripte i satelite (rad-audit, rad-docx, fpzg-diplomski, replikacija-pspp): paralelni multi-lens audit s lens budgetom, bidirekcionalni povratak na raniju fazu, zaustavljanje s pitanjima za autora umjesto beskonačne petlje, mod rad_docx za gotov tuđi rad. Aktiviraj na 'pokreni orkestrator', 'provuci rad kroz sve faze', 'audit + predaja u jednom', 'rad-orchestrator', ili kad korisnik želi više Katedrinih skillova po fazi. Ne aktiviraj za jedan izolirani zadatak (samo tipografija) — za to je katedra-lite izravno. (v1.3.0: tvrdi gate po gate.py izlaznom kodu; skripta živi samo u paketu, testirano na 3 fixture-a.) v2.3.0."
+description: "Orkestrator faza rada (plan, pisanje, audit, predaja) kroz Workflow tool nad stvarnim katedra-lite skriptama i satelitima: paralelni audit s lens budgetom, povratak na raniju fazu, pitanja za autora, rad_docx mod za gotov rad. Aktiviraj na 'pokreni orkestrator', 'provuci rad kroz sve faze', 'audit + predaja u jednom'. Skup je: ne za jedan izolirani zadatak. v2.4.0."
 ---
 
 # RAD-ORCHESTRATOR — više skillova po fazi, kroz stvarne skripte
@@ -12,21 +12,12 @@ sljedeći alat. Slobodan markdown bez `.katedra/` stanja je kvar, ne rezultat.
 
 ## 0. Ulazni protokol — prije poziva Workflowa
 
-1. **Dohvati paket** (isti korak kao katedra-lite §0.0 — repo `katedra-pkg`; synced kopija je rezerva):
+1. **Dohvati paket** (isti redoslijed izvora kao katedra-lite `references/runtime.md`: priloženi
+   zip/bundle → git klon → anonimni clone → synced kopija). Skripta se **source-a**, ne pokreće:
    ```bash
-   export KATEDRA_PKG="$HOME/.katedra-pkg"
-   export KATEDRA_PKG_URL="https://github.com/danielrisavi77-create/katedra-pkg.git"            # cloud sesija s priključenim repoom, ako to sučelje nudi
-   export KATEDRA_PKG_URL_TOKEN="UPIŠI_URL_S_TOKENOM"   # https://<token>@github.com/danielrisavi77-create/katedra-pkg.git (desktop VM / okolina bez GitHub proxyja)
-   # 1) priložen paket u chatu (katedra-pkg*.zip ili *.bundle) uvijek ima prednost — radi u SVAKOJ sesiji, bez GitHuba
-   P="$(find /root/.claude/uploads "$HOME/uploads" /mnt/user-data . -maxdepth 4 \( -iname 'katedra*pkg*.zip' -o -iname 'katedra*pkg*.bundle' \) -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)"
-   if [ -n "$P" ]; then rm -rf "$KATEDRA_PKG"; case "$P" in *.bundle) git clone -q "$P" "$KATEDRA_PKG";; *) mkdir -p "$KATEDRA_PKG" && unzip -oq "$P" -d "$KATEDRA_PKG" && { [ -f "$KATEDRA_PKG/bin/env.sh" ] || { D="$(ls -d "$KATEDRA_PKG"/*/ | head -1)"; [ -f "$D/bin/env.sh" ] && mv "$D"/* "$D"/.[!.]* "$KATEDRA_PKG"/ 2>/dev/null; }; };; esac; echo "📦 paket iz priloga: $P"; fi
-   # 2) git: pull ako postoji, inače clone (prvo bez tokena, pa s tokenom)
-   if [ -d "$KATEDRA_PKG/.git" ]; then find "$KATEDRA_PKG" -name __pycache__ -type d -prune -exec rm -rf {} + 2>/dev/null; git -C "$KATEDRA_PKG" pull -q --ff-only 2>/dev/null || true;
-   elif [ ! -f "$KATEDRA_PKG/bin/env.sh" ]; then for U in "$KATEDRA_PKG_URL" "$KATEDRA_PKG_URL_TOKEN"; do case "$U" in UPIŠI_*) continue;; esac; git clone -q --depth 1 "$U" "$KATEDRA_PKG" 2>/dev/null && break; done; fi
-   # 3) što imamo
-   if [ -f "$KATEDRA_PKG/bin/env.sh" ]; then . "$KATEDRA_PKG/bin/env.sh"; echo "katedra-pkg $KATEDRA_PKG_VERZIJA";
-   else KATEDRA_SKILL="$(ls -d /root/.claude/skills/synced/*/katedra-lite ~/.claude/skills/katedra-lite 2>/dev/null | head -1)"; echo "⚠️ paket nije dostupan — priloži katedra-pkg-vX.zip u chat (najjednostavnije) ili priključi repo sesiji; do tada synced kopija: $KATEDRA_SKILL (skripte mogu biti starije od ovog SKILL.md-a)"; fi
+   . "$(ls -d "$HOME/.katedra-pkg/rad-orchestrator" /root/.claude/skills/synced/*/rad-orchestrator ~/.claude/skills/rad-orchestrator 2>/dev/null | head -1)/scripts/bootstrap.sh"
    ```
+   Token se ne ugrađuje u URL; privatni repo ide kroz autoriziranu vezu sesije ili priloženi paket.
    `KATEDRA_SKILL` i `<SLUG>_HOME` koje ovaj korak izveze idu u `args` (`katedra_skill`, `sateliti_dir`
    = `$KATEDRA_PKG`). Svaki idući bash poziv počinje s `. "$KATEDRA_PKG/bin/env.sh"` (Cowork ne pamti
    okolinu između poziva). Ako ni paketa ni synced kopije nema → stani i reci korisniku.
@@ -51,7 +42,7 @@ sljedeći alat. Slobodan markdown bez `.katedra/` stanja je kvar, ne rezultat.
      `references/fakulteti/hks-fzs.json`); inače formalni nalazi ostaju „preskočeno" (pravilo 8).
    - `project_root`: APSOLUTNA putanja mape rada (npr. `/home/claude/rad-<slug>`); agenti ne dijele cwd.
 4. **Pripremi skriptu tamo gdje je Workflow može čitati** (radna mapa). Prvi redak skripte nosi
-   verziju (`// rad-orchestrator v1.3.0`); redoslijed izvora: paket → synced skill:
+   verziju (`// rad-orchestrator v1.4.0`); redoslijed izvora: paket → synced skill:
    ```bash
    . "$KATEDRA_PKG/bin/env.sh" 2>/dev/null
    SRC="$RAD_ORCHESTRATOR_HOME/scripts/rad-orchestrator.js"; [ -f "$SRC" ] || SRC="$(ls /root/.claude/skills/synced/*/rad-orchestrator/scripts/rad-orchestrator.js 2>/dev/null | head -1)"
