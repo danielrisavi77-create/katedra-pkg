@@ -1,3 +1,13 @@
+# v2.1.0 — pouzdan rezultat provjere, ciljane DOCX izmjene, izričito odobrenje plana (22. 9. 2026.)
+
+Release korak koji spaja tri grane što su stajale izvan `main`-a. Nijedan spoj nije imao konflikt; cijeli `bin/testovi.sh` na spojenom stablu: **33/33 skupine**, izlazni kod 0.
+
+* **2.0.1 zakrpa (PR #52, `fix/zakrpa-20260920-audit-guards`).** Nepoznat fakultet i ručne provjere ostaju „neizmjereno", ne prolaz. Eksplicitne granice IEEE parsiranja i nepodržanih stilova, 40 release regresija i devet HKS provjera. Detalji u `rad-audit/references/PROMJENE.md`.
+* **Review integrity, isporuka A (`feat/review-integrity-A`).** Nevažeći, odbijeni, savjetodavni, nedovoljno pokriveni ili zastarjeli rezultat provjere više ne može postati dokaz spremnosti drugog dokumenta. Validator ugovora reviewa, bound review na izoliranoj snimci ledgera, svježina potvrde vezana uz bajtove lokalnih izvora. Spec i plan u `docs/superpowers/`.
+* **Ciljane DOCX izmjene (`feat/targeted-docx-safety-verified`).** Novo: `rad-docx/scripts/ciljane_izmjene.py` (`inspect` / `apply` / `verify`) s opsegom vezanim uz hash, obaveznim snapshotom i zasebnom izlaznom putanjom; 50 sintetskih regresija. `visual_check.ok` je uvijek `null`: render i ljudski pregled ostaju obavezni.
+* **Izričito odobrenje plana u servisu (`claude/explicit-plan-approval`).** `service/app.py` ne izvršava plan bez izričitog, na plan vezanog odobrenja.
+* **Zašto minor, ne patch.** Ciljane izmjene su nova sposobnost i nova pravila u `SKILL.md` (`katedra-lite`, `rad-docx`); po pravilu iz README-a to diže minor. Frozen `core_contract` ostaje `1.0.1`.
+
 # v2.0.0 — thin router, dvije brzine i jasna snaga pravila (18. 9. 2026.)
 
 * **Router 43 175 → 10 742 znakova, 648 → 232 retka.** Runtime/GitHub/Claude bootstrap, privatnost i Track Changes politika više se ne učitavaju u svakoj studentskoj poruci; žive u zasebnim referencama.
