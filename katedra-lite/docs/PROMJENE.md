@@ -2124,3 +2124,12 @@ odnose na izvršive provjere, ne tvrdnju o dostupnosti privatnog dokumenta.
 Postojeći K160 nije prepisan; HKS promjene nose K161/K162. HKS profil ostaje
 `nepotvrdeno` jer izvorni PDF nije provjeren u ovoj integraciji. Stari 24×3
 live artefakt nije dokaz za ovaj kod; potreban je novi exact-head rezultat.
+
+
+## 2026-09-22 — 2.4.0: landing-verification bilješka
+
+Integracijski kandidat #61 dokazao je zajednički rad audit-guard promjena iz #52 i
+review-integrity Delivery A: 32/32 paketne skupine te 24/24 live routing pitanja
+na istom headu. U međuvremenu je main napredovao na 2.4.0 i već sadrži te
+promjene zajedno s kasnijim poboljšanjima. Ova bilješka pokreće završnu
+exact-head verifikaciju aktualnog 2.4.0 stabla; nije nova funkcionalnost.
