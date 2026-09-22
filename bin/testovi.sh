@@ -56,6 +56,10 @@ pokreni "rad-audit: bolesni rad mora pasti" \
   python3 "$KORIJEN/rad-audit/scripts/tests/test_bolesni.py"
 pokreni "katedra-lite: gate" \
   python3 "$KORIJEN/katedra-lite/scripts/tests/test_gate.py"
+pokreni "katedra-lite: review status" \
+  python3 "$KORIJEN/katedra-lite/scripts/tests/test_review_status.py"
+pokreni "katedra-lite: review coverage" \
+  python3 "$KORIJEN/katedra-lite/scripts/tests/test_review_coverage.py"
 pokreni "katedra: registar kvarova" python3 "$KORIJEN/katedra/scripts/tests/test_kvar.py"
 pokreni "katedra: provjera tvrdnji" python3 "$KORIJEN/katedra/scripts/tests/test_zakrpa.py"
 pokreni "katedra: verzija i oznake" python3 "$KORIJEN/katedra/scripts/tests/test_verzija.py"
