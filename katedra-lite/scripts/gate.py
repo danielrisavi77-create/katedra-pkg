@@ -317,7 +317,7 @@ def koraci(faza: str, c: dict) -> list[Korak]:
         return steps
 
     # predaja
-    return [
+    steps = [
         _ucitavanje(faza, kat),
         _revizije(rad, kat),
         Korak("dijelovi", "svi obavezni dijelovi rada napravljeni",
@@ -421,6 +421,18 @@ def koraci(faza: str, c: dict) -> list[Korak]:
               blokira=False,
               zasto="ide ZADNJI: agregira artefakte koje su prethodni koraci upravo napisali"),
     ]
+
+    if c.get("bound_review"):
+        bound = Korak(
+            "vezani_pregled", "vezani evidence/consistency pregled",
+            _k("review_receipt.py", "run",
+               "--project-root", c.get("project_root") or os.getcwd(),
+               "--rad", rad, "--kat", kat,
+               "--view", c.get("view") or "original_no_revisions"),
+            treba=[rad, claims, evidence, izvori], blokira=True,
+            zasto="opt-in receipt veže rezultat uz točne bajtove i svježe izvršenje")
+        steps.append(bound)
+    return steps
 
 
 def _razrijesi_satelit(korak: Korak) -> tuple[list[str] | None, str]:
