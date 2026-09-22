@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import tempfile, unittest
+from unittest.mock import patch
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -46,5 +47,22 @@ class ReceiptTests(unittest.TestCase):
                 rr.capture_context(root,document=document,
                     dependencies={'claims':state/'claims.jsonl'},view='original_no_revisions',
                     config={'policy':'strict'},code_root=Path(rr.__file__).parents[1])
+
+    def test_runner_uses_isolated_ledger_snapshot(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d); document,state=make_project(root); seen=[]
+            def fake_run(argv,cwd):
+                seen.append(list(argv))
+                out=None
+                if '--out' in argv:
+                    out=Path(argv[argv.index('--out')+1])
+                # Let real commands run: assertion is on paths after call collection.
+                return rr._run_real(argv,cwd)
+            with patch.object(rr,'_run',side_effect=fake_run):
+                rr.run_bundle(root,document=document,state_dir=state,
+                    view='original_no_revisions',config={'policy':'strict'},code_root=Path(rr.__file__).parents[1])
+            claims_args=[arg for cmd in seen for i,arg in enumerate(cmd) if i and cmd[i-1]=='--claims']
+            self.assertTrue(claims_args)
+            self.assertTrue(all('/reviews/' in p.replace('\\','/') and '/inputs/.katedra/' in p.replace('\\','/') for p in claims_args))
 
 if __name__=='__main__': unittest.main()
