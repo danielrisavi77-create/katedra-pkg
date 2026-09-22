@@ -1,6 +1,6 @@
 ---
 name: rad-audit
-description: "Motor audita akademskog .docx-a, faze A–G: integritet, citati i literatura, brojke i statistika, hipoteze, tvrdnja naspram izvora, jezik, Word polja, metapodaci, sigurni ispravci. Aktiviraj na 'audit rada', 'provjeri citate/literaturu', 'usporedi rad s izvorima', 'zašto je tablica zaključana'. U projektu s .katedra/ zove ga katedra-lite mod 4. v2.4.0."
+description: "Motor audita akademskog .docx-a, faze A–G: integritet, citati i literatura, brojke i statistika, hipoteze, tvrdnja naspram izvora, jezik, Word polja, metapodaci, sigurni ispravci. Aktiviraj na 'audit rada', 'provjeri citate/literaturu', 'usporedi rad s izvorima', 'zašto je tablica zaključana'. U projektu s .katedra/ zove ga katedra-lite mod 4. v2.4.1."
 ---
 
 # Rad-audit — pipeline za provjeru akademskih radova

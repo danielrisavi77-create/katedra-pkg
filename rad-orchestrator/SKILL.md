@@ -1,6 +1,6 @@
 ---
 name: rad-orchestrator
-description: "Orkestrator faza rada (plan, pisanje, audit, predaja) kroz Workflow tool nad stvarnim katedra-lite skriptama i satelitima: paralelni audit s lens budgetom, povratak na raniju fazu, pitanja za autora, rad_docx mod za gotov rad. Aktiviraj na 'pokreni orkestrator', 'provuci rad kroz sve faze', 'audit + predaja u jednom'. Skup je: ne za jedan izolirani zadatak. v2.4.0."
+description: "Orkestrator faza rada (plan, pisanje, audit, predaja) kroz Workflow tool nad stvarnim katedra-lite skriptama i satelitima: paralelni audit s lens budgetom, povratak na raniju fazu, pitanja za autora, rad_docx mod za gotov rad. Aktiviraj na 'pokreni orkestrator', 'provuci rad kroz sve faze', 'audit + predaja u jednom'. Skup je: ne za jedan izolirani zadatak. v2.4.1."
 ---
 
 # RAD-ORCHESTRATOR — više skillova po fazi, kroz stvarne skripte

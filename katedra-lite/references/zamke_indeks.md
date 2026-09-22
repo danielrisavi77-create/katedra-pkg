@@ -4,7 +4,7 @@
 > **Ne uređuj ručno.** Nakon izmjene kataloga: `indeks_zamki.py --upisi`.
 > `bin/testovi.sh` pada ako je ovaj indeks zastario.
 
-Unosa: **116** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom: **102** · ograda ne pripada (deklarirano): **17** · **duguje ogradu: 2**
+Unosa: **120** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom: **106** · ograda ne pripada (deklarirano): **17** · **duguje ogradu: 2**
 
 Traži bez učitavanja cijelog kataloga:
 
@@ -136,6 +136,10 @@ sed -n '844,880p' katedra-lite/references/zamke.md   # unos po retku
 | 171 | Namjerni ispravak brojke u `verify_rewrite` blokira jednako kao tiha izmjena | — | ✅ | 4361 |
 | 172 | Orkestrator u fazi pisanja zove skill koji ne postoji od v1.9 | `glas_fpzg.md`, `pisanje.md`, `mapa.md` | — | 4379 |
 | 173 | Vjerodajnica u URL-u prolazila je contract jer je provjera gledala samo router | `runtime.md`, `router_contract.py`, `SKILL.md` | — | 4403 |
+| 174 | Hash fakultetskog bundlea hashirao je krajeve redaka, pa je registry na Windowsu bio „s… | `test_stari_kvarovi.py`, `efzg.json` | ✅ | 4430 |
+| 175 | `os.path.relpath` preko dva diska rušio je `check_rules.py` samo radi ispisa puta | `check_rules.py`, `test_stari_kvarovi.py` | ✅ | 4452 |
+| 176 | Test servisa čitao je JSON kodnom stranicom sustava i ostavljao datoteku otvorenom | `test_service.py` | ✅ | 4469 |
+| 177 | `router_contract.py` je ispisivao put kartice s backslashom, pa je R72 padao samo na Wi… | `router_contract.py`, `SKILL.md`, `index.json` | ✅ | 4486 |
 
 ## Unosi bez ograde
 

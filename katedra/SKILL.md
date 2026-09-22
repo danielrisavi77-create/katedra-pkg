@@ -1,6 +1,6 @@
 ---
 name: katedra
-description: "Meta-skill za UČENJE iz sesija: kvar, lažni nalaz ili autorova izmjena postaje pravilo, alat ili zakrpa za katedra-lite, rad-audit i rad-docx. Aktiviraj na 'zapiši kvar', 'napravi zakrpu', 'alat je krivo javio', 'nauči iz ove sesije', 'zamke.md'. Ne za plan, pisanje, audit, obranu ili predaju (to je katedra-lite). v2.4.0."
+description: "Meta-skill za UČENJE iz sesija: kvar, lažni nalaz ili autorova izmjena postaje pravilo, alat ili zakrpa za katedra-lite, rad-audit i rad-docx. Aktiviraj na 'zapiši kvar', 'napravi zakrpu', 'alat je krivo javio', 'nauči iz ove sesije', 'zamke.md'. Ne za plan, pisanje, audit, obranu ili predaju (to je katedra-lite). v2.4.1."
 ---
 
 # KATEDRA — skill za učenje
