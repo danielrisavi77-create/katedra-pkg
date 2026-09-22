@@ -1783,7 +1783,7 @@ def ispis(iz, rad, tip):
     print(f"PRAVILA FAKULTETA — {p.get('naziv', p.get('slug', '?'))}")
     print("=" * 78)
     print(f"rad: {rad}")
-    print(f"tip rada: {tip} · profil: {os.path.relpath(iz.put_profila)}")
+    print(f"tip rada: {tip} · profil: {prikaz_puta(iz.put_profila)}")
     print(f"izvor pravila: {iz.izvor}")
     if iz.advisory:
         print()
@@ -1838,6 +1838,16 @@ def ispis(iz, rad, tip):
 
 
 # ---------------------------------------------------------------------- main
+
+def prikaz_puta(put):
+    """Put za ispis: relativno na cwd kad je moguće. Kvar 173: na Windowsu `relpath`
+    između dva diska (repo na D:, temp na C:) baca ValueError i ruši cijeli alat —
+    a ispis puta nije razlog da provjera ne proradi."""
+    try:
+        return os.path.relpath(put)
+    except ValueError:
+        return os.path.abspath(put)
+
 
 def main():
     ap = argparse.ArgumentParser(

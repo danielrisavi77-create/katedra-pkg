@@ -541,7 +541,10 @@ def faculty_bundle_sha256(faculty_dir: str | Path, slug: str) -> str:
         rel = _rel(path, root)
         h.update(rel.encode("utf-8"))
         h.update(b"\0")
-        h.update(path.read_bytes())
+        # Kvar 172: s core.autocrlf=true (Windows, i Danielov stroj) checkout nosi CRLF,
+        # pa je isti profil davao drugi hash i registry javljao „stale” samo na Windowsu.
+        # Hashira se sadržaj, ne kraj retka.
+        h.update(path.read_bytes().replace(b"\r\n", b"\n"))
         h.update(b"\0")
     return h.hexdigest()
 

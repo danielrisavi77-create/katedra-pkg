@@ -12,6 +12,14 @@ PLAN = {"thesis": "Obvezno glasanje povećava formalnu, ali ne i percipiranu leg
 HINT = {"label": "FPZG diplomski", "status": "verified", "citation": "fpzg", "wordMin": 10000, "wordMax": 15000, "minReferences": 15, "sections": ["sažetak", "uvod", "zaključak", "literatura"]}
 
 
+def _json(put):
+    """Kvar 174: `json.load(open(put))` čita kodnom stranicom sustava (cp1252 na Windows
+    runneru → UnicodeDecodeError) i ostavlja datoteku otvorenu, pa brisanje temp mape
+    pada s WinError 32. Uvijek utf-8, uvijek zatvoreno."""
+    with open(put, encoding="utf-8") as f:
+        return json.load(f)
+
+
 def test_tiptap_markdown_keeps_marks_lists_tables():
     md = tiptap_to_markdown(FIX["sections"][1]["content"])
     assert "**institucionalna mjera**" in md
@@ -28,14 +36,14 @@ def test_write_katedra_creates_state_profile_chapters():
         out = write_katedra(FIX, root, HINT, SCRIPTS, mod="pisanje", plan_approved=True, plan=PLAN)
         kat = os.path.join(root, ".katedra")
         assert os.path.exists(os.path.join(kat, "stanje.json"))
-        st = json.load(open(os.path.join(kat, "stanje.json")))
+        st = _json(os.path.join(kat, "stanje.json"))
         assert st["mod"] == "pisanje" and st["plan_odobren"] is True and st["tip"] == "diplomski" and st["citatni_stil"] == "autor-godina" and st["fakultet_admisija"] == "nije-admitiran"
-        prof = json.load(open(os.path.join(kat, "resolved_profile.json")))
+        prof = _json(os.path.join(kat, "resolved_profile.json"))
         assert prof["status"] == "nepotvrdeno" and prof["provenance"]["default"] == "katedra-pack"
         files = sorted(os.listdir(os.path.join(kat, "poglavlja")))
         assert files == ["01-sazetak.md", "02-uvod.md", "03-teorijski-okvir.md", "04-zakljucak.md", "literatura.md"]
         assert open(os.path.join(kat, "poglavlja", "02-uvod.md"), encoding="utf-8").read().startswith("# Uvod\n")
-        izv = json.load(open(os.path.join(kat, "izvori.json")))
+        izv = _json(os.path.join(kat, "izvori.json"))
         assert izv["izvori"][0]["doi"] == "10.2307/2952255" and izv["izvori"][0]["verification"]["status"] == "verified"
         assert len(out["poglavlja"]) == 5
     finally:

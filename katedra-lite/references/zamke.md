@@ -4375,3 +4375,59 @@ Popravak: `--namjerno TOKEN=RAZLOG` (ponovljivo, za brojke i citatne ključeve).
 token ne blokira i ispisuje se s razlogom. Nenavedeni i dalje blokira. Token bez razloga se
 odbija. Na stvarnom paru: 20 brojki i 4 citatna ključa navedena s razlogom, preostalih 7
 ostaje ✗ dok se ne navedu. Ograda: K5 (3 provjere).
+
+---
+
+## 172. Hash fakultetskog bundlea hashirao je krajeve redaka, pa je registry na Windowsu bio „stale”
+
+Na Linux CI-ju `profile_registry.py --check` prolazi, na Windows runneru i na Danielovu računalu
+(`core.autocrlf=true`) pada — nad istim commitom:
+
+```
+$ profile_registry.py --check                (Windows, autocrlf=true, main 434c67a)
+❌ admission bundle hash stale za efzg: pokreni faculty_scale_gate.py ponovno …   [2]
+efzg: katalog b41a5ea63a · sirovi bajtovi 665dd49874 · LF-normalizirano b41a5ea63a
+fpzg: katalog ad9c88d913 · sirovi bajtovi 0b73cc7235 · LF-normalizirano ad9c88d913
+```
+
+`faculty_bundle_sha256` je hashirao `read_bytes()`; checkout s CRLF-om daje druge bajtove za isti
+profil. Obitelj kvara 148 (`relative_to` s backslashom): artefakt ovisi o OS-u generiranja.
+
+Popravak: hashira se sadržaj s `\r\n` → `\n`. Na Linuxu se hash ne mijenja (nema CR-a), pa
+postojeći katalog vrijedi bez ponovne admisije.
+
+Ograda: `test_stari_kvarovi.py` K172 — kopija `references/fakulteti`, `efzg.json` prepisan s CRLF-om daje isti hash; stvarna izmjena sadržaja daje drugi. Mutacija: `read_bytes()` bez normalizacije obara prvu provjeru. Windows CI job (sada obavezan) vrti `profile_registry.py --check` kao skupinu.
+
+---
+
+## 173. `os.path.relpath` preko dva diska rušio je `check_rules.py` samo radi ispisa puta
+
+Windows runner drži repo na `D:`, a test profil u temp mapi na `C:`. Redak koji samo ispisuje
+put profila rušio je cijelu provjeru pravila:
+
+```
+K28: letter — alat je napisao JSON (nije pukao)   ✗ FAIL
+  File "<frozen ntpath>", line 796, in relpath
+ValueError: path is on mount 'C:', start on mount 'D:'
+```
+
+Popravak: `prikaz_puta()` — relativno kad je moguće, inače apsolutni put.
+
+Ograda: `test_stari_kvarovi.py` K173 — `os.path.relpath` zamijenjen funkcijom koja baca ValueError kao na dva diska; `prikaz_puta` vraća apsolutni put. Mutacija: `except ValueError` uklonjen → test pada s ValueError.
+
+---
+
+## 174. Test servisa čitao je JSON kodnom stranicom sustava i ostavljao datoteku otvorenom
+
+`service/tests/test_service.py` je radio `json.load(open(put))`: na Windows runneru to čita
+cp1252, a nezatvorena datoteka zaključa temp mapu, pa pada i čišćenje:
+
+```
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x8d in position 679
+PermissionError: [WinError 32] … '…\\.katedra\\stanje.json'
+```
+
+Obitelj kvara 159 (encoding), ovaj put u `open()`, ne u `subprocess`. Popravak: `_json()` s
+`encoding="utf-8"` i `with`.
+
+Ograda: sam `test_write_katedra_creates_state_profile_chapters` na Windows CI jobu, koji je od ovog commita obavezan (`continue-on-error` uklonjen).

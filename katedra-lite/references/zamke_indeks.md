@@ -4,7 +4,7 @@
 > **Ne uređuj ručno.** Nakon izmjene kataloga: `indeks_zamki.py --upisi`.
 > `bin/testovi.sh` pada ako je ovaj indeks zastario.
 
-Unosa: **114** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom: **102** · ograda ne pripada (deklarirano): **17** · **duguje ogradu: 0**
+Unosa: **117** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom: **105** · ograda ne pripada (deklarirano): **17** · **duguje ogradu: 0**
 
 Traži bez učitavanja cijelog kataloga:
 
@@ -134,3 +134,6 @@ sed -n '844,880p' katedra-lite/references/zamke.md   # unos po retku
 | 169 | Gomilanje ograda nije se mjerilo, pa je dorada „povezanost, a ne uzročnost" zvučala obr… | — | ✅ | 4310 |
 | 170 | `revizije.py toc` na Wordovu sadržaju tiho ne radi ništa, a JMBAG čita kao redak sadrža… | — | ✅ | 4330 |
 | 171 | Namjerni ispravak brojke u `verify_rewrite` blokira jednako kao tiha izmjena | — | ✅ | 4361 |
+| 172 | Hash fakultetskog bundlea hashirao je krajeve redaka, pa je registry na Windowsu bio „s… | `test_stari_kvarovi.py`, `efzg.json` | ✅ | 4381 |
+| 173 | `os.path.relpath` preko dva diska rušio je `check_rules.py` samo radi ispisa puta | `check_rules.py`, `test_stari_kvarovi.py` | ✅ | 4403 |
+| 174 | Test servisa čitao je JSON kodnom stranicom sustava i ostavljao datoteku otvorenom | `test_service.py` | ✅ | 4420 |
