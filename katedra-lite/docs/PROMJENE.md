@@ -2133,3 +2133,5 @@ review-integrity Delivery A: 32/32 paketne skupine te 24/24 live routing pitanja
 na istom headu. U međuvremenu je main napredovao na 2.4.0 i već sadrži te
 promjene zajedno s kasnijim poboljšanjima. Ova bilješka pokreće završnu
 exact-head verifikaciju aktualnog 2.4.0 stabla; nije nova funkcionalnost.
+
+- Windows verifikacija: normaliziran prikaz putanja, UTF-8 čitanje servisnih fixturea i CRLF-stabilan faculty admission hash; live routing opis izričito pokriva provjeru .docx metapodataka prije slanja mentorici.
