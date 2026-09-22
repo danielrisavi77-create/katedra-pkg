@@ -131,11 +131,24 @@ def ime_s_naslovnice(put: str) -> str:
         m = re.match(r"(?i)^(?:student(?:ica)?|autor(?:ica)?)\s*:\s*(.+)$", r)
         if m:
             return m.group(1).strip()
-    # inače: prvi redak od dvije do tri riječi s velikim početnim slovima
-    for r in redci[:20]:
+    # inače: prvi redak od dvije do tri riječi s velikim početnim slovima.
+    # Kvar 24 (rad-audit): naslovnica veleučilišta glasi „VELEUČILIŠTE /
+    # s pravom javnosti / BALTAZAR ZAPREŠIĆ", pa je ime ustanove uzimano kao
+    # ime autora i davalo grešku „metapodatak i rad ne govore isto". Redci do
+    # tri mjesta iza naziva vrste ustanove pripadaju imenu ustanove.
+    vrsta_ustanove = re.compile(r"(?i)sveučilište|veleučilište|visoka\s+škola|akademija|"
+                                r"s\s+pravom\s+javnosti")
+    ostalo = re.compile(r"(?i)fakultet|studij|zagreb|rijeka|osijek|split|zaprešić")
+    zadnja_ustanova = -10
+    for i, r in enumerate(redci[:20]):
+        if vrsta_ustanove.search(r):
+            zadnja_ustanova = i
+            continue
+        if ostalo.search(r):
+            continue
         rijeci = r.split()
         if 2 <= len(rijeci) <= 3 and all(w[:1].isupper() for w in rijeci) \
-                and not re.search(r"(?i)sveučilište|fakultet|studij|zagreb|rijeka|osijek|split", r):
+                and i - zadnja_ustanova > 2:
             return r
     return ""
 

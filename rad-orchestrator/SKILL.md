@@ -1,6 +1,6 @@
 ---
 name: rad-orchestrator
-description: "Orkestrator faza rada (plan → pisanje → audit → predaja) koji kroz Workflow tool pokreće STVARNE katedra-lite skripte i satelite (rad-audit, rad-docx, fpzg-diplomski, replikacija-pspp): paralelni multi-lens audit s lens budgetom, bidirekcionalni povratak na raniju fazu, zaustavljanje s pitanjima za autora umjesto beskonačne petlje, mod rad_docx za gotov tuđi rad. Aktiviraj na 'pokreni orkestrator', 'provuci rad kroz sve faze', 'audit + predaja u jednom', 'rad-orchestrator', ili kad korisnik želi više Katedrinih skillova po fazi. Ne aktiviraj za jedan izolirani zadatak (samo tipografija) — za to je katedra-lite izravno. (v1.3.0: tvrdi gate po gate.py izlaznom kodu; skripta živi samo u paketu, testirano na 3 fixture-a.) v2.2.0."
+description: "Orkestrator faza rada (plan → pisanje → audit → predaja) koji kroz Workflow tool pokreće STVARNE katedra-lite skripte i satelite (rad-audit, rad-docx, fpzg-diplomski, replikacija-pspp): paralelni multi-lens audit s lens budgetom, bidirekcionalni povratak na raniju fazu, zaustavljanje s pitanjima za autora umjesto beskonačne petlje, mod rad_docx za gotov tuđi rad. Aktiviraj na 'pokreni orkestrator', 'provuci rad kroz sve faze', 'audit + predaja u jednom', 'rad-orchestrator', ili kad korisnik želi više Katedrinih skillova po fazi. Ne aktiviraj za jedan izolirani zadatak (samo tipografija) — za to je katedra-lite izravno. (v1.3.0: tvrdi gate po gate.py izlaznom kodu; skripta živi samo u paketu, testirano na 3 fixture-a.) v2.3.0."
 ---
 
 # RAD-ORCHESTRATOR — više skillova po fazi, kroz stvarne skripte
@@ -102,6 +102,42 @@ prešućuje. `score`/`pokrivenost` dolaze iz `napredak.py`; score ispod pokriven
    `check_argument` i faza B rad čitaju kao rad bez citata. `provjeri_vancouver.py` ostaje kao
    samostalna kontrola.
 7. **Paket se ne mijenja iz workflowa.** Agent koji nađe kvar u katedra-lite/satelitu piše `.katedra/nalazi_paketa.md` (simptom, uzrok, predloženi diff, dokaz prije–poslije) i nastavlja u smanjenom opsegu; zakrpa ide kroz `katedra` (učenje) uz reviziju. U testnom runu 2. 9. 2026. sinteza je popravila `build_docx.py` izravno u paketu — popravak je bio dobar (SEQ natpisi, popis tablica, docDefaults), ali je prošao bez pregleda i bez dokaza u katalogu; zato ovo pravilo.
+
+8. **Primjedbe mentora iz maila ulaze u trag prije prvog popravka.** `extract_comments.py
+   mail.txt --autor "…" --out .katedra/zamjerke.json` (katedra-lite kvar 168). Primjedba koja
+   nije u `zamjerke.json` ne postoji za `zamjerke.py provjeri`, pa se na kraju ne može dokazati
+   da je riješena. Na kraju svaka dobiva `zamjerke.py resolve zN --status rijeseno|djelomicno
+   --napomena "gdje"`. Ono što traži autorovu potvrdu (npr. koje je baze stvarno pretraživao)
+   ostaje `djelomicno`, ne `rijeseno`.
+9. **Mentorov zahtjev JEST odluka autora.** U `rad_docx` modu sadržajni nalazi su `treba_autora`.
+   Kad korisnik izrijekom traži da se mentorove primjedbe provedu, primjedbe su `odluke_autora`
+   i provode se na kopiji. Svaka namjerno promijenjena brojka ili citatni ključ navodi se u
+   `verify_rewrite.py --namjerno TOKEN=RAZLOG` (katedra-lite kvar 171). Crveno koje se
+   „zanemari" nije provjera.
+10. **Nakon svake izmjene koja pomiče prijelom: `revizije.py toc rad_vN.docx rad_vN.docx`.**
+    Zatim provjeri popis tablica i grafikona prema renderu. Do kvara 170 alat je na Wordovu
+    sadržaju (w:sdt) tiho radio ništa, pa je sadržaj ostajao zastario.
+11. **Nezavisni recenzent prije isporuke.** Agent koji nije vidio nastanak verzije čita je
+    naspram mentorovih primjedbi (ZADOVOLJENO / DJELOMIČNO / NE) i traži nove probleme. U sesiji
+    22. 9. 2026. našao je ono što alati nisu: 24 „…, a ne …" (kvar 169), mehanički ubačene
+    veznike „doduše/utoliko" i ograde protiv tvrdnji koje u radu nitko ne iznosi. Vlastiti
+    rad ne ocjenjuje onaj tko ga je napisao.
+
+## 1a. Kad Workflow alata nema
+
+Neke sesije (npr. cloud sesija bez Workflow alata) ne mogu pozvati `rad-orchestrator.js`.
+Tada glavna sesija sama vodi iste faze **istim skriptama i istim redoslijedom**:
+
+| Faza | Naredbe |
+|---|---|
+| Setup | `stanje_init.py` (za fakultet izvan registryja dovoljno je `--fakultet-izvan-registryja`), `diff_versions.py --snapshot`, `extract_comments.py` (docx ili mail) |
+| Audit | `gate.py --faza audit` → paralelne leće kao subagenti (brojke prema izvornicima, APA/literatura) → `nalazi_trag.py zabiljezi` |
+| Popravci | na kopiji; `verify_rewrite.py --namjerno …` → `revizije.py redline` → `revizije.py toc` |
+| Provjera | `gate.py` ponovno, `check_ai_style.py` (kohezija i ograde), rad-audit `generate_report.py`, nezavisni recenzent (pravilo 11), `zamjerke.py provjeri` |
+
+Razlika prema Workflowu se mora reći korisniku: nema lens budgeta ni automatskog rollbacka,
+pa glavna sesija sama pazi na pravila 2 i 5. Kvar u paketu koji pritom nađe i dalje ide u
+`.katedra/nalazi_paketa.md`, pa kroz `katedra` (pravilo 7).
 
 ## 4. Što je gdje
 

@@ -1,3 +1,13 @@
+# v2.0.1 — četiri lažna nalaza s jednog urednog završnog rada (kvarovi 21–24)
+
+Rad: Veleučilište Baltazar Zaprešić, APA, 31 referenca. Audit je javio **kritično 1, srednje 15**. Ručna provjera: kritični nalaz i 4 srednja bili su lažni. Crveno je upravo tamo gdje je rad ispravan.
+
+* **Kvar 21 — posredni citat.** `(izvorno Salovey i Mayer, 1990, citirano prema Takšić i sur., 2006, str. 731)` davao je ključ `('izvorno', '1990')` i jedini kritični nalaz. Ključ je sada sekundarni izvor, kako traži APA. R42.
+* **Kvar 22 — popis literature kao „zbroj kategorija".** `16(1), 95–112` → „ukupno 112 = 16 + 1 + 95" (3 nalaza). `main` reže tekst na naslovu literature, a `zbroj_kategorija` uklanja svezak(broj) i raspone. Stvaran zbroj i dalje se nalazi. R43.
+* **Kvar 23 — p i opis iz različitih surečenica.** „(r = 0,384; p = 0,002), dok ostale dimenzije nisu bile značajne" bio je blokirajuće proturječje. Opis se sada čita iz surečenice u kojoj p stoji, a stvarno proturječje i dalje pada (2 negativne kontrole). R44.
+* **Kvar 24 — ime ustanove kao ime autora.** „BALTAZAR ZAPREŠIĆ" (redak ispod „VELEUČILIŠTE / s pravom javnosti") uziman je s naslovnice, pa je ispravno upisan `dc:creator` postao „ne smije otići s radom". R45.
+* **Provjereno.** Suite baseline 189/195 → 195/195. `engine_contract.json` je osvježen (`0.0.0-undeclared+2bf38d3a`).
+
 # v1.9.5 — kratica institucije kao alias (kvar 12)
 
 * **Zašto.** `extract_biblio_keys` svodi redak popisa na (prvi pojam, godina). Institucionalni autor nosi oba oblika — pun naziv i kraticu — a koji je „prvi pojam" ovisi o redu zapisa. `Hrvatska narodna banka (HNB) (2023)` daje `hrvatska`, citat `(HNB, 2023)` daje `hnb`, pa isti izvor ispada **istodobno siroče i citat bez reference**. Mjereno na dva institucionalna izvora: **četiri nalaza, nijedan stvaran**, izlaz 1. Obrnuti zapis (`HNB (Hrvatska narodna banka)`) prolazio je slučajno jer je ondje kratica prva — zato je u `POMIRENJE.md` ostao zapisan samo kao sumnja, i to u suprotnom smjeru od onoga u kojem kvar doista postoji.

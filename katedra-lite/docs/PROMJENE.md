@@ -1,3 +1,15 @@
+# v2.3.0 — učenje sa završnog rada (Baltazar Zaprešić, primjedbe mentorice mailom, 22. 9. 2026.)
+
+Patch `fac0ee5` napravljen je na 2.0.0/2.0.1; spojen na 2.2.0. Brojevi prenumerirani jer su 161–166 (katedra-lite) i 13–20 (rad-audit) već zauzeti: katedra-lite 161–165 → **167–171**, rad-audit 13–16 → **21–24**. Test-skupine R42–R45 zadržane (na 2.2.0 zadnja je R41).
+
+Sesija je rad provela kroz rad-orchestrator bez Workflow alata: 12 primjedbi → 5 verzija, audit, nezavisni recenzent. Svaki unos ispod je nešto što je paket napravio krivo ili nije imao, izmjereno na tom radu. Ograda za sve: `scripts/tests/test_ucenje_2026_09_22.py`, u `bin/testovi.sh`, **baseline 3/11 → 14/14**.
+
+* **Kvar 167 — `stanje_init` za fakultet izvan registryja.** Orkestrator šalje samo `--fakultet-izvan-registryja`, init je tražio i `--fakultet`, pa je Setup svakog takvog rada padao (izlaz 2). Slug se sada izvodi, a `--ogranicenje` ostaje obavezno.
+* **Kvar 168 — primjedbe iz maila.** `extract_comments.py mail.txt --autor "…"` (ili `--iz-teksta`) čita numerirane stavke. Fixture je stvaran mail s 12 primjedbi: dobiva se 12 zamjerki, citirani mail ispod ne ulazi, a datum „22. ruj" nije stavka. Prije toga primjedbe su se morale krivotvoriti kao Word-komentari.
+* **Kvar 169 — ograde.** `check_ai_style` mjeri `ograde_na_1000` (prag 4,0). Na radu: izvornik 2,0, dorada 5,5 (tada bez nalaza, sada ⚠), prorijeđeno 2,9. Savjet za nisku koheziju izrijekom zabranjuje „doduše/utoliko" kao punilo.
+* **Kvar 170 — `revizije.py toc`.** Wordov sadržaj u `w:sdt` bio je nevidljiv: od 39 redaka obrađeno 0, a JMBAG s naslovnice čitan je kao redak sadržaja, uz izlaz ✅. Sada: XML razina (sdt, hyperlink), mijenja se samo zadnji `w:t`, broj stranice ima najviše 4 znamenke, stilovi TOC imaju prednost, a broj se čita iz podnožja. Dokaz: 35 brojeva namjerno pokvareno na 99. Staro: 35 ostaje. Novo: 36/36 točno.
+* **Kvar 171 — `verify_rewrite --namjerno TOKEN=RAZLOG`.** Ispravak brojke po mentoru više ne mora biti crveno koje se ignorira. Navedeno i obrazloženo ne blokira, nenavedeno blokira, a token bez razloga se odbija.
+
 # v2.2.0 — tanki routeri za cijeli paket, drift svih kartica, dva skilla dobila testove (22. 9. 2026.)
 
 * **rad-orchestrator 46 321 → 10 122 znaka.** Uklonjen „Dodatak A" (36 KB JS-a, v1.2.1, dok je paket na v1.3.0). Bez skripte orkestrator staje i traži paket. Kvar 166.

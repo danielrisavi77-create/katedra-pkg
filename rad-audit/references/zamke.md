@@ -511,3 +511,94 @@ ne verifikacija izvora.
 
 Ograda: `scripts/tests/test_zakrpa_release.py`, sintetički pozitivni i negativni
 slučajevi. Rezultati se odnose na ove fixturee, ne na neovisno provjeren stvarni rad.
+
+---
+
+## 21. Posredni citat „izvorno X, citirano prema Y" daje ključ „izvorno", pa uredan APA navod postaje kritičan nalaz
+
+`parse_ay_segment` skida oznake ispred citata („prema:", „usp.", „izvor:"), ali ne i oznaku
+posrednog citiranja. Segment se zatim reže na prvom `, GODINA`, pa prvi pojam ispada riječ
+„izvorno". Na završnom radu (Veleučilište Baltazar Zaprešić, APA, 22. 9. 2026.) dva posredna
+navoda, oba ispravna po APA-i:
+
+```
+(izvorno Salovey i Mayer, 1990, citirano prema Takšić, Mohorić i Munjas, 2006, str. 731)
+(izvorno Boyne, 2002, citirano prema Lopez-Zafra i sur., 2025, str. 495)
+
+🔴 Kritično (1): ⚠ CITAT BEZ REFERENCE: [('izvorno', '1990'), ('izvorno', '2002')]
+```
+
+Jedini kritični nalaz cijelog audita bio je lažan. Po APA-i u popis ide samo sekundarni
+izvor, pa je on jedini ključ koji se smije provjeravati.
+
+Popravak: ako segment nosi „citirano / cit. / navedeno / preuzeto prema|u|iz", ključ se
+uzima iz dijela iza te oznake; vodeće „izvorno/originalno" se skida. Poslije: ključevi
+`('takšić', '2006')` i `('lopez-zafra', '2025')`, oba u popisu, 0 kritičnih. Obični citat
+(`Ivić i Perić, 2020a`) nepromijenjen. Testovi: skupina R42.
+
+## 22. Svezak(broj) i raspon stranica iz popisa literature čitaju se kao „zbroj kategorija"
+
+`zbroj_kategorija` traži rečenicu u kojoj najveći broj jednak zbroju ostalih. `main` mu je
+predavao cijeli dokument, uključujući popis literature, a bibliografski zapis je upravo
+takav niz brojeva:
+
+```
+Suvremena psihologija, 16(1), 95–112.          → ⚠ ukupno 112 = 16 + 1 + 95
+ET²eR – Ekonomija …, 5(3), 26–34.              → ⚠ ukupno 34 = 5 + 3 + 26
+Int. J. of Organizational Leadership, 14(2), 492–508. → ⚠ ukupno 508 = 14 + 2 + 492
+```
+
+Tri „srednja" nalaza na istom radu (13), nijedan u tekstu rada. Zbroj se slaže po
+konstrukciji: stranica kraja minus početka nije broj, ali 16 + 1 + 95 = 112 jest slučajnost
+koja se ponavlja kod svakog zapisa s kratkim sveskom.
+
+Popravak u dva sloja: `main` reže tekst na naslovu popisa literature (`LIT_HEADING_RE`), a
+`zbroj_kategorija` prije brojanja uklanja `svezak(broj)` i raspone `a–b`. Drugi sloj štiti i
+bibliografske podatke usred teksta. Stvaran zbroj („od ukupno 161 optuženika, 70, 50 i 41
+osoba") i dalje se nalazi. Testovi: skupina R43.
+
+## 23. Opis značajnosti čita se iz cijele rečenice, pa druga surečenica „proturječi" p-vrijednosti prve
+
+`check_statistika` je za svaku rečenicu jednom računao „tvrdi značajno / tvrdi neznačajno" i
+tu presudu primjenjivao na svaki p u rečenici. U hrvatskoj prozi opis rezultata i opis
+kontrasta redovito stoje u istoj rečenici:
+
+```
+… pozitivnu korelaciju (r = 0,384; p = 0,002), dok ostale dimenzije nisu bile
+statistički značajne.
+   ⚠ p = 0,002 opisano kao „neznačajno" uz prag 0.1                  [blokira]
+
+… značajan učinak (p = 0,02), dok razlika između skupina nije dosegnula razinu
+statističke značajnosti (p = 0,06).
+   ⚠ p = 0,02 opisano kao „neznačajno" uz prag 0.05                  [blokira]
+```
+
+Oba puta blokirajući korak gatea pao je na urednoj rečenici, a zaobilaženje je bilo
+lomljenje rečenice na dvije, tj. stil se mijenjao da se umiri alat.
+
+Popravak: rečenica se dijeli na surečenice (zarez + dok/a/ali/no/međutim/nego/pri čemu,
+točka-zarez izvan zagrada; `(r = 0,384; p = 0,002)` ostaje jedan navod), a opis se čita iz
+surečenice u kojoj p stoji. Rečenica s jednom surečenicom ponaša se kao prije, pa stvarno
+proturječje („značajna (p = 0,32)", „nije bila značajna (p = 0,001), dok …") i dalje pada.
+Testovi: skupina R44.
+
+## 24. Ime ustanove s naslovnice uzima se kao ime autora, pa uredan dc:creator postaje greška
+
+`ime_s_naslovnice` bez oznake „Student:" uzima prvi redak od dvije-tri riječi s velikim
+slovima, a isključuje samo retke sa „sveučilište|fakultet|studij" i četiri grada. Naslovnica
+veleučilišta ime ustanove piše u tri retka:
+
+```
+VELEUČILIŠTE / s pravom javnosti / BALTAZAR ZAPREŠIĆ / … / IVA IVIĆ
+naslovnica       BALTAZAR ZAPREŠIĆ
+⚠ PODACI KOJI NE SMIJU OTIĆI S RADOM (1):
+   • dc:creator = „Iva Ivić", a naslovnica navodi „BALTAZAR ZAPREŠIĆ"
+```
+
+Nalaz se pojavio tek NAKON što je autorica ispravno upisana u metapodatke, dakle alat je
+kaznio popravak.
+
+Popravak: redak koji imenuje vrstu ustanove (sveučilište, veleučilište, visoka škola,
+akademija, „s pravom javnosti") otvara prozor od dva retka koji pripada imenu ustanove;
+retci sa studijem, fakultetom ili gradom preskaču se pojedinačno. Poslije: `naslovnica  IVA
+IVIĆ`, 0 grešaka. Testovi: skupina R45.

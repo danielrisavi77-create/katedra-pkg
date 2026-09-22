@@ -4,7 +4,7 @@
 > **Ne uređuj ručno.** Nakon izmjene kataloga: `indeks_zamki.py --upisi`.
 > `bin/testovi.sh` pada ako je ovaj indeks zastario.
 
-Unosa: **109** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom: **97** · ograda ne pripada (deklarirano): **17** · **duguje ogradu: 0**
+Unosa: **114** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom: **102** · ograda ne pripada (deklarirano): **17** · **duguje ogradu: 0**
 
 Traži bez učitavanja cijelog kataloga:
 
@@ -129,3 +129,8 @@ sed -n '844,880p' katedra-lite/references/zamke.md   # unos po retku
 | 164 | Neizmjereno lomljenje tablica javljalo se kao „✅ nema nalaza" | `provjeri_prikaze.py`, `rad.docx`, `test_fpzg.py` | ✅ | 4225 |
 | 165 | Drift kartica mjerio se samo za katedra-lite, pa je pet kartica zaostalo neprimijećeno | `drift.py`, `inventar_tvrdnji.py`, `runtime.md` | ✅ | 4239 |
 | 166 | Rezerva u rad-orchestrator routeru bila je starija od skripte koju je čuvala | `SKILL.md`, `gate.py`, `router_granice.py` | ✅ | 4254 |
+| 167 | Fakultet izvan registryja ruši pun init jer se isti slug traži dvaput | `test_ucenje_2026_09_22.py` | ✅ | 4271 |
+| 168 | Primjedbe mentora poslane mailom nisu imale ulaz u zamjerke.json | `extract_comments.py`, `mentor_komentari.docx` | ✅ | 4289 |
+| 169 | Gomilanje ograda nije se mjerilo, pa je dorada „povezanost, a ne uzročnost" zvučala obr… | — | ✅ | 4310 |
+| 170 | `revizije.py toc` na Wordovu sadržaju tiho ne radi ništa, a JMBAG čita kao redak sadrža… | — | ✅ | 4330 |
+| 171 | Namjerni ispravak brojke u `verify_rewrite` blokira jednako kao tiha izmjena | — | ✅ | 4361 |

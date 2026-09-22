@@ -41,7 +41,25 @@ PRAGOVI = {
     "udio_kratkih_max": 0.15,              # <=10 riječi
     "isti_pocetak_max": 3,                 # po poglavlju
     "isti_glagol_atribucije_max": 4,       # po poglavlju
+    # Kvar (katedra-lite, 22. 9. 2026.): mentorica je tražila „povezanost, ne
+    # utjecaj", a dorada je u svaki odlomak dodala ogradu. Nezavisni recenzent
+    # izbrojao je 24 „…, a ne …" i 12 „ne dokazuje / nije dokaz" (5,5 na 1000
+    # riječi); tekst je zvučao obrambeno. Izvornik prije dorade: 2,0; nakon
+    # prorjeđivanja 2,9. Nijedan dotadašnji prag to nije vidio.
+    "ograde_na_1000_max": 4.0,
 }
+
+# Ograde koje se u preglednom radu gomilaju kad se dosljednost „povezanost ≠ uzročnost"
+# provodi rečenicu po rečenicu umjesto jednom u metodologiji i jednom u zaključku.
+OGRADE = [
+    r",\s+a\s+ne\s+",
+    r"\bne\s+dokazuj\w*",
+    r"\bni(?:je|su)\s+dokaz\w*",
+    r"\bne\s+jamči\b",
+    r"\bne\s+omogućuj\w*\s+zaključ\w*",
+    r"\bnije\s+opravdano\b",
+    r"\bne\s+može\s+se\s+zaključiti\b",
+]
 
 VEZNICI = [
     "jer", "budući da", "s obzirom na to da", "zbog toga", "zbog čega", "stoga",
@@ -161,6 +179,7 @@ def analiza(odlomci, naziv="cijeli rad"):
     pocetci = Counter(" ".join(H.rijeci(r)[:2]).lower() for r in rec if len(H.rijeci(r)) >= 2)
     glagoli = {g: izbroji(r"\b" + g + r"\b", tekst) for g in GLAGOLI_ATRIBUCIJE}
     glagoli = {k: v for k, v in glagoli.items() if v}
+    ograde = sum(len(re.findall(u, tekst, re.IGNORECASE)) for u in OGRADE)
     fraze = {k: izbroji(u, tekst) for k, u in FRAZE.items()}
     fraze = {k: v for k, v in fraze.items() if v}
 
@@ -183,6 +202,8 @@ def analiza(odlomci, naziv="cijeli rad"):
         "pocetci": dict(pocetci.most_common(8)),
         "glagoli": dict(sorted(glagoli.items(), key=lambda x: -x[1])),
         "fraze": fraze,
+        "ograde": ograde,
+        "ograde_na_1000": round(ograde / rijeci_uk * 1000, 1) if rijeci_uk else 0,
     }
 
 
@@ -193,10 +214,18 @@ def nalazi(a):
     if a["kohezija_na_1000"] < lo:
         out.append(("x", f"kohezija {a['kohezija_na_1000']}/1000 (prag {lo})",
                     "Rečenice stoje kao nepovezane tvrdnje. Korak 2 pipelinea: poveži "
-                    "uzročno i suprotno, ne dodavanjem 'Nadalje' nego stvarnim vezama."))
+                    "uzročno i suprotno, ne dodavanjem 'Nadalje' nego stvarnim vezama. "
+                    "Ne gurati prag ubacivanjem 'doduše', 'utoliko', 'nasuprot tome' ondje "
+                    "gdje odnos nije dopusni ni suprotni: recenzent to čita kao strojni šav."))
     elif a["kohezija_na_1000"] > hi:
         out.append(("!", f"kohezija {a['kohezija_na_1000']}/1000 (gornji prag {hi})",
                     "Previše veznika zna značiti i predugačke rečenice — provjeri medijan."))
+    if a.get("ograde_na_1000", 0) > PRAGOVI["ograde_na_1000_max"]:
+        out.append(("!", f"ograde {a['ograde']}× ({a['ograde_na_1000']}/1000, prag "
+                         f"{PRAGOVI['ograde_na_1000_max']})",
+                    "Gotovo svaki odlomak završava odricanjem (…, a ne …; ne dokazuje). "
+                    "Ogradu reci jednom gdje nosi (metodologija, prikaz, zaključak); ostale "
+                    "briši ili pretvori u tvrdnju o nacrtu. Ne briši ograde koje traži mentor."))
     if a["razlicitih_veznika"] < PRAGOVI["razlicitih_veznika_min"]:
         out.append(("!", f"samo {a['razlicitih_veznika']} različitih veznih sredstava",
                     "Malo različitih znači mehaničke šavove. Cilj: najmanje "

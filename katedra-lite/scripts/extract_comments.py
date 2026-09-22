@@ -423,6 +423,59 @@ def iz_dokumenta(put):
     return nove, len(komentari), promjene
 
 
+def iz_teksta(put, autor="mentor"):
+    """Numerirane primjedbe iz običnog teksta (mail mentora) → isti oblik kao iz_dokumenta.
+
+    Kvar (katedra-lite, 22. 9. 2026.): mentorica je 12 primjedbi poslala u mailu,
+    ne kao komentare u .docx-u. Jedini ulaz u zamjerke.json bio je .docx, pa su
+    zamjerke morale biti krivotvorene kao Word-komentari u pomoćnom dokumentu da
+    bi `zamjerke.py provjeri` uopće znao za njih. Primjedba koja ne uđe u trag
+    je upravo „komentar koji se spomene u intakeu pa zaboravi" (intake 0.7).
+
+    Prepoznaje stavke „1. …", „2) …" na početku retka; stavka traje do sljedeće
+    stavke, do citiranog retka („>") ili do potpisa/zaglavlja prosljeđenog maila.
+    """
+    try:
+        with open(put, encoding="utf-8", errors="replace") as f:
+            tekst = f.read()
+    except OSError as e:
+        print(f"❌ {put} se ne može pročitati: {e}", file=sys.stderr)
+        return None
+    kraj = re.compile(r"(?im)^\s*(?:--\s*$|>|s\s+poštovanjem|srdačan\s+pozdrav|lp\b|"
+                      r"(?:pet|čet|sri|uto|pon|sub|ned)\w*,\s+\d|on\s+\w+,.*wrote:|"
+                      r"-{3,}\s*forwarded|from:|šalje:)")
+    stavka = re.compile(r"(?m)^[ \t]*(\d{1,2})[.)][ \t]+(?=\S)")
+    pogoci = list(stavka.finditer(tekst))
+    nove, izvori = [], set()
+    ocekivan = 1
+    for i, m in enumerate(pogoci):
+        broj = int(m.group(1))
+        if broj != ocekivan:
+            # numeracija koja ne teče (datum „22. ruj", redni broj u rečenici) nije stavka
+            continue
+        ocekivan += 1
+        do = pogoci[i + 1].start() if i + 1 < len(pogoci) else len(tekst)
+        tijelo = tekst[m.end():do]
+        k = kraj.search(tijelo)
+        if k:
+            tijelo = tijelo[:k.start()]
+        tijelo = re.sub(r"\s+", " ", tijelo).strip()
+        if not tijelo:
+            continue
+        prva = re.split(r"(?<=[.!?])\s", tijelo, maxsplit=1)[0]
+        nove.append({
+            "autor": autor,
+            "mjesto": f"primjedba {broj} · {skrati(prva, 70)}",
+            "tekst": tijelo,
+            "tip": klasificiraj(tijelo),
+            "status": "otvoreno",
+            "rijeseno_gdje": None,
+            "izvor_id": _jedinstven(f"tekst:{os.path.basename(put)}:{broj}", izvori),
+            "_datum": "",
+        })
+    return nove, len(nove), []
+
+
 def _num(s):
     m = re.search(r"\d+", str(s))
     return int(m.group()) if m else 0
@@ -540,6 +593,10 @@ def main():
     ap.add_argument("--pregled", action="store_true", help="samo ispiši, ne piši datoteku")
     ap.add_argument("--zatvori", metavar="ID", help="zatvori zamjerku (traži --gdje)")
     ap.add_argument("--gdje", metavar="OPIS", help="gdje je i kako zamjerka riješena")
+    ap.add_argument("--iz-teksta", action="store_true",
+                    help="rad je običan tekst (mail mentora s numeriranim primjedbama), ne .docx; "
+                         "zadano za .txt/.md/.eml")
+    ap.add_argument("--autor", default="mentor", help="autor primjedbi uz --iz-teksta")
     ap.add_argument("--otvorene", metavar="ZAMJERKE.JSON", nargs="?",
                     const=_DEFAULT_STATE, help="ispiši samo otvorene zamjerke")
     a = ap.parse_args()
@@ -605,7 +662,8 @@ def main():
               file=sys.stderr)
         return 2
 
-    rez = iz_dokumenta(a.rad)
+    tekstni = a.iz_teksta or a.rad.lower().endswith((".txt", ".md", ".eml"))
+    rez = iz_teksta(a.rad, a.autor) if tekstni else iz_dokumenta(a.rad)
     if rez is None:
         return 2
     nove, broj_komentara, promjene = rez

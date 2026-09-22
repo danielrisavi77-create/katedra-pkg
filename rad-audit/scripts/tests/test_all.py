@@ -668,6 +668,56 @@ def test_manifest():
           otisci.get("crlf") == otisci.get("lf"), otisci)
 
 
+def test_r42_r45_lana():
+    """R42–R45 — lažni nalazi na završnom radu (Baltazar Zaprešić, APA, 22. 9. 2026.).
+    Svaki je uredan rad pretvarao u crveno: posredni citat, bibliografski zapis kao
+    „zbroj kategorija", ime veleučilišta kao ime autora, dvije surečenice kao jedna."""
+    import tempfile
+    from docx import Document
+    import common as C
+    import numbers_inventory as N
+    import check_statistika as S
+    import provjeri_metapodatke as M
+
+    k = C.parse_ay_segment("izvorno Salovey i Mayer, 1990, citirano prema Takšić i sur., 2006, str. 731")
+    check("R42: posredni citat daje ključ SEKUNDARNOG izvora", k == ("takšić", "2006"), k)
+    k = C.parse_ay_citation_group("izvorno Boyne, 2002, citirano prema Lopez-Zafra i sur., 2025, str. 495")
+    check("R42: 'izvorno' nikad nije prezime", k == {("lopez-zafra", "2025")}, k)
+    check("R42: obični citat nepromijenjen", C.parse_ay_segment("Ivić i Perić, 2020a") == ("ivić", "2020a"))
+
+    z = N.zbroj_kategorija(["Suvremena psihologija, 16(1), 95–112."])
+    check("R43: svezak(broj) i raspon stranica nisu zbroj kategorija", z == [], z)
+    z = N.zbroj_kategorija(["Od ukupno 161 optuženika, 70 osoba, 50 osoba i 41 osoba osuđeno je."])
+    check("R43: stvaran zbroj kategorija i dalje se nalazi", len(z) == 1, z)
+
+    def stat(txt):
+        d = Document()
+        d.add_paragraph(txt)
+        f = tempfile.mktemp(suffix=".docx")
+        d.save(f)
+        return S.analiziraj(f)["proturjecje"]
+    check("R44: 'p = 0,002 …, dok ostale nisu značajne' nije proturječje",
+          stat("Autori nalaze pozitivnu korelaciju (r = 0,384; p = 0,002), dok ostale "
+               "dimenzije nisu bile statistički značajne. Korištena je Pearsonova korelacija.") == [])
+    check("R44: dvije surečenice s dva p nisu proturječje",
+          stat("Regresija je pokazala značajan učinak (p = 0,02), dok razlika skupina nije "
+               "dosegnula razinu statističke značajnosti (p = 0,06). Test je ANOVA.") == [])
+    check("R44: stvarno proturječje i dalje pada",
+          len(stat("Razlika je bila statistički značajna (p = 0,32). Korišten je t-test.")) == 1)
+    check("R44: stvarno proturječje u prvoj surečenici i dalje pada",
+          len(stat("Razlika nije bila značajna (p = 0,001), dok je druga bila. t-test.")) == 1)
+
+    d = Document()
+    for r in ["VELEUČILIŠTE", "s pravom javnosti", "BALTAZAR ZAPREŠIĆ", "Zaprešić",
+              "Stručni prijediplomski studij", "Poslovanje i upravljanje",
+              "IVA IVIĆ", "UTJECAJ EMOCIONALNE INTELIGENCIJE", "ZAVRŠNI RAD"]:
+        d.add_paragraph(r)
+    f = tempfile.mktemp(suffix=".docx")
+    d.save(f)
+    ime = M.ime_s_naslovnice(f)
+    check("R45: ime veleučilišta nije ime autora", ime == "IVA IVIĆ", ime)
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="rad_audit_fixtures_")
     fx = os.path.join(tmp, "fixtures")
@@ -974,6 +1024,7 @@ def main():
     test_stvarni_rad()
     test_izvori()
     test_manifest()
+    test_r42_r45_lana()
 
     # --- report ---
     passed = sum(1 for _, ok, _ in RESULTS if ok)

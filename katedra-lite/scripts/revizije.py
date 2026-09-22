@@ -56,6 +56,7 @@ import json
 import os
 import shutil
 import subprocess
+import re
 import sys
 import tempfile
 import zipfile
@@ -350,16 +351,49 @@ def _render_pdf(docx_path: str, out_dir: str) -> str:
     return pdf_path
 
 
+_W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+
+
+def _svi_odlomci(doc):
+    """Svi <w:p> tijela, UKLJUČUJUĆI one u <w:sdt> (Wordov sadržaj) i u tablicama.
+
+    Kvar (katedra-lite, 22. 9. 2026.): Word sadržaj sprema u content control
+    (`w:sdt`/`docPartObj`), a `doc.paragraphs` vidi samo izravnu djecu tijela.
+    `revizije.py toc` je zato na Wordovu sadržaju tiho radio ništa i javljao ✅;
+    na završnom radu od 34 retka sadržaja obradio je 0, a „pronašao" JMBAG.
+    """
+    return list(doc.element.body.iter(_W + "p"))
+
+
+def _tekst(p_el):
+    return "".join(t.text or "" for t in p_el.iter(_W + "t"))
+
+
+def _stil(p_el):
+    ps = p_el.find(_W + "pPr/" + _W + "pStyle")
+    return ps.get(_W + "val") if ps is not None else ""
+
+
 def _find_toc_paragraphs(doc):
-    """Vrati indekse odlomaka oblika 'naslov<TAB>broj' — keširani TOC redci."""
-    out = []
-    for i, p in enumerate(doc.paragraphs):
-        t = p.text
-        if "\t" in t:
-            head, _, tail = t.rpartition("\t")
-            if head.strip() and tail.strip().isdigit():
-                out.append((i, head.strip()))
-    return out
+    """Vrati [(element, naslov, broj_w:t)] za retke oblika 'naslov<TAB>broj'.
+
+    Broj stranice ima najviše četiri znamenke: naslovnica „Naziv kolegija<TAB>
+    JMBAG" inače se čita kao redak sadržaja. Kad dokument ima stilove sadržaja
+    (TOC1…, Sadrzaj1…, „table of figures"), broje se samo ti odlomci.
+    """
+    kandidati = []
+    for p in _svi_odlomci(doc):
+        ts = list(p.iter(_W + "t"))
+        if not ts or p.find(".//" + _W + "tab") is None:
+            continue
+        zadnji = ts[-1]
+        broj = (zadnji.text or "").strip()
+        naslov = "".join(t.text or "" for t in ts[:-1]).strip()
+        if naslov and broj.isdigit() and len(broj) <= 4:
+            kandidati.append((p, naslov, zadnji, _stil(p)))
+    toc_stil = re.compile(r"(?i)^(toc|sadr[zž]aj|contents|tableoffigures|table of figures|popis)")
+    stilski = [(p, n, z) for p, n, z, st in kandidati if toc_stil.match(st or "")]
+    return stilski or [(p, n, z) for p, n, z, _ in kandidati]
 
 
 def estimate_toc(docx_path: str, out_path: str, skip_pages: int = 4) -> int:
@@ -379,53 +413,61 @@ def estimate_toc(docx_path: str, out_path: str, skip_pages: int = 4) -> int:
     with tempfile.TemporaryDirectory() as tmp:
         pdf_path = _render_pdf(docx_path, tmp)
         reader = PdfReader(pdf_path)
-        found = {}
-        for page_idx, page in enumerate(reader.pages):
-            if page_idx < skip_pages:
-                continue  # preskoči naslovnicu/Sadržaj samog sebe (lažni pogoci)
-            text = page.extract_text() or ""
-            # Traži cijelu stranicu, ne samo početak — naslov se često nalazi
-            # na sredini stranice (prethodni odlomak se nastavlja s prošle
-            # stranice pa tek onda počinje novo poglavlje).
-            for _, heading in toc_entries:
-                if heading in found:
-                    continue
-                needle = heading[: min(30, len(heading))]
-                if needle in text:
-                    found[heading] = page_idx + 1
+        stranice = [(i, (pg.extract_text() or "")) for i, pg in enumerate(reader.pages)]
 
-        missing = [h for _, h in toc_entries if h not in found]
-        if missing:
-            print(f"⚠️  {len(missing)} naslova nije pronađeno u renderiranom PDF-u "
-                  f"(provjeri odgovaraju li naslovi TOC redaka stvarnim naslovima u tekstu):")
-            for h in missing[:10]:
-                print(f"     - {h}")
+    def redci(t):
+        return [" ".join(l.split()) for l in t.splitlines() if l.strip()]
 
-        first_heading_page = found.get(toc_entries[0][1])
-        offset = (first_heading_page - 1) if first_heading_page else 0
+    def pogada(cilj, r):
+        return r == cilj or (len(cilj) > 30 and r.startswith(cilj[:30])) \
+            or (len(r) > 25 and cilj.startswith(r))
 
-        for idx, heading in toc_entries:
-            page = found.get(heading)
-            if page is None:
+    ciljevi = [(n, " ".join(n.split())) for _, n, _z in toc_entries]
+    # Stranice samog sadržaja preskaču se po sadržaju, ne po broju: fiksnih
+    # „prve 4 stranice" preskočilo je i Sažetak (4. stranica PDF-a) na radu gdje
+    # sadržaj stoji na trećoj.
+    zadnja_toc = -1
+    for idx, t in stranice[:12]:
+        rr = redci(t)
+        if sum(1 for _, c in ciljevi if any(c in r for r in rr)) >= 5:
+            zadnja_toc = idx
+    granica = zadnja_toc if zadnja_toc >= 0 else skip_pages - 1
+
+    found, tiskani = {}, {}
+    for naslov, cilj in ciljevi:
+        for idx, t in stranice:
+            if idx <= granica:
                 continue
-            printed = max(1, page - offset)
-            p = doc.paragraphs[idx]
-            template = next((r for r in p.runs if r.text), p.runs[-1] if p.runs else None)
-            new_text = f"{heading}\t{printed}"
-            if template is None:
-                p.add_run(new_text)
-            else:
-                bold, italic, underline = template.bold, template.italic, template.underline
-                size, font_name = template.font.size, template.font.name
-                for r in list(p.runs):
-                    r.text = ""
-                template.text = new_text
-                template.bold, template.italic, template.underline = bold, italic, underline
-                if size:
-                    template.font.size = size
-                if font_name:
-                    template.font.name = font_name
+            rr = redci(t)
+            if any(pogada(cilj, r) for r in rr):
+                found[naslov] = idx + 1
+                # tiskani broj stranice = samostalan broj u podnožju
+                brojevi = [r for r in rr[-3:] if r.isdigit() and len(r) <= 4]
+                if brojevi:
+                    tiskani[naslov] = int(brojevi[-1])
+                break
 
+    missing = [n for n, _ in ciljevi if n not in found]
+    if missing:
+        print(f"⚠️  {len(missing)} naslova nije pronađeno u renderiranom PDF-u "
+              f"(provjeri odgovaraju li naslovi TOC redaka stvarnim naslovima u tekstu):")
+        for h in missing[:10]:
+            print(f"     - {h}")
+
+    # Broj se uzima iz podnožja stranice na kojoj je naslov. Tek bez podnožja
+    # računa se pomak, uz pretpostavku da je prvi redak sadržaja stranica 1 —
+    # stari zapisani brojevi nisu sidro, jer su upravo oni zastarjeli.
+    prvi = next((n for n, _ in ciljevi if n in found), None)
+    offset = (found[prvi] - 1) if prvi else 0
+    promjene = 0
+    for _, naslov, z in toc_entries:
+        if naslov not in found:
+            continue
+        novi = str(tiskani.get(naslov, max(1, found[naslov] - offset)))
+        if z.text.strip() != novi:
+            z.text = novi
+            promjene += 1
+    print(f"   redaka sadržaja: {len(toc_entries)} · pronađeno: {len(found)} · izmijenjeno: {promjene}")
     doc.save(out_path)
     return 0
 
