@@ -4499,3 +4499,46 @@ obitelj (kvar 148 `index.json`, kvar 127 `drift.py`): put iz `pathlib`-a ide u i
 Popravak: `card.relative_to(root).as_posix()`.
 
 Ograda: `test_router_contract.py` R72 na Windows CI jobu (obavezan od kvara 176). Mutacija: `.as_posix()` uklonjen → R72 pada lokalno na Windowsu.
+
+---
+
+## 178. Paralelne sesije uzimale su isti „sljedeći” broj kvara, a sudar se vidio tek pri ručnom spajanju
+
+22. 9. 2026. tri puta: Lanin patch (161–165 protiv #52 i 2.2.0), 2.4.0 (172–173 protiv #65) i
+#65 sam. Svaka sesija računa `kvar.py --sljedeci` nad svojom kopijom kataloga; unutar jedne
+datoteke numeracija je ispravna, pa `kvar.py --provjeri` prolazi. Sudar je otkrivalo ručno
+spajanje, a jednom je prenumeracija `sed`-om u opisu PR-a broj promijenila dvaput (172→174→176).
+
+```
+$ provjeri_sudar_kvarova.py  (kontrolni primjer: Lanin patch fac0ee5 prema 2.2.0)
+sudari: [161, 162, 163, 164, 165]
+$ provjeri_sudar_kvarova.py --baza origin/main --grana origin/feat/targeted-docx-safety-verified
+✅ nijedan broj kvara ne sudara se s origin/main
+```
+
+Popravak: `katedra/scripts/provjeri_sudar_kvarova.py` — isti broj s drugim naslovom u bazi je
+sudar, uz prijedlog prvog slobodnog broja; raspon (`98–104.`) pokriva svaki broj u sebi.
+CI korak na svakom PR-u (`--baza` = svježe dohvaćen `main`); `katedra/SKILL.md` traži provjeru
+prije commita.
+
+Ograda: `katedra/scripts/tests/test_sudar_kvarova.py` (R-S1–R-S7, skupina „katedra: sudar brojeva kvarova”) — isti naslov nije sudar, drugi jest, broj unutar raspona jest, CRLF nije, CLI nad pravim git repoom vraća 1 s prijedlogom, nedostupna baza je 2. Mutacija: uvjet `b[n] != k[n]` → `False` obara R-S3, R-S4 i R-S6.
+
+---
+
+## 179. Test symlinka padao je na Windowsu bez ovlasti, pa je lokalni suite uvijek bio crven
+
+`test_dangling_output_symlink_not_followed` stvara symlink; Windows bez Developer Mode to ne
+dopušta:
+
+```
+OSError: [WinError 1314] A required privilege is not held by the client
+❌ rad-docx: ciljane izmjene (izlazni kod 1)
+```
+
+Na CI runneru ovlast postoji, pa je test ondje prolazio; lokalno je jedna od tri „poznate”
+crvene skupine, a stalno crvena skupina uči čitatelja da crveno ignorira (pravilo 20 obrnuto).
+
+Popravak: `OSError` pri stvaranju symlinka je `skipTest` s razlogom „NIJE izmjerena ovdje; mjeri je CI”.
+Sama zaštita u `ciljane_izmjene.py` nije dirana; na CI-ju (Linux i Windows) test i dalje radi.
+
+Ograda: nema — ograda je sam test na CI-ju; ovaj unos samo mijenja pad bez ovlasti u imenovani preskok.

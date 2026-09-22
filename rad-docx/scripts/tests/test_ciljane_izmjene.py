@@ -439,7 +439,11 @@ class TargetedEdits(unittest.TestCase):
         with self.assertRaises(self.m.EditError): self.apply(self.plan(self.remove()))
 
     def test_dangling_output_symlink_not_followed(self):
-        self.out.symlink_to(self.root / 'missing.docx')
+        try:
+            self.out.symlink_to(self.root / 'missing.docx')
+        except OSError as e:  # kvar 179: Windows bez Developer Mode (WinError 1314)
+            self.skipTest(f'symlink se ne može stvoriti na ovom sustavu ({e.__class__.__name__}): '
+                          'provjera NIJE izmjerena ovdje; mjeri je CI')
         with self.assertRaises(self.m.EditError): self.apply(self.plan(self.remove()))
         self.assertTrue(self.out.is_symlink())
 

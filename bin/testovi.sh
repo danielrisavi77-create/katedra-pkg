@@ -66,6 +66,7 @@ pokreni "katedra: registar kvarova" python3 "$KORIJEN/katedra/scripts/tests/test
 pokreni "katedra: provjera tvrdnji" python3 "$KORIJEN/katedra/scripts/tests/test_zakrpa.py"
 pokreni "katedra: verzija i oznake" python3 "$KORIJEN/katedra/scripts/tests/test_verzija.py"
 pokreni "katedra: granica routera" python3 "$KORIJEN/katedra/scripts/tests/test_router_granice.py"
+pokreni "katedra: sudar brojeva kvarova" python3 "$KORIJEN/katedra/scripts/tests/test_sudar_kvarova.py"
 pokreni "paket: svi routeri ispod granice" python3 "$KORIJEN/katedra/scripts/router_granice.py" "$KORIJEN"
 pokreni "katedra: oznaka verzije = VERSION" python3 "$KORIJEN/katedra/scripts/verzija.py" --provjeri
 pokreni "zakrpa: regresije citata, profila i inventara" \
