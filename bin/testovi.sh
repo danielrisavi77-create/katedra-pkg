@@ -62,6 +62,8 @@ pokreni "katedra-lite: review coverage" \
   python3 "$KORIJEN/katedra-lite/scripts/tests/test_review_coverage.py"
 pokreni "katedra-lite: bound review receipt" \
   python3 "$KORIJEN/katedra-lite/scripts/tests/test_review_receipt.py"
+pokreni "katedra-lite: bound review gate" \
+  python3 "$KORIJEN/katedra-lite/scripts/tests/test_gate_bound_review.py"
 pokreni "katedra: registar kvarova" python3 "$KORIJEN/katedra/scripts/tests/test_kvar.py"
 pokreni "katedra: provjera tvrdnji" python3 "$KORIJEN/katedra/scripts/tests/test_zakrpa.py"
 pokreni "katedra: verzija i oznake" python3 "$KORIJEN/katedra/scripts/tests/test_verzija.py"
