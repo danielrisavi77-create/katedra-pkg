@@ -201,6 +201,50 @@ RE_UKUPNO = _re.compile(
     r"(?:optuž|predmet|slučaj|ispitanik|jedinic|osob)", _re.IGNORECASE | _re.UNICODE)
 
 
+# Kvar R46 (nađen na HKS-FZS diplomskom, rujan 2026.): tražilo se
+# `(?<![\w.,])(\d{1,6})(?![\w])`, a to iz „11,2 %" izvadi „11", iz „63,5 %"
+# izvadi „63", iz „83,8 %" izvadi „83". Cijeli dio decimalnoga broja postane
+# pribrojnik, pa se iz raspodjele postotaka slože fantomske cjeline:
+#   „ukupno 46 = 1 + 8 + 11 + 26"   (iz „između 8 % i 11,2 % … između 26 % i 46 %")
+#   „ukupno 129 = 63 + 6 + 10 + 50" (iz „129 ispitanika (63,5 %) … (50,7 %)")
+#   „ukupno 160 = 83 + 31 + 46"     (iz „160 sestara … 83,8 % … 31,0 % … 46,9 %")
+# Sva tri su lažna: ni jedan od tih brojeva nije kategorija, a zbroj izlazi
+# slučajno jer se biralo između svih podskupova s jednim izostavljenim članom.
+#
+# Dvije ograde:
+#   1. decimalni broj se NE rastavlja — „63,5" nije „63" (ni „5");
+#   2. krajevi raspona („između 8 % i 11,2 %", „od 6 do 10 godina") nisu
+#      pribrojnici nego granice jedne te iste veličine; zbrajati ih je besmisleno.
+BROJ_PRIBROJNIK = _re.compile(r"(?<![\w.,])(\d{1,6})(?![\w]|[.,]\d)")
+
+RASPON_RE = _re.compile(
+    r"(?i)\b(?:izme[đd]u|od)\s+(\d{1,6}(?:[.,]\d+)?)\s*(?:%|posto|‰)?\s*"
+    r"\b(?:i|do|te)\b\s+(\d{1,6}(?:[.,]\d+)?)")
+
+
+def _rasponi(recenica: str) -> list[tuple[int, int]]:
+    """Rasponi znakovnih položaja koje zauzimaju krajevi raspona."""
+    spanovi = []
+    for m in RASPON_RE.finditer(recenica):
+        spanovi.append(m.span(1))
+        spanovi.append(m.span(2))
+    return spanovi
+
+
+def _pribrojnici(recenica: str) -> list[int]:
+    """Cijeli brojevi koji uopće smiju biti pribrojnici u skupu kategorija.
+
+    Izbacuje cijeli dio decimalnoga broja i krajeve raspona.
+    """
+    izuzeti = _rasponi(recenica)
+    out = []
+    for m in BROJ_PRIBROJNIK.finditer(recenica):
+        if any(a <= m.start() < b for a, b in izuzeti):
+            continue
+        out.append(int(m.group(1)))
+    return out
+
+
 def zbroj_kategorija(recenice: list[str], tolerancija: int = 0) -> list[dict]:
     """Nađi mjesta gdje niz kategorija tvori cjelinu i provjeri IZVOR, ne samo zbroj.
 
@@ -213,7 +257,7 @@ def zbroj_kategorija(recenice: list[str], tolerancija: int = 0) -> list[dict]:
     """
     nalazi = []
     for r in recenice:
-        brojevi = [int(x) for x in _re.findall(r"(?<![\w.,])(\d{1,6})(?![\w])", r)]
+        brojevi = _pribrojnici(r)
         if len(brojevi) < 4:
             continue
         ukupno = max(brojevi)

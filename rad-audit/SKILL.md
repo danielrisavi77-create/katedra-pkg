@@ -1,6 +1,6 @@
 ---
 name: rad-audit
-description: "Motor audita akademskog rada u .docx-u, faze A–G: integritet, citati, brojke, cross-check s izvornom građom, jezik, Word polja, ispravci. Aktiviraj na 'audit rada', 'provjeri citate/literaturu', 'usporedi rad s izvorima', 'zašto je tablica zaključana'. Ne aktiviraj kao kopilot: u projektu s .katedra/ zove ga katedra-lite mod 4 kroz engine.py. (Zadnje: R14/R15/R16 stvarno implementirani nakon što je provjera tvrdnji pokazala da su bili samo opisani; parafraza.py, brojke_iz_rasprave.py, faza E2 lektura.) Od v1.9.10 i: metapodaci (docProps/), uputnice na prikaze, aritmetika u tablicama, statističko izvještavanje (p naspram opisa), hipoteze i presude, tvrdnja naspram izvora koji je citiran, postojanje bibliografske jedinice. v2.0.0."
+description: "Motor audita akademskog rada u .docx-u, faze A–G: integritet, citati, brojke, cross-check s izvornom građom, jezik, Word polja, ispravci. Aktiviraj na 'audit rada', 'provjeri citate/literaturu', 'usporedi rad s izvorima', 'zašto je tablica zaključana'. Ne aktiviraj kao kopilot: u projektu s .katedra/ zove ga katedra-lite mod 4 kroz engine.py. (Zadnje: R14/R15/R16 stvarno implementirani nakon što je provjera tvrdnji pokazala da su bili samo opisani; parafraza.py, brojke_iz_rasprave.py, faza E2 lektura.) Od v1.9.10 i: metapodaci (docProps/), uputnice na prikaze, aritmetika u tablicama, statističko izvještavanje (p naspram opisa), hipoteze i presude, tvrdnja naspram izvora koji je citiran, postojanje bibliografske jedinice. v2.1.0."
 ---
 
 # Rad-audit — pipeline za provjeru akademskih radova
@@ -235,6 +235,10 @@ python3 brojke_iz_rasprave.py rad.docx    # C: svaka brojka o vlastitom uzorku u
                                           #    mora postojati u Rezultatima ili tablicama; brojka s
                                           #    citatom u istoj rečenici pripisana je literaturi;
                                           #    + zaokruživanje p naspram stvarnih vrijednosti
+python3 inventar_tvrdnji.py rad.docx --dosjei fazaD/ --po-seriji 7
+                                          # D0: inventar brojčanih/opisnih tvrdnji po
+                                          #     numeričkoj referenci (Vancouver/IEEE).
+                                          #     Ne provjerava istinitost tvrdnje.
 python3 extract_text.py rad.docx         # čist tekst (python-docx, bez XML smeća)
 ```
 
@@ -294,7 +298,16 @@ python3 /root/.claude/skills/docx/scripts/accept_changes.py rad.docx out.docx   
 7. **E. Jezik/tipografija** — `check_repetition.py`, `check_typography.py`. Razbij obrazac „izvješće navodi", koncentriraj hedžing, spoji staccato. Tipfeler može biti skriven razbijenim runom.
 8. **F. Formatiranje** — SADRŽAJ/POPISI kao **TOC polja**, natpisi kao **SEQ**, spomeni kao **REF**; makni `pageBreakBefore` **samo s natpisa prikaza** (praznine/„zaključano") — na naslovu poglavlja je najčešće propisan pa ostaje, tablice `autofit`; fontovi dosljedni (theme + docDefaults + stilovi); uvlaka iz Normal `firstLine` (+ `after` da se odlomci ne stope); `updateFields=true`.
 9. **G. Ispravci** — jasne pogreške odmah; stil uz potvrdu. Uređuj po CIJELOM odlomku, ali **nikad ne kolabiraj runove odlomka s poljem** (REF/SEQ). Escape `& < >`, `xml:space="preserve"`.
-10. **Verifikacija** — nakon svake runde: XSD validacija, fldChar balans, citati, ključne brojke, cross-check spot, tipografija; render ako soffice radi (ako pada u sandboxu — provjeri na XML-u i budi iskren; NE šalji pandoc-PDF kao dokaz fonta). Za predaju korisniku spremi razvrstan izvještaj s `generate_report.py`.
+10. **H. Upute fakulteta** — `generate_report.py` uvijek evidentira ovu fazu.
+    Bez izričito odabrane provjerne skripte (`--profil <put>`) vraća kod 3:
+    fakultetska pravila nisu provjerena. Lokacija `KATEDRA_LITE` i prisutnost
+    susjednog skilla nisu odabir fakulteta. Tek za potvrđeno odabrani HKS-FZS
+    smije se zadati `--profil <KATEDRA_LITE>/scripts/provjeri_hks_fzs.py`.
+    Nedostajuća izričita putanja ili prekid izvršavanja daju kod 2, bez fallbacka.
+    `--profil` ovdje prima pouzdano odabranu Python skriptu, **ne JSON profil**.
+    Status i pravila HKS profila ostaju zasebni dokazi: ova zakrpa ne potvrđuje
+    izvorne Upute. Neizmjeren redoslijed ima `ok: null`, ne prolaz.
+11. **Verifikacija** — nakon svake runde: XSD validacija, fldChar balans, citati, ključne brojke, cross-check spot, tipografija; render ako soffice radi (ako pada u sandboxu — provjeri na XML-u i budi iskren; NE šalji pandoc-PDF kao dokaz fonta). Za predaju korisniku spremi razvrstan izvještaj s `generate_report.py`.
 
 ## Poznati opseg (pročitaj prije nego zaključiš da nešto "ne radi")
 

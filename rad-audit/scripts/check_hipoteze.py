@@ -14,7 +14,8 @@ argumentom, nego rad s rupom koja se vidi iz sadržaja.
 Provjerava:
   * hipoteza koja se poslije poglavlja s hipotezama više ne spominje;
   * hipoteza koja se spominje, ali bez presude (prihvaćena, odbačena,
-    potvrđena, nije potvrđena, djelomično);
+    potvrđena, nije potvrđena, podržana, nije podržana, poduprta,
+    djelomično);
   * presuda koja se donosi o hipotezi koja nije postavljena;
   * cilj koji se nigdje ne preuzima u Rezultatima, Raspravi ni Zaključku.
 
@@ -50,10 +51,24 @@ SADRZAJ_REDAK = re.compile(r"(?m)^.*\t\s*\d{1,3}\s*$")
 KRAJ_POGLAVLJA = re.compile(r"(?im)^\s*(?:\d+(?:\.\d+)*\.?\s*)?[A-ZČĆŠŽĐ][^\n]{2,70}$")
 
 OZNAKA_H = re.compile(r"\bH\s?(\d{1,2})\b")
+# Kvar R44 (nađen na HKS-FZS diplomskom, rujan 2026.): rad je svim četirima
+# hipotezama dao izričitu presudu — i to dvaput, u Rezultatima i u Zaključku —
+# ali riječju „podržana" / „nije podržana", koje u rječniku nije bilo. Alat je
+# javio tri lažna KRITIČNA nalaza („H1, H3, H4 bez presude") na radu koji o
+# hipotezama presuđuje urednije od većine. Lažni kritični nalaz je najskuplji
+# kvar ovdje: student ga ide „popravljati" u radu koji je bio dobar.
+#
+# „podržati" i „poduprijeti" su u hrvatskoj metodologiji ravnopravni s
+# „prihvatiti" i „potvrditi". Traži se GLAGOLSKI PRIDJEV (podržan, podržana,
+# podržane, poduprt, poduprta, poduprijeta) — ne prezent („rezultati podržavaju
+# tvrdnju"), koji je opis nalaza, a ne presuda o hipotezi. Negacija („nije
+# podržana") ionako ulazi jer se traži samo POSTOJANJE presude; je li presuda
+# potvrdna ili niječna alat ne prosuđuje (željezno pravilo 31).
 PRESUDA = re.compile(
     r"(?i)\b(prihva[ćc]\w+|odbac\w+|potvr[đd]\w+|nije\s+potvr[đd]\w+|"
     r"ni(?:je|su)\s+prihva[ćc]\w+|djelomi[čc]n\w+|opovrg\w+|"
-    r"ne\s+mo[žz]e\s+se\s+prihvatiti|osnovan\w*|neosnovan\w*)")
+    r"ne\s+mo[žz]e\s+se\s+prihvatiti|osnovan\w*|neosnovan\w*|"
+    r"podr[žz]an\w*|nepodr[žz]an\w*|poduprt\w*|poduprijet\w*|potkrijepljen\w*)")
 
 
 def _odsjecak(body: str, uzorak: re.Pattern) -> str:
@@ -137,7 +152,7 @@ def ispisi(r: dict) -> int:
               f"({len(r['bez_presude'])}): "
               f"{', '.join('H' + str(h) for h in r['bez_presude'])}")
         print("   Postavljena je, ali nijedna rečenica ne kaže je li prihvaćena,")
-        print("   odbačena, potvrđena ili djelomično potvrđena. To je prvo pitanje")
+        print("   odbačena, potvrđena, podržana ili djelomično potvrđena. To je prvo pitanje")
         print("   na obrani.")
 
     if not (r["bez_presude"] or r["rupe"]):

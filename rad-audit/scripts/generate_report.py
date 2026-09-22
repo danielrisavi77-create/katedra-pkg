@@ -6,6 +6,7 @@ Uporaba:
   python3 generate_report.py rad.docx --sources izvori/
   python3 generate_report.py rad.docx --sources izvori/ --out izvjestaj.md
   python3 generate_report.py rad.docx --sources izvori/ --json izvjestaj.json
+  python3 generate_report.py rad.docx --profil /odabrani/fakultet/checker.py
 
 Zašto ovako (a ne da svaka skripta vraća strukturirane podatke): pojedinačne
 provjere su namjerno jednostavni read-only ispisi u terminal (lako ih je
@@ -97,9 +98,49 @@ def run_captured(fn, *args):
     return buf.getvalue(), code
 
 
+
+GRANICA_UPUTE = (
+    "[DEKLARIRANA GRANICA — profil fakulteta nije odabran]\n"
+    "  Audit NE tvrdi usklađenost s uputama nepoznatog fakulteta.\n"
+    "  Nakon potvrde fakulteta zadaj --profil <put do njegove provjerne skripte>.\n"
+    "  Samo za odabrani HKS-FZS: --profil <KATEDRA_LITE>/scripts/provjeri_hks_fzs.py.\n"
+    "  KATEDRA_LITE označuje lokaciju, ne odabire fakultet."
+)
+
+
+def _faza_upute(path, profil=None):
+    """Run only an explicitly selected faculty checker; never guess a faculty.
+
+    Code 3 means no selected profile / a declared checker boundary. An invalid
+    explicit path or failed execution is code 2, not a successful empty audit.
+    `--profil` is a trusted caller-selected Python checker, not a JSON profile.
+    """
+    import subprocess
+    name = "H — Upute fakulteta"
+    if not profil:
+        return name, GRANICA_UPUTE, 3
+    if not os.path.isfile(profil):
+        return name, f"⚠ faza nije izvedena: odabrana skripta ne postoji: {profil}", 2
+    try:
+        result = subprocess.run(
+            [sys.executable, profil, path], capture_output=True,
+            text=True, encoding="utf-8", errors="replace", timeout=120,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return name, f"⚠ faza nije izvedena: {exc}", 2
+    output = "\n".join(part.rstrip() for part in (result.stdout, result.stderr) if part)
+    code = result.returncode if result.returncode >= 0 else 2
+    if not output:
+        output = f"⚠ odabrana provjera nije dala ispis (izlazni kod {code})"
+        if code == 0:
+            code = 3
+    return name, output, code
+
+
 def main(argv):
     path = argv[0]
     sources = argv[argv.index("--sources") + 1] if "--sources" in argv else None
+    profil = argv[argv.index("--profil") + 1] if "--profil" in argv else None
     out_md = argv[argv.index("--out") + 1] if "--out" in argv else \
         os.path.splitext(path)[0] + "_izvjestaj.md"
     out_json = argv[argv.index("--json") + 1] if "--json" in argv else None
@@ -199,6 +240,11 @@ def main(argv):
         phases.append(("D — Preklapanje (verbatim-copy)", txt, code))
     else:
         phases.append(("D — Cross-check", "[preskočeno — dodaj --sources <folder> s izvornom građom]", 0))
+
+    # Faculty rules require explicit caller selection. Missing selection is
+    # always visible in both the report and phase_exit_codes, never inferred
+    # from an installed neighboring HKS checker or an environment variable.
+    phases.append(_faza_upute(path, profil))
 
     buckets = {"kritično": [], "srednje": [], "kozmetičko": []}
     for name, ptxt, pcode in phases:

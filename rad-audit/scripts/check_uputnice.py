@@ -34,10 +34,35 @@ VRSTE = ("Tablica", "Tablicu", "Tablici", "Tablice", "Tablicama",
 # Prva izvedba uzorka tražila je `Slik\w*` i zato je na stvarnom radu prijavila
 # da se Slika 3 i Slika 4 nigdje ne spominju, iako je tekst uredno pisao
 # „prikazana je na Slici 3". Isto vrijedi za „Ruka → ruci" tip promjene.
+#
+# Kvar R43 — množina. Uzorak je poznavao točno DVA broja i nije dopuštao
+# rednu točku iza broja, pa se rečenica „Rezultati prikazani u Tablicama 7. i 8.
+# ne podupiru H4" registrirala samo kao uputnica na Tablicu 7: točka iza „7"
+# prekidala je veznički dio. Na stvarnom radu (diplomski, 8 tablica) to je
+# dalo lažni nalaz „PRIKAZ KOJI SE NIGDJE NE SPOMINJE: Tablica 5, 8", iako je
+# Tablica 8 uredno spomenuta. Sada se hvata cijeli niz brojeva iza imenice —
+# s rednom točkom ili bez nje, s bilo kojim brojem veznika („i", „te", zarez)
+# ili crticom za raspon — i raspon se raširi na sve brojeve u njemu.
+BROJEVI = r"\d+\.?(?:\s*(?:i|te|,|do|–|—|-)\s*\d+\.?)*"
 UPUTNICA = re.compile(
-    r"\b(Tablic\w*|Sli[kc]\w*|Grafikon\w*|Prikaz\w*|Shem\w*)\s+(\d+)"
-    r"(?:\s*(?:i|,|do|–|-)\s*(\d+))?",
+    r"\b(Tablic\w*|Sli[kc]\w*|Grafikon\w*|Prikaz\w*|Shem\w*)\s+(" + BROJEVI + r")",
     re.UNICODE)
+
+# Raspon („1–3", „1 do 3") znači i sve između; nabrajanje („1 i 3") ne znači.
+_RASPON = re.compile(r"(\d+)\s*(?:do|–|—|-)\s*(\d+)")
+
+
+def brojevi_uputnice(niz: str) -> set[int]:
+    """Skup brojeva iz repa uputnice: „7. i 8." → {7, 8}, „1–3" → {1, 2, 3}."""
+    out: set[int] = set()
+    n = niz.replace(".", " ")
+    for a, b in _RASPON.findall(n):
+        a, b = int(a), int(b)
+        if a <= b and b - a <= 50:
+            out.update(range(a, b + 1))
+    for g in re.findall(r"\d+", n):
+        out.add(int(g))
+    return out
 
 # Natpis: samo na POČETKU odlomka, u nominativu, s točkom ili dvotočjem
 NATPIS = re.compile(r"^(Tablica|Slika|Grafikon|Prikaz|Shema)\s+(\d+)\s*[.:]", re.UNICODE)
@@ -76,9 +101,8 @@ def analiziraj(put: str) -> dict:
             if pocetak and mm.start() == 0:
                 continue                      # ovo je natpis, ne uputnica
             v = _vrsta(mm.group(1))
-            for g in (mm.group(2), mm.group(3)):
-                if g:
-                    uputnice.setdefault(v, set()).add(int(g))
+            for g in brojevi_uputnice(mm.group(2)):
+                uputnice.setdefault(v, set()).add(g)
 
     u_prazno, nespomenuti = [], []
     for v, brojevi in sorted(uputnice.items()):

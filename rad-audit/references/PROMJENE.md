@@ -205,3 +205,20 @@ zadnji korak `test_all.py` (skupina R22), pa se razilaženje vidi kao pad testa.
 primjerkom svake klase pogreške, tvrdnja da audit **mora pasti**, i negativna kontrola da
 zdravi rad prolazi bez kritičnih nalaza. Do sada je suite mjerio samo odsutnost šuma;
 nijedan test nije tvrdio da rad s pogreškom pada.
+
+
+## 2026-09-21 — 2.0.1: selektivna integracija zakrpe s provjerenim ogradama
+
+Baza je main 14c339ba (nakon PR-a #51). Originalni prilog nije kopiran preko
+kartica, profila, kataloga ili postojećeg `test_all.py`. Zadržani su korisni
+popravci statistike, uputnica, presuda, praga, kategorija i tipografije.
+Nepostojeće reference ostaju nalazi; HKS nije zadani fakultet. Inventar čita
+Vancouver i IEEE bibliografiju; nevaljana veličina serije ne proizvodi dosjee.
+
+Nove provjere: `test_zakrpa_release.py` (40 testova s podslučajevima i stvarnim
+adapter subprocessima), `test_hks_fzs.py` (9 provjera). Oba ulaza dodana su u
+`bin/testovi.sh`: svih 26 prethodnih skupina ostaje, ukupno 28. Brojevi se
+odnose na izvršive provjere, ne tvrdnju o dostupnosti privatnog dokumenta.
+Postojeći K160 nije prepisan; HKS promjene nose K161/K162. HKS profil ostaje
+`nepotvrdeno` jer izvorni PDF nije provjeren u ovoj integraciji. Stari 24×3
+live artefakt nije dokaz za ovaj kod; potreban je novi exact-head rezultat.

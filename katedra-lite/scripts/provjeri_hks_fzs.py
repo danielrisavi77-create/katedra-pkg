@@ -2,8 +2,9 @@
 """Pravila HKS-FZS uputa za diplomski koja profil paketa ne može nositi — provjera nad .docx-om.
 
 Sve što stoji ovdje ima lokator u „Posebne upute za pisanje diplomskog rada FZS HKS" (veljača 2026.).
-Izlaz je savjetodavan: profil je `nepotvrdeno` (pročitan sažimačem), pa nijedan nalaz nije ❌ nego
-⚠️ [za potvrdu] dok se PDF uputa ne pročita izravno (pravilo 18).
+Težina nalaza ovisi o statusu profila: dok je `nepotvrdeno`, nalaz je ⚠️ [za potvrdu];
+Status se čita iz profila; ova zakrpa ne potvrđuje izvorni PDF.
+Neizmjerene provjere imaju ok=None, a ne prolaz (kvar 162).
 
 Od v1.9 (nalaz 9) opseg po dijelovima, obaveznost, redoslijed dijelova i podsekcija te razmak
 odlomaka nosi PROFIL (`struktura.opseg.diplomski.dijelovi`, `format.odlomak.razmak_pt` u
@@ -34,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 import zipfile
@@ -41,10 +43,35 @@ import zipfile
 from docx import Document
 
 RE_HEAD1 = re.compile(r"^\s*(\d{1,2})\.\s+(.+)$")
-RE_TAB_REF_TOCKA = re.compile(r"\b(?:u\s+)?Tablic[ai]\s+\d+\.(?=\s+[a-zčćžšđ]|\))")  # točka pa malo slovo/zagrada = nije kraj rečenice
+# Kvar 161. Uzorak je tražen nad odlomcima spojenima znakom \n, pa je rečenica
+# koja ZAVRŠAVA s „… prikazana su u Tablici 1." i iza koje slijedi odlomak s
+# malim početnim slovom (bilješka ispod tablice, „n – broj ispitanika; …")
+# ispadala kršenje. Ondje je točka kraj rečenice, ne točka iza broja tablice.
+# Izmjereno na ispravljenom radu: 2 lažna nalaza („u Tablici 1.", „u Tablici 3.").
+# Uz to je uzorak PROPUŠTAO množinu: „u Tablicama 7. i 8." je stvarno kršenje
+# koje `Tablic[ai]` ne pokriva. Sada se traži po odlomku, i jednina i množina.
+RE_TAB_REF_TOCKA = re.compile(
+    r"\b(?:u\s+)?Tablic(?:ama|[ai])\s+\d+\.(?=\s+[a-zčćžšđ0-9]|\)|\s*[iI]\s+\d)")
 RE_TAB_REF = re.compile(r"\bTablic[ai]\s+\d+")
 RE_CIT_POSLIJE = re.compile(r"[.,;]\s?\(\d{1,3}(?:\s*[,–-]\s*\d{1,3})*\)")   # „.(12)" ili „, (3)"
 RE_CIT = re.compile(r"\(\d{1,3}(?:\s*[,–-]\s*\d{1,3})*\)")
+
+
+def _profil():
+    """Read the bundled HKS profile without inventing missing rules."""
+    put = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
+                       "references", "fakulteti", "hks-fzs.json")
+    try:
+        with open(put, encoding="utf-8") as fh:
+            data = json.load(fh)
+        return data if isinstance(data, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _status_profila(profil=None):
+    status = (profil if profil is not None else _profil()).get("status")
+    return status if isinstance(status, str) else "nepoznato"
 
 
 def _n(s):
@@ -72,6 +99,7 @@ def rijeci(txt):
 
 def analiza(put):
     doc = Document(put)
+    profil = _profil()
     B = blokovi(doc)
     n = []  # nalazi: (razina, sekcija, poruka)
     def nalaz(sekcija, poruka, ok=False):
@@ -103,6 +131,57 @@ def analiza(put):
                          ("sažetak", "Sažetak"), ("summary", "Summary"), ("sadržaj", "Sadržaj")):
         nalaz("dijelovi", f"{naziv}: {'nađen' if kljuc in pred_txt.lower() else 'NIJE nađen u prednjem dijelu'} (odj. 3.4–3.8)",
               ok=kljuc in pred_txt.lower())
+
+    # ---- REDOSLIJED dijelova (kvar 162)
+    #
+    # Profil VEĆ nosi propisani redoslijed u
+    # `struktura.opseg.diplomski.dijelovi.<ime>.redoslijed` (tdk 4, bdc 5,
+    # sazetak 6, summary 7, sadrzaj 8, kratice 9), ali ga nitko nije čitao:
+    # provjeravalo se samo POSTOJANJE dijela. Na HKS-FZS diplomskom Sadržaj i
+    # Popis kratica bili su ZAMIJENJENI (Upute, t. 8 i 9), a alat je javio
+    # „✅ Sadržaj: nađen" i o redoslijedu šutio.
+    #
+    # Sadržaj je Wordovo TOC polje u `w:sdt` elementu, pa ga
+    # `Document(...).paragraphs` ne vidi — zato se ide po `element.body`.
+    _W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+    # Labels locate document sections; all numeric order values come from JSON.
+    _oznake = [("tdk", "temeljna dokumentacijska kartica", "TDK"),
+               ("bdc", "basic documentation card", "Basic Documentation Card"),
+               ("sazetak", "sažetak", "Sažetak"), ("summary", "summary", "Summary"),
+               ("sadrzaj", "sadržaj", "Sadržaj"), ("kratice", "popis kratica", "Popis kratica")]
+    try:
+        _dijelovi = profil["struktura"]["opseg"]["diplomski"]["dijelovi"]
+        _PROPISANO = [(kljuc, naziv, _dijelovi[key]["redoslijed"])
+                     for key, kljuc, naziv in _oznake]
+        if (any(type(red) is not int or red < 1 for _, _, red in _PROPISANO)
+                or len({red for _, _, red in _PROPISANO}) != len(_PROPISANO)):
+            _PROPISANO = []
+    except (KeyError, TypeError):
+        _PROPISANO = []
+    _polozaj = {}
+    for _i, _ch in enumerate(doc.element.body):
+        _t = "".join(n.text or "" for n in _ch.iter(_W + "t")).strip().lower()
+        if not _t:
+            continue
+        if _t.startswith("1. uvod"):
+            break
+        for _kljuc, _naziv, _red in _PROPISANO:
+            if _naziv not in _polozaj and _t.startswith(_kljuc):
+                _polozaj[_naziv] = _i
+    _nadeni = sorted(_polozaj, key=lambda k: _polozaj[k])
+    _ocekivani = [n for _, n, _r in sorted(_PROPISANO, key=lambda x: x[2])
+                  if n in _polozaj]
+    if not _PROPISANO:
+        nalaz("dijelovi", "redoslijed dijelova: neizmjeren — profil nema valjana pravila redoslijeda", ok=None)
+    elif len(_nadeni) >= 2:
+        _ok = _nadeni == _ocekivani
+        nalaz("dijelovi",
+              "redoslijed dijelova: " + " → ".join(_nadeni)
+              + ("" if _ok else "  |  propisano: " + " → ".join(_ocekivani))
+              + " (Upute, t. 1–19)", ok=_ok)
+    else:
+        nalaz("dijelovi", "redoslijed dijelova: premalo prepoznatih dijelova "
+              f"({len(_nadeni)}) za provjeru redoslijeda — neizmjereno (Upute, t. 1–19)", ok=None)
 
     # sažetak: blok između retka „SAŽETAK" i „SUMMARY"
     def izmedju(a, b):
@@ -169,7 +248,7 @@ def analiza(put):
         upu = len(RE_TAB_REF.findall(rt))
         nalaz("rasprava", f"upućivanje na tablice u Raspravi: {upu}× (Upute: ne upućuje se na tablice; odj. 3.15)", ok=upu == 0)
         prvi = next((p.text for h1, h2, st, p in B if h1 and h1[0] == b_rasp and not st.startswith("heading") and p.text.strip()), "")
-        nalaz("rasprava", f"prvi odlomak sažima rezultate? provjeri ručno — „{prvi[:110]}…\" (odj. 3.15)", ok=True)
+        nalaz("rasprava", f"prvi odlomak sažima rezultate? provjeri ručno — „{prvi[:110]}…\" (odj. 3.15)", ok=None)
 
     # ---- zaključak: redni brojevi
     if b_zakl:
@@ -179,8 +258,10 @@ def analiza(put):
 
     # ---- tablice
     svi = [p.text for _, _, st, p in B if not st.startswith("heading")]
-    txt_all = "\n".join(t for t in svi if not re.match(r"^\s*Tablica\s+\d+\.\s", t))  # bez natpisa
-    s_tockom = RE_TAB_REF_TOCKA.findall(txt_all)
+    odlomci = [t for t in svi if not re.match(r"^\s*Tablica\s+\d+\.\s", t)]  # bez natpisa
+    txt_all = "\n".join(odlomci)
+    # PO ODLOMKU: spajanje je stvaralo lažne nalaze preko granice rečenice (kvar 161).
+    s_tockom = [m for t in odlomci for m in RE_TAB_REF_TOCKA.findall(t)]
     nalaz("tablice", f"upućivanje „Tablica N.\" s točkom u tekstu: {len(s_tockom)}× (Upute: „(Tablica 1)\" bez točke; odj. 5.5) npr. {s_tockom[:4]}", ok=len(s_tockom) == 0)
     natpisi = [t for t in svi if re.match(r"^\s*Tablica\s+\d+\.\s", t)]
     nalaz("tablice", f"natpisi „Tablica N.\" (s točkom): {len(natpisi)} (odj. 5.5)", ok=len(natpisi) > 0)
@@ -247,7 +328,8 @@ def analiza(put):
         duge = [t for t in zt if len(t.split()) > 25]
         nalaz("životopis", f"odlomaka: {len(zt)}, dužih od 25 riječi (nalik rečenicama, ne natuknicama): {len(duge)} (odj. 3.19)", ok=not duge)
 
-    return {"datoteka": put, "profil": "hks-fzs (nepotvrdeno, sažimač)", "nalazi": n,
+    return {"datoteka": put, "profil": f"hks-fzs ({_status_profila(profil)})",
+            "profil_status": _status_profila(profil), "nalazi": n,
             "brojke": {"uvod_rijeci": uvod_r, "rasprava_rijeci": rasp_r, "tijelo_rijeci": tijelo_r}}
 
 
@@ -258,8 +340,16 @@ def ispisi(r):
     for x in r["nalazi"]:
         if x["sekcija"] != sek:
             sek = x["sekcija"]; print(f"\n{sek.upper()}")
-        print(("  ✅ " if x["ok"] else "  ⚠️ ") + x["poruka"])
-    ok = sum(1 for x in r["nalazi"] if x["ok"]); print(f"\n{ok}/{len(r['nalazi'])} u skladu · ostalo [za potvrdu] — profil nije potvrđen iz pdftotext-a (pravilo 18: ⚠️, ne ❌).")
+        prefix = "  ➖ " if x["ok"] is None else ("  ✅ " if x["ok"] else "  ⚠️ ")
+        print(prefix + x["poruka"])
+    measured = [x for x in r["nalazi"] if x["ok"] is not None]
+    ok = sum(x["ok"] is True for x in measured)
+    unknown = len(r["nalazi"]) - len(measured)
+    print(f"\n{ok}/{len(measured)} izmjerenih provjera u skladu · neizmjereno: {unknown}")
+    if r.get("profil_status") == "potvrdeno":
+        print("Status profila: potvrdeno (prema zapisu profila).")
+    else:
+        print("Nalazi ostaju [za potvrdu] — izvorni profil nije potvrđen; ovo nije potvrda sukladnosti.")
 
 
 def main(argv=None):
@@ -269,7 +359,9 @@ def main(argv=None):
     r = analiza(a.rad); ispisi(r)
     if a.kao_json:
         json.dump(r, open(a.kao_json, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-    return 0
+    if any(x["ok"] is None for x in r["nalazi"]) or r["profil_status"] != "potvrdeno":
+        return 3
+    return 1 if any(x["ok"] is False for x in r["nalazi"]) else 0
 
 
 if __name__ == "__main__":

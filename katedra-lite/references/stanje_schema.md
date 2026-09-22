@@ -310,3 +310,8 @@ blokira unsupported/conflicted/contradicted claim i evidence iz blocking izvora,
 `--policy advisory` samo prikazuje što bi strict blokirao. Source Analysis Matrix može se
 spremiti u `.katedra/evidence_gate.json`. Record schema ostaje
 `references/claim_ledger_schema.json`, a gate output schema je `references/evidence_gate_schema.json`.
+
+
+### `review_receipt.json` / `.katedra/reviews/<run>/receipt.json`
+
+Opt-in vezani pregled proizvodi zasebnu v1 potvrdu bez promjene postojećih claim/evidence/consistency shema. Potvrda nosi status `pass|blocked|unmeasured|stale`, hashove ulaza i izlaza te izričito `whole_document: false`. Promjena dokumenta ili ovisnosti nakon mjerenja čini prethodni rezultat zastarjelim; odsutna potvrda nije implicitni prolaz.

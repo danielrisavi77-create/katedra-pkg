@@ -1,3 +1,13 @@
+# v2.1.0 — pouzdan rezultat provjere, ciljane DOCX izmjene, izričito odobrenje plana (22. 9. 2026.)
+
+Release korak koji spaja tri grane što su stajale izvan `main`-a. Nijedan spoj nije imao konflikt; cijeli `bin/testovi.sh` na spojenom stablu: **33/33 skupine**, izlazni kod 0.
+
+* **2.0.1 zakrpa (PR #52, `fix/zakrpa-20260920-audit-guards`).** Nepoznat fakultet i ručne provjere ostaju „neizmjereno", ne prolaz. Eksplicitne granice IEEE parsiranja i nepodržanih stilova, 40 release regresija i devet HKS provjera. Detalji u `rad-audit/references/PROMJENE.md`.
+* **Review integrity, isporuka A (`feat/review-integrity-A`).** Nevažeći, odbijeni, savjetodavni, nedovoljno pokriveni ili zastarjeli rezultat provjere više ne može postati dokaz spremnosti drugog dokumenta. Validator ugovora reviewa, bound review na izoliranoj snimci ledgera, svježina potvrde vezana uz bajtove lokalnih izvora. Spec i plan u `docs/superpowers/`.
+* **Ciljane DOCX izmjene (`feat/targeted-docx-safety-verified`).** Novo: `rad-docx/scripts/ciljane_izmjene.py` (`inspect` / `apply` / `verify`) s opsegom vezanim uz hash, obaveznim snapshotom i zasebnom izlaznom putanjom; 50 sintetskih regresija. `visual_check.ok` je uvijek `null`: render i ljudski pregled ostaju obavezni.
+* **Izričito odobrenje plana u servisu (`claude/explicit-plan-approval`).** `service/app.py` ne izvršava plan bez izričitog, na plan vezanog odobrenja.
+* **Zašto minor, ne patch.** Ciljane izmjene su nova sposobnost i nova pravila u `SKILL.md` (`katedra-lite`, `rad-docx`); po pravilu iz README-a to diže minor. Frozen `core_contract` ostaje `1.0.1`.
+
 # v2.0.0 — thin router, dvije brzine i jasna snaga pravila (18. 9. 2026.)
 
 * **Router 43 175 → 10 742 znakova, 648 → 232 retka.** Runtime/GitHub/Claude bootstrap, privatnost i Track Changes politika više se ne učitavaju u svakoj studentskoj poruci; žive u zasebnim referencama.
@@ -2063,3 +2073,20 @@ poruka koju je lanac proizveo bila je lažna.
 - `_rukopis_ima`: svaki „popis*" prolazio je kao popis literature → popis tablica se nikad nije gradio, `check_rules` blokirao na „obavezni dijelovi". Sad: natpisi prikaza su `SEQ` polja, POPIS TABLICA je `TOC \c` polje, popis prikaza kojih u rukopisu nema se ne gradi prazan (⚠ na stderr).
 - `docDefaults` i stil `Caption` dobivaju font/veličinu profila (tema Cambria/Calibri više ne „curi" u tablice i polja) — `check_rules` font ⚠→✅.
 - `citiranje.razmak_izmedu_jedinica` → 12 pt među jedinicama literature; navodnik u generiranoj izjavi hrvatski. Popravak je napisao audit-agent unutar workflowa (rad-orchestrator §3 sada to zabranjuje — nalazi paketa idu u `.katedra/nalazi_paketa.md`).
+
+
+## 2026-09-21 — 2.0.1: selektivna integracija zakrpe s provjerenim ogradama
+
+Baza je main 14c339ba (nakon PR-a #51). Originalni prilog nije kopiran preko
+kartica, profila, kataloga ili postojećeg `test_all.py`. Zadržani su korisni
+popravci statistike, uputnica, presuda, praga, kategorija i tipografije.
+Nepostojeće reference ostaju nalazi; HKS nije zadani fakultet. Inventar čita
+Vancouver i IEEE bibliografiju; nevaljana veličina serije ne proizvodi dosjee.
+
+Nove provjere: `test_zakrpa_release.py` (40 testova s podslučajevima i stvarnim
+adapter subprocessima), `test_hks_fzs.py` (9 provjera). Oba ulaza dodana su u
+`bin/testovi.sh`: svih 26 prethodnih skupina ostaje, ukupno 28. Brojevi se
+odnose na izvršive provjere, ne tvrdnju o dostupnosti privatnog dokumenta.
+Postojeći K160 nije prepisan; HKS promjene nose K161/K162. HKS profil ostaje
+`nepotvrdeno` jer izvorni PDF nije provjeren u ovoj integraciji. Stari 24×3
+live artefakt nije dokaz za ovaj kod; potreban je novi exact-head rezultat.

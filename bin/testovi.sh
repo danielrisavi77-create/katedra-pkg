@@ -54,12 +54,26 @@ pokreni "rad-audit: regresije" \
   python3 "$KORIJEN/rad-audit/scripts/tests/test_all.py"
 pokreni "rad-audit: bolesni rad mora pasti" \
   python3 "$KORIJEN/rad-audit/scripts/tests/test_bolesni.py"
+pokreni "rad-docx: ciljane izmjene" \
+  python3 "$KORIJEN/rad-docx/scripts/tests/test_ciljane_izmjene.py"
 pokreni "katedra-lite: gate" \
   python3 "$KORIJEN/katedra-lite/scripts/tests/test_gate.py"
 pokreni "katedra: registar kvarova" python3 "$KORIJEN/katedra/scripts/tests/test_kvar.py"
 pokreni "katedra: provjera tvrdnji" python3 "$KORIJEN/katedra/scripts/tests/test_zakrpa.py"
 pokreni "katedra: verzija i oznake" python3 "$KORIJEN/katedra/scripts/tests/test_verzija.py"
 pokreni "katedra: oznaka verzije = VERSION" python3 "$KORIJEN/katedra/scripts/verzija.py" --provjeri
+pokreni "zakrpa: regresije citata, profila i inventara" \
+  python3 "$KORIJEN/rad-audit/scripts/tests/test_zakrpa_release.py"
+pokreni "katedra-lite: HKS-FZS regresije" \
+  python3 "$KORIJEN/katedra-lite/scripts/tests/test_hks_fzs.py"
+pokreni "katedra-lite: review status" \
+  python3 "$KORIJEN/katedra-lite/scripts/tests/test_review_status.py"
+pokreni "katedra-lite: review coverage" \
+  python3 "$KORIJEN/katedra-lite/scripts/tests/test_review_coverage.py"
+pokreni "katedra-lite: bound review receipt" \
+  python3 "$KORIJEN/katedra-lite/scripts/tests/test_review_receipt.py"
+pokreni "katedra-lite: bound review gate" \
+  python3 "$KORIJEN/katedra-lite/scripts/tests/test_gate_bound_review.py"
 pokreni "katedra-lite: indeks zamki" python3 "$KORIJEN/katedra-lite/scripts/tests/test_indeks.py"
 pokreni "katedra-lite: mjerilo usmjeravanja" python3 "$KORIJEN/katedra-lite/scripts/tests/test_trigger.py"
 pokreni "katedra-lite: thin-router contract" python3 "$KORIJEN/katedra-lite/scripts/tests/test_router_contract.py"

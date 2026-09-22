@@ -33,8 +33,65 @@ import sys
 from common import load_docx_text, load_supplementary_text, sentences, LIT_HEADING_RE
 
 P_VRIJEDNOST = re.compile(r"\bp\s*(=|<|>|≤|≥|<=|>=)\s*(0?[,.]\d+|[01](?![,.\d]))", re.I)
-ALFA_DEKLARACIJA = re.compile(r"(?i)(?:razin\w+|prag\w*|signifikantnost\w*)[^.]{0,40}?"
-                              r"p\s*[<≤]\s*(0?[,.]\d+)")
+# Kvar R45 (nađen na HKS-FZS diplomskom, rujan 2026.): prag JEST bio deklariran —
+# „Razina statističke značajnosti postavljena je na p < 0,05" u poglavlju 4.7 —
+# ali stari uzorak je između ključne riječi i „p <" dopuštao najviše 40 znakova,
+# a ovdje ih stoji 43 („ statističke značajnosti postavljena je na "). Osim toga
+# je poznavao SAMO oblik s „p <"; hrvatski radovi prag jednako često pišu bez
+# slova p („razina značajnosti iznosi 0,05"), izokrenutim redom („statistički
+# značajnim smatra se p < 0,05") ili grčkim slovom („α = 0,05"), koje u uzorku
+# nije postojalo unatoč tome što se u dokumentaciji spominjalo.
+#
+# Posljedica je bila lažni savjet „razina značajnosti se nigdje ne deklarira" na
+# radu koji je prag deklarirao uredno, i — gore — pogrešno ODBACIVANJE zaštite u
+# petlji: rečenica koja deklarira prag mora biti izuzeta iz usporedbe s pragom
+# (p tamo JEST jednak pragu, po definiciji), a bez prepoznavanja te zaštite nema.
+#
+# Svaki uzorak hvata prag u skupini 1.
+ALFA_UZORCI = [
+    # α = 0,05 | alfa < 0,05 | α iznosi 0,05 | α je postavljena na 0,05
+    re.compile(r"(?i)(?:α|\balfa\b|\balpha\b)\s*"
+               r"(?:[=<≤]|je|iznosi|postavljen\w*(?:\s+je)?(?:\s+na)?|od)\s*"
+               r"(0?[,.]\d+)"),
+    # razina / prag (statističke) značajnosti … p < 0,05
+    re.compile(r"(?i)(?:razin\w+|prag\w*|signifikantnost\w*|granic\w+)"
+               r"[^.;!?]{0,70}?p\s*[<≤]\s*(0?[,.]\d+)"),
+    # razina značajnosti iznosi / postavljena je na / od 0,05 (bez slova p)
+    re.compile(r"(?i)(?:razin\w+|prag\w*|granic\w+)\s+(?:\w+\s+){0,3}?"
+               r"(?:zna[čc]ajnost\w*|signifikantnost\w*)"
+               r"[^.;!?]{0,40}?(?:iznosi|postavljen\w*(?:\s+je)?(?:\s+na)?|je|=|od)\s*"
+               r"(0?[,.]\d+)"),
+    # statistički značajnim smatra se / uzima se p < 0,05
+    re.compile(r"(?i)zna[čc]ajn\w*\s+(?:se\s+)?"
+               r"(?:smatra\w*|uzima\w*|dr[žz]al\w*|progla[šs]\w*)"
+               r"[^.;!?]{0,30}?p\s*[<≤]\s*(0?[,.]\d+)"),
+]
+
+
+def _deklaracija_praga(tekst: str):
+    """Vrati (prag, pogodak) za prvu deklaraciju praga u tekstu, inače (None, None)."""
+    for uzorak in ALFA_UZORCI:
+        m = uzorak.search(tekst or "")
+        if m:
+            return _broj(m.group(1)), m.group(0)
+    return None, None
+
+
+class _AlfaDeklaracija:
+    """Zadržan naziv radi kompatibilnosti: `.search(t)` vraća prvi pogodak bilo
+    kojeg uzorka iz ALFA_UZORCI (nekoć jedan jedini regex)."""
+
+    @staticmethod
+    def search(tekst):
+        najbolji = None
+        for uzorak in ALFA_UZORCI:
+            m = uzorak.search(tekst or "")
+            if m and (najbolji is None or m.start() < najbolji.start()):
+                najbolji = m
+        return najbolji
+
+
+ALFA_DEKLARACIJA = _AlfaDeklaracija()
 
 ZNACAJNO = re.compile(r"(?i)\b(statistički\s+)?znača[jn]\w*")
 # Hrvatska negacija ne stoji uz pridjev: „nije SE STATISTIČKI ZNAČAJNO razlikovala",
@@ -67,10 +124,7 @@ def analiziraj(put: str, alfa: float | None = None) -> dict:
     tijelo = (body[:m[-1].start()] if m else body) + "\n" + "\n".join(cells) \
         + "\n" + sup.get("footnotes", "")
 
-    deklarirana = None
-    dm = ALFA_DEKLARACIJA.search(tijelo)
-    if dm:
-        deklarirana = _broj(dm.group(1))
+    deklarirana, _pogodak = _deklaracija_praga(tijelo)
     prag = alfa if alfa is not None else (deklarirana if deklarirana else 0.05)
 
     recenice = sentences(tijelo)

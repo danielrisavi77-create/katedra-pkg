@@ -4,7 +4,7 @@
 > **Ne uređuj ručno.** Nakon izmjene kataloga: `indeks_zamki.py --upisi`.
 > `bin/testovi.sh` pada ako je ovaj indeks zastario.
 
-Unosa: **103** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom: **91** · ograda ne pripada (deklarirano): **17** · **duguje ogradu: 0**
+Unosa: **105** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom: **93** · ograda ne pripada (deklarirano): **17** · **duguje ogradu: 0**
 
 Traži bez učitavanja cijelog kataloga:
 
@@ -123,3 +123,5 @@ sed -n '844,880p' katedra-lite/references/zamke.md   # unos po retku
 | 158 | Provjera koja nije izvedena ispisuje se kao "0 krsenja", uz razlog koji nije tocan | `test_stari_kvarovi.py` | ✅ | 4080 |
 | 159 | Obitelj kvara 119 zatvorena: 19 `subprocess` poziva bez `encoding=` počišćeno, a AST pr… | `testovi.sh`, `provjeri_subprocess.py` | ✅ | 4131 |
 | 160 | Slovni sufiks godine („2023a") rušio je pokrivenost izvora | `fpzg--project--diplomski--uskladjen.docx`, `test_stari_kvarovi.py` | ✅ | 4159 |
+| 161 | Uputnica na tablicu prelazila je granicu odlomka | `provjeri_hks_fzs.py`, `test_hks_fzs.py`, `test_zakrpa_release.py` | ✅ | 4178 |
+| 162 | Redoslijed dijelova nije koristio pravila profila, a neizmjereno je bilo zeleno | `hks-fzs.json`, `test_hks_fzs.py`, `test_zakrpa_release.py` | ✅ | 4192 |
