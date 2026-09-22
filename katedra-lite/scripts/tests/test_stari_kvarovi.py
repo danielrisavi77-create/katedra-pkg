@@ -382,6 +382,33 @@ def main():
     check("K27: „popis tablica” NIJE popis literature",
           not bdx._je_popis_literature("popis tablica"))
 
+    # Windows regression: report display must survive a profile on another drive.
+    cr = modul("check_rules")
+    original_relpath = cr.os.path.relpath
+    try:
+        cr.os.path.relpath = lambda *_a, **_k: (_ for _ in ()).throw(ValueError("different drive"))
+        check("K174: prikaz putanje profila preživljava drugi Windows drive",
+              cr._display_path(r"C:\\tmp\\profil.json") == r"C:\\tmp\\profil.json")
+    finally:
+        cr.os.path.relpath = original_relpath
+
+    # Admission hash is byte-sensitive except for Git's platform line-ending checkout.
+    prr = modul("profile_rules")
+    root174 = tempfile.mkdtemp()
+    try:
+        os.makedirs(os.path.join(root174, "overlays"))
+        p174 = os.path.join(root174, "efzg.json")
+        with open(p174, "wb") as h:
+            h.write(b'{\n  "slug": "efzg"\n}\n')
+        lf_hash = prr.faculty_bundle_sha256(root174, "efzg")
+        with open(p174, "wb") as h:
+            h.write(b'{\r\n  "slug": "efzg"\r\n}\r\n')
+        crlf_hash = prr.faculty_bundle_sha256(root174, "efzg")
+        check("K175: admission bundle hash je jednak za LF i CRLF checkout",
+              lf_hash == crlf_hash, (lf_hash, crlf_hash))
+    finally:
+        shutil.rmtree(root174)
+
     # --- 28: izlazni kod iz toga SMIJE LI simbol blokirati, ne iz broja simbola --
     # Ugovor: kod je 1 točno kad postoji ❌ (broj_krsenja > 0); sama ⚠ daje 0.
     # Mjeri se CLI na dva dokumenta i uspoređuje s vlastitim JSON-om alata.
