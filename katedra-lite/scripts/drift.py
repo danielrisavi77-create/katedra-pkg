@@ -17,6 +17,12 @@ put se može i zadati s `--kartica` ili `KATEDRA_KARTICA`:
     python3 drift.py --kratko             # jedan redak za prvu poruku sesije
     python3 drift.py --json out.json
     python3 drift.py --kartica PUT --repo PUT
+    python3 drift.py --skill rad-audit    # isti mjerač za drugi skill iz paketa
+    python3 drift.py --svi --kratko       # svih sedam skillova, po jedan blok
+
+`--svi` postoji od v2.2.0: u v2.1.0 je alat mjerio samo katedra-lite, a kartice
+katedra, rad-audit, rad-docx i rad-orchestrator zaostajale su za repoom (router
+2.0 od 44 KB → 12 KB nikad nije stigao u karticu) bez ijednog upozorenja.
 
 Izlazni kodovi: 0 = iste, 1 = razišle se, 2 = NIJE izmjereno (jedna strana nedostaje,
 dvije različite kartice, greška ulaza). Dvojka nikad ne znači „uredno" — tiha nula nad
@@ -38,6 +44,9 @@ import sys
 
 SLUG = "katedra-lite"
 NASLOV = re.compile(r"^(#{1,4})\s+(.+?)\s*$")
+SVI_SKILLOVI = ("katedra-lite", "katedra", "rad-audit", "rad-docx", "fpzg-diplomski",
+                "replikacija-pspp", "rad-orchestrator")
+PAKET = os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 POVIJEST_DUBINA = 300           # commita unatrag; dalje od toga smjer se ne dokazuje
 
 
@@ -305,15 +314,54 @@ def izmjeri(kartica_txt, repo_txt):
     }
 
 
+def svi(kratko):
+    """Svaki skill zasebnim pozivom (globalni SLUG se ne dijeli među mjerenjima).
+
+    Izlaz: 1 ako se ijedan razišao, inače 2 ako ijedan nije izmjeren, inače 0.
+    Neinstaliran skill je „nije izmjereno" za taj skill, ne prolaz."""
+    kodovi = []
+    for slug in SVI_SKILLOVI:
+        naredba = [sys.executable, os.path.abspath(__file__), "--skill", slug]
+        if kratko:
+            naredba.append("--kratko")
+        r = subprocess.run(naredba, capture_output=True, text=True, encoding="utf-8")
+        kodovi.append(r.returncode)
+        oznaka = {0: "✅", 1: "❌", 2: "⚠️ "}.get(r.returncode, "⛔")
+        print("── %s %s" % (oznaka, slug))
+        izlaz = (r.stdout or "") + (r.stderr or "")
+        for red in izlaz.rstrip().splitlines():
+            print("   " + red)
+    razisli = sum(1 for k in kodovi if k == 1)
+    neizmj = sum(1 for k in kodovi if k not in (0, 1))
+    print("\nkartice: %d iste · %d razišle · %d nije izmjereno (od %d)"
+          % (kodovi.count(0), razisli, neizmj, len(kodovi)))
+    if razisli:
+        return 1
+    return 2 if neizmj else 0
+
+
 def main():
     ap = argparse.ArgumentParser(description="Drift SKILL.md-a: kartica naspram repoa.")
     ap.add_argument("--kartica", help="put do account (synced) SKILL.md-a; inače se traži")
     ap.add_argument("--repo", help="put do repo SKILL.md-a; inače SKILL.md pored scripts/")
     ap.add_argument("--kratko", action="store_true", help="jedan redak, za prvu poruku sesije")
     ap.add_argument("--json", dest="json_out", help="zapiši nalaz kao JSON")
+    ap.add_argument("--skill", choices=SVI_SKILLOVI, help="skill iz paketa (zadano: katedra-lite)")
+    ap.add_argument("--svi", action="store_true", help="izmjeri svih sedam skillova paketa")
     a = ap.parse_args()
 
-    repo_put = a.repo or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "SKILL.md")
+    if a.svi:
+        return svi(a.kratko)
+
+    global SLUG
+    if a.skill:
+        SLUG = a.skill
+    if a.repo:
+        repo_put = a.repo
+    elif a.skill:
+        repo_put = os.path.join(PAKET, a.skill, "SKILL.md")
+    else:
+        repo_put = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "SKILL.md")
     repo_put = os.path.realpath(repo_put)
 
     kartica_put, kartica_txt, razlog, biljeska = razrijesi_karticu(a.kartica)

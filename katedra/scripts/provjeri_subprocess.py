@@ -18,6 +18,7 @@ import os
 import sys
 
 KORIJENI = ("katedra-lite/scripts", "rad-audit/scripts", "rad-docx/scripts", "katedra/scripts",
+            "fpzg-diplomski/scripts", "replikacija-pspp/scripts",
             "rad-orchestrator", "service", "bin")
 
 

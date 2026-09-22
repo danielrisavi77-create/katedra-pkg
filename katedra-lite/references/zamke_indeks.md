@@ -4,7 +4,7 @@
 > **Ne uređuj ručno.** Nakon izmjene kataloga: `indeks_zamki.py --upisi`.
 > `bin/testovi.sh` pada ako je ovaj indeks zastario.
 
-Unosa: **105** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom: **93** · ograda ne pripada (deklarirano): **17** · **duguje ogradu: 0**
+Unosa: **109** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom: **97** · ograda ne pripada (deklarirano): **17** · **duguje ogradu: 0**
 
 Traži bez učitavanja cijelog kataloga:
 
@@ -125,3 +125,7 @@ sed -n '844,880p' katedra-lite/references/zamke.md   # unos po retku
 | 160 | Slovni sufiks godine („2023a") rušio je pokrivenost izvora | `fpzg--project--diplomski--uskladjen.docx`, `test_stari_kvarovi.py` | ✅ | 4159 |
 | 161 | Uputnica na tablicu prelazila je granicu odlomka | `provjeri_hks_fzs.py`, `test_hks_fzs.py`, `test_zakrpa_release.py` | ✅ | 4178 |
 | 162 | Redoslijed dijelova nije koristio pravila profila, a neizmjereno je bilo zeleno | `hks-fzs.json`, `test_hks_fzs.py`, `test_zakrpa_release.py` | ✅ | 4192 |
+| 163 | Pregled kvara 159 nije gledao dva skilla, pa je isti kvar u njima ostao živ | `provjeri_subprocess.py`, `provjeri_prikaze.py`, `pspp_replikacija.py` | ✅ | 4208 |
+| 164 | Neizmjereno lomljenje tablica javljalo se kao „✅ nema nalaza" | `provjeri_prikaze.py`, `rad.docx`, `test_fpzg.py` | ✅ | 4225 |
+| 165 | Drift kartica mjerio se samo za katedra-lite, pa je pet kartica zaostalo neprimijećeno | `drift.py`, `inventar_tvrdnji.py`, `runtime.md` | ✅ | 4239 |
+| 166 | Rezerva u rad-orchestrator routeru bila je starija od skripte koju je čuvala | `SKILL.md`, `gate.py`, `router_granice.py` | ✅ | 4254 |

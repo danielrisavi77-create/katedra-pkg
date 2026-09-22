@@ -1,6 +1,6 @@
 ---
 name: katedra
-description: "Meta-skill za UČENJE iz sesija: kvar, lažni nalaz ili autorova izmjena postaje pravilo, alat ili zakrpa za katedra-lite, rad-audit i rad-docx. Aktiviraj na 'zapiši kvar', 'napravi zakrpu', 'alat je krivo javio', 'nauči iz ove sesije', 'zamke.md'. Ne aktiviraj za plan, pisanje, audit, obranu ili predaju — to je kopilot katedra-lite. (Zadnje: pravilo 8 i zakrpa.py --provjeri-tvrdnje — SKILL.md ne smije tvrditi ono što kod ne radi.) v2.1.0."
+description: "Meta-skill za UČENJE iz sesija: kvar, lažni nalaz ili autorova izmjena postaje pravilo, alat ili zakrpa za katedra-lite, rad-audit i rad-docx. Aktiviraj na 'zapiši kvar', 'napravi zakrpu', 'alat je krivo javio', 'nauči iz ove sesije', 'zamke.md'. Ne aktiviraj za plan, pisanje, audit, obranu ili predaju — to je kopilot katedra-lite. (Zadnje: pravilo 8 i zakrpa.py --provjeri-tvrdnje — SKILL.md ne smije tvrditi ono što kod ne radi.) v2.2.0."
 ---
 
 # KATEDRA — skill za učenje
@@ -255,7 +255,9 @@ scripts/zakrpa.py          gradnja zakrpe iz razlike dviju verzija skilla (`--pa
 scripts/dokaz.py           prije/poslije trčanje; zadano pad→prolaz, `--dopusti-isto` kad je razlika u tekstu
 scripts/verzija.py         broj verzije paketa i oznaka koju kartica nosi (`--provjeri`, `--stanje`,
                            `--sljedeca`, `--postavi X.Y.Z`, `--dodaj-oznaku SKILL`)
+scripts/router_granice.py  svaki SKILL.md paketa ≤ 24 000 znakova (0 unutar, 1 preko, 2 neizmjereno);
+                           zakrpa koja deblja router mora ići u references/, ne u SKILL.md
 scripts/tests/             test_kvar.py (registar), test_zakrpa.py (oba smjera provjere tvrdnji),
-                           test_verzija.py (oznake verzije); sve u bin/testovi.sh
+                           test_verzija.py (oznake verzije), test_router_granice.py; sve u bin/testovi.sh
 assets/                    fixtures koji reproduciraju kvarove (v. assets/README.md)
 ```

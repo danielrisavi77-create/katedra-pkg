@@ -32,7 +32,7 @@ Kad je repo dostupan, prije rada koji ovisi o satelitima pokreni:
 ```bash
 . "$KATEDRA_PKG/bin/env.sh"
 python3 "$KATEDRA_PKG/katedra-lite/scripts/vjestine.py" --provjeri
-python3 "$KATEDRA_PKG/katedra-lite/scripts/drift.py" --kratko
+python3 "$KATEDRA_PKG/katedra-lite/scripts/drift.py" --svi --kratko
 ```
 
 Exit/greška alata je stanje okoline ili nalaz, ne prolaz. Push/read ovlasti se ne zaključuju jedna iz druge. Ako host odbije repo operaciju pravilom politike, ne pokušavaj zaobilazne credential rute.
@@ -56,7 +56,16 @@ Kad je Full path prvi put učitao runtime i paket je dostupan, korisniku jednom 
 `KATEDRA_PKG_VERZIJA` i rezultat:
 
 ```bash
-python3 "$KATEDRA_PKG/katedra-lite/scripts/drift.py" --kratko
+python3 "$KATEDRA_PKG/katedra-lite/scripts/drift.py" --svi --kratko
 ```
 
 To vrijedi za runtime/full-path sesiju, ne za Quick path koji uopće ne treba paket.
+
+**Kad kartica zaostaje (❌ uz „kartica zaostaje za repoom — verzija iz commita …")**, to se
+korisniku kaže jednom rečenicom, s imenima skillova. Skripte i tada dolaze iz paketa, ali
+router koji se učitava u svaku poruku je stariji od doktrine u repou. Ažuriranje je korisnikovo:
+u sesiji koja nudi prijedlog skilla (review kartica), predloži novi `SKILL.md` iz paketa za
+svaki skill koji je ❌, cijeli i nepromijenjen; inače mu reci da kartice zaostaju i od koje
+verzije. Kartica se ne „popravlja" ručnim spajanjem dviju verzija u sesiji. Izmjereno
+22. 9. 2026.: nakon releasea 2.0 pet od sedam kartica ostalo je na commitima 0dee1f2 i
+b28d53e (router katedra-litea 44 KB umjesto 12 KB), a provjera je pokrivala samo katedra-lite.

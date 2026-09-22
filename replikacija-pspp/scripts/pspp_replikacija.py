@@ -105,7 +105,7 @@ def gradi_sintaksu(k):
 # ════════════════════════════════════════════════════════════════════════════
 def pspp(sps, izlaz, oblik, radna):
     r = subprocess.run(["pspp", os.path.basename(sps), "-o", izlaz, "-O", f"format={oblik}"],
-                       capture_output=True, text=True, timeout=600, cwd=radna)
+                       capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600, cwd=radna)
     greske = [l for l in (r.stderr or "").split("\n") if "error" in l.lower()]
     if greske:
         print("   PSPP javlja:", greske[0][:140])
@@ -381,7 +381,7 @@ def izvuci(k, radna):
 # 4. SNIMKE SUČELJA
 # ════════════════════════════════════════════════════════════════════════════
 def sh(naredba):
-    return subprocess.run(naredba, shell=True, capture_output=True, text=True).stdout.strip()
+    return subprocess.run(naredba, shell=True, capture_output=True, text=True, encoding="utf-8", errors="replace").stdout.strip()
 
 
 def prozori():

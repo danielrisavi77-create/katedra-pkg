@@ -99,6 +99,43 @@ def main():
     r4 = drift.smjer_iz_povijesti(tempfile.mkdtemp(), rel, drift.normaliziraj(STARO))
     check("R66: mapa koja nije repo ne ruši alat", r4 is None or "greska" in r4, r4)
 
+
+    # R80: --skill mjeri drugi skill paketa; repo strana se razrješava na
+    # <paket>/<slug>/SKILL.md, ne na katedra-lite pored skripte (v2.2.0).
+    paket = Path(SCRIPTS).parents[1]
+    kart = Path(tempfile.mkdtemp()) / "rad-audit"
+    kart.mkdir()
+    (kart / "SKILL.md").write_text((paket / "rad-audit" / "SKILL.md").read_text(encoding="utf-8"),
+                                   encoding="utf-8")
+    r = subprocess.run([sys.executable, os.path.join(SCRIPTS, "drift.py"), "--skill", "rad-audit",
+                        "--kartica", str(kart / "SKILL.md")],
+                       capture_output=True, text=True, encoding="utf-8")
+    check("R80: --skill rad-audit uspoređuje s rad-audit/SKILL.md iz paketa (iste → 0)",
+          r.returncode == 0 and "rad-audit" in r.stdout, (r.returncode, r.stdout[-300:]))
+    (kart / "SKILL.md").write_text("---\nname: rad-audit\n---\nstara kartica\n", encoding="utf-8")
+    r = subprocess.run([sys.executable, os.path.join(SCRIPTS, "drift.py"), "--skill", "rad-audit",
+                        "--kartica", str(kart / "SKILL.md")],
+                       capture_output=True, text=True, encoding="utf-8")
+    check("R80: --skill rad-audit nad drugačijom karticom javlja drift (1)", r.returncode == 1,
+          (r.returncode, r.stdout[-300:]))
+
+    # R81: --svi agregira: bilo koji drift → 1; inače bilo što neizmjereno → 2;
+    # tek sve iste → 0. Neinstaliran skill nikad ne postaje „uredno".
+    class _R:
+        def __init__(self, k):
+            self.returncode, self.stdout, self.stderr = k, "", ""
+    izvorni = drift.subprocess.run
+    try:
+        for kodovi, ocekivano in (([0] * 7, 0), ([0] * 6 + [2], 2), ([0, 2, 1, 0, 0, 0, 0], 1)):
+            it = iter(kodovi)
+            drift.subprocess.run = lambda *a, **k: _R(next(it))
+            import contextlib, io as _io
+            with contextlib.redirect_stdout(_io.StringIO()):
+                dobiveno = drift.svi(True)
+            check("R81: --svi %s → %d" % (kodovi, ocekivano), dobiveno == ocekivano, dobiveno)
+    finally:
+        drift.subprocess.run = izvorni
+
     print("=" * 70)
     print("REZULTATI TESTOVA: %d/%d prošlo"
           % (len(SVE) - len(PALO), len(SVE)))

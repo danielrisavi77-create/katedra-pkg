@@ -4203,3 +4203,65 @@ mutirani profil (kratice prije sadržaja): krivo odbijeno -> prihvaćeno prema J
 Ograda: `scripts/tests/test_hks_fzs.py` (K162) i mutacijski/negativni testovi u
 `rad-audit/scripts/tests/test_zakrpa_release.py`. Izvještaj odvaja broj izmjerenih
 od broja neizmjerenih kontrola. Nije potvrda da su Upute provjerene iz izvornika.
+
+
+## 163. Pregled kvara 159 nije gledao dva skilla, pa je isti kvar u njima ostao živ
+
+`provjeri_subprocess.py` je od kvara 159 bio u suiti i javljao „✅ svaki subprocess poziv
+ima encoding=". Popis `KORIJENI` nije sadržavao `fpzg-diplomski/scripts` ni
+`replikacija-pspp/scripts`, pa četiri poziva s `text=True` bez `encoding=` nitko nije
+gledao: `pdfinfo`/`pdftotext` u `provjeri_prikaze.py` (hrvatski natpisi iz PDF-a na
+cp1250 konzoli) i `pspp`/`sh` u `pspp_replikacija.py`. Kvar je bio tih: zeleno nad
+nepregledanim kodom.
+
+```text
+KORIJENI bez dva skilla: ✅ 0 nalaza · s njima: ❌ 4 subprocess poziva bez encoding=
+```
+
+Popravak: oba skilla dodana u `KORIJENI`, četiri poziva dobila su
+`encoding="utf-8", errors="replace"`. Ograda: skupina „paket: subprocess s encoding="
+u `bin/testovi.sh` sada pokriva svih sedam skillova.
+
+## 164. Neizmjereno lomljenje tablica javljalo se kao „✅ nema nalaza"
+
+`fpzg-diplomski/scripts/provjeri_prikaze.py` bez `rad.pdf` pored `rad.docx` ispiše
+upozorenje, preskoči provjeru lomljenja i vrati izlazni kod 0 uz „✅ nema nalaza".
+Rad s tablicama tako je prolazio provjeru koja se nije ni pokrenula; ista klasa kao
+kanta „nije provjereno" u fazi PREDAJA (12. 9. 2026.).
+
+```text
+rad s 1 tablicom, bez PDF-a: izlaz 0 „✅ nema nalaza" -> izlaz 2 „lomljenje NIJE izmjereno"
+```
+
+Popravak: izlaz 2 kad nema nalaza, a lomljenje tablica nije izmjereno; rad bez tablica
+ostaje 0. Ograda: `fpzg-diplomski/scripts/tests/test_fpzg.py` (prvi testovi tog skilla).
+
+## 165. Drift kartica mjerio se samo za katedra-lite, pa je pet kartica zaostalo neprimijećeno
+
+`drift.py` je imao ukovan `SLUG = "katedra-lite"`. Nakon releasea 2.0 (thin router)
+pet od sedam account kartica ostalo je na commitima 0dee1f2 i b28d53e: router
+katedra-litea 44 126 B umjesto 11 889 B, rad-orchestrator 46 321 B s „Dodatkom A",
+rad-audit bez `inventar_tvrdnji.py`. Sesije su učitavale stari router u svaku poruku.
+
+```text
+drift.py --kratko: 1 skill izmjeren · drift.py --svi --kratko: 5 od 7 ❌ „kartica zaostaje za repoom"
+```
+
+Popravak: `--skill SLUG` i `--svi` u `drift.py`; `references/runtime.md` pokreće
+`--svi --kratko` i propisuje što reći korisniku. Ograda: R80 i R81 u
+`scripts/tests/test_drift.py`.
+
+## 166. Rezerva u rad-orchestrator routeru bila je starija od skripte koju je čuvala
+
+`rad-orchestrator/SKILL.md` nosio je „Dodatak A" (36 KB) s cijelim Workflow JS-om kao
+rezervu „ako paket nema tu verziju". Dodatak je bio v1.2.1, a `scripts/rad-orchestrator.js`
+v1.3.0 (tvrdi gate po izlaznom kodu `gate.py`); razlika 92 retka. Rezerva bi tiho
+vratila stariji, mekši gate, a router je 46 321 znak išao u kontekst svake aktivacije.
+
+```text
+Dodatak A: // rad-orchestrator v1.2.1 · paket: // rad-orchestrator v1.3.0 · diff: 92 retka
+```
+
+Popravak: dodatak uklonjen (router 10 122 znaka); bez skripte u paketu ili synced kopiji
+orkestrator staje i traži paket. Ograda: `katedra/scripts/router_granice.py` u suiti
+drži svaki SKILL.md paketa ispod 24 000 znakova (`test_router_granice.py`).
