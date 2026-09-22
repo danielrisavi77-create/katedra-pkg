@@ -18,6 +18,22 @@ def _implementation_sha(root):
     v=root.parent/"VERSION"
     if v.is_file(): rows.append(("../VERSION",file_sha256(v)))
     return _sha(_canon(rows))
+def bound_dependencies(project_root, state_dir):
+    root=Path(project_root).resolve(); state=Path(state_dir).resolve()
+    deps={"claims":state/"claims.jsonl","evidence":state/"evidence.jsonl","sources":state/"izvori.json"}
+    ev=deps["evidence"]
+    if not ev.is_file(): return deps
+    for line in ev.read_text(encoding="utf-8").splitlines():
+        if not line.strip(): continue
+        row=json.loads(line); sp=str(row.get("source_path") or "")
+        if not sp: continue
+        p=Path(sp)
+        if p.is_absolute(): raise ValueError("bound review ne prihvaća apsolutni/vanjski source_path")
+        source=(root/p).resolve()
+        try: rel=source.relative_to(root)
+        except ValueError as exc: raise ValueError("source_path izlazi iz projekta") from exc
+        deps["source:"+rel.as_posix()]=source
+    return deps
 def capture_context(project_root,*,document,dependencies,view,config,code_root):
     root=Path(project_root).resolve(); doc=Path(document).resolve(); art,rec=current_record(root,doc)
     if not art or not rec: raise ValueError("dokument nije praćen u artifact manifestu")
@@ -62,13 +78,17 @@ def _run(argv,cwd):
     except (OSError,subprocess.TimeoutExpired): return 2
 def run_bundle(project_root,*,document,state_dir,view,config,code_root):
     root=Path(project_root).resolve(); state=Path(state_dir).resolve()
-    deps={"claims":state/"claims.jsonl","evidence":state/"evidence.jsonl","sources":state/"izvori.json"}
+    deps=bound_dependencies(root,state)
     before=capture_context(root,document=document,dependencies=deps,view=view,config=config,code_root=code_root)
     run=root/".katedra"/"reviews"/uuid.uuid4().hex; run.mkdir(parents=True)
     inputs=run/"inputs"; snap_state=inputs/".katedra"; snap_state.mkdir(parents=True)
-    snap_deps={name:snap_state/path.name for name,path in deps.items()}
+    snap_deps={}
     for name,path in deps.items():
-        shutil.copy2(path,snap_deps[name])
+        if name.startswith("source:"):
+            rel=Path(name.split(":",1)[1]); target=inputs/rel
+        else:
+            target=snap_state/path.name
+        target.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(path,target); snap_deps[name]=target
     # Preserve project-relative source paths used by the evidence ledger.
     for line in snap_deps["evidence"].read_text(encoding="utf-8").splitlines():
         if not line.strip(): continue
