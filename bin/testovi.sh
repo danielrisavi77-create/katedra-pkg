@@ -58,9 +58,15 @@ pokreni "rad-docx: ciljane izmjene" \
   python3 "$KORIJEN/rad-docx/scripts/tests/test_ciljane_izmjene.py"
 pokreni "katedra-lite: gate" \
   python3 "$KORIJEN/katedra-lite/scripts/tests/test_gate.py"
+pokreni "fpzg-diplomski: stil, prikazi, grafikoni" \
+  python3 "$KORIJEN/fpzg-diplomski/scripts/tests/test_fpzg.py"
+pokreni "replikacija-pspp: sintaksa, ispis, usporedba" \
+  python3 "$KORIJEN/replikacija-pspp/scripts/tests/test_replikacija.py"
 pokreni "katedra: registar kvarova" python3 "$KORIJEN/katedra/scripts/tests/test_kvar.py"
 pokreni "katedra: provjera tvrdnji" python3 "$KORIJEN/katedra/scripts/tests/test_zakrpa.py"
 pokreni "katedra: verzija i oznake" python3 "$KORIJEN/katedra/scripts/tests/test_verzija.py"
+pokreni "katedra: granica routera" python3 "$KORIJEN/katedra/scripts/tests/test_router_granice.py"
+pokreni "paket: svi routeri ispod granice" python3 "$KORIJEN/katedra/scripts/router_granice.py" "$KORIJEN"
 pokreni "katedra: oznaka verzije = VERSION" python3 "$KORIJEN/katedra/scripts/verzija.py" --provjeri
 pokreni "zakrpa: regresije citata, profila i inventara" \
   python3 "$KORIJEN/rad-audit/scripts/tests/test_zakrpa_release.py"

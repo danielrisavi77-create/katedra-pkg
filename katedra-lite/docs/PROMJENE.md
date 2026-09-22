@@ -1,3 +1,15 @@
+# v2.2.0 — tanki routeri za cijeli paket, drift svih kartica, dva skilla dobila testove (22. 9. 2026.)
+
+* **rad-orchestrator 46 321 → 10 122 znaka.** Uklonjen „Dodatak A" (36 KB JS-a, v1.2.1, dok je paket na v1.3.0). Bez skripte orkestrator staje i traži paket. Kvar 166.
+* **rad-audit 31 954 → 12 757 znakova.** Solo intake, popis alata i samotestiranje izdvojeni u `references/solo_intake.md`, `references/alati.md` i `references/samotest.md`, sadržaj nepromijenjen. Način MOTOR ih ne čita.
+* **Ograda za sve routere.** `katedra/scripts/router_granice.py` u suiti: svaki SKILL.md paketa ≤ 24 000 znakova (granica thin-router contracta). Na v2.1.0 bi pala na dva skilla.
+* **Drift svih kartica.** `drift.py --skill SLUG` i `--svi`; `references/runtime.md` pokreće `--svi --kratko` i propisuje da se korisniku predloži nova kartica. Izmjereno: 5 od 7 kartica zaostajalo je od releasea 2.0. Kvar 165.
+* **Kvar 159 zatvoren i u preostala dva skilla.** `provjeri_subprocess.py` nije gledao `fpzg-diplomski` i `replikacija-pspp`; četiri poziva bez `encoding=` popravljena. Kvar 163.
+* **`provjeri_prikaze.py` (fpzg-diplomski):** neizmjereno lomljenje tablica je izlaz 2, ne „✅ nema nalaza". Kvar 164.
+* **Prvi testovi za `fpzg-diplomski` (15) i `replikacija-pspp` (17)**, oba u `bin/testovi.sh`.
+* **CI:** job `package-tests-windows` (windows-latest, Git Bash). Do prvog zelenog prolaza ne blokira PR (`continue-on-error`).
+* **Nije mijenjano:** `zamke.md` se ne dijeli; indeks i `indeks_zamki.py --trazi` već omogućuju ciljano čitanje, a runtime ne učitava `PROMJENE.md` ni `docs/audit.md`.
+
 # v2.1.0 — pouzdan rezultat provjere, ciljane DOCX izmjene, izričito odobrenje plana (22. 9. 2026.)
 
 Release korak koji spaja tri grane što su stajale izvan `main`-a. Nijedan spoj nije imao konflikt; cijeli `bin/testovi.sh` na spojenom stablu: **33/33 skupine**, izlazni kod 0.

@@ -48,6 +48,53 @@ jobs:
           path: .testovi/zadnji.log
           if-no-files-found: ignore
 
+  # Autor radi na Windowsu, a kvarovi 145, 159 i cp1250 ispis iz bin/testovi.sh
+  # vidjeli su se tek na njegovom stroju, nikad u CI-ju. Ovaj job vrti isti suite
+  # na windows-latest (Git Bash). Dok prvi put ne prođe zeleno, NE blokira PR
+  # (continue-on-error); čim prođe, makni continue-on-error i dodaj ga u
+  # obavezne provjere grane main.
+  package-tests-windows:
+    name: Full package test suite (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 40
+    continue-on-error: true
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Provide python3 on PATH
+        run: |
+          mkdir -p "$RUNNER_TEMP/py3"
+          printf '#!/bin/sh\nexec python "$@"\n' > "$RUNNER_TEMP/py3/python3"
+          chmod +x "$RUNNER_TEMP/py3/python3"
+          echo "$RUNNER_TEMP/py3" >> "$GITHUB_PATH"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install python-docx pillow pytest fastapi httpx numpy pandas matplotlib jsonschema
+
+      - name: Run full Katedra suite
+        run: bash bin/testovi.sh
+
+      - name: Upload suite log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: katedra-test-log-windows
+          path: .testovi/zadnji.log
+          if-no-files-found: ignore
+
   claude-trigger-eval:
     name: Live Claude trigger eval (auth-gated)
     runs-on: ubuntu-latest

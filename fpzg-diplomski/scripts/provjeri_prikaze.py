@@ -7,6 +7,10 @@ Ne provjerava sadržaj — to rade check_rules.py i audit_all.py. Ovo hvata kvar
 koje se inače primijeti tek kad rad izađe iz pisača.
 
     python3 provjeri_prikaze.py rad.docx
+
+Izlaz: 0 = izmjereno i bez nalaza · 1 = nalazi · 2 = nema nalaza, ali lomljenje
+tablica NIJE izmjereno (nema rad.pdf pored rad.docx, a rad ima tablice). Do
+v2.2.0 taj je slučaj ispisivao upozorenje i vraćao 0 uz „✅ nema nalaza".
 """
 import argparse
 import json
@@ -28,10 +32,10 @@ def norm(s):
 
 
 def stranice_pdfa(pdf):
-    n = int(subprocess.run(["pdfinfo", pdf], capture_output=True, text=True)
+    n = int(subprocess.run(["pdfinfo", pdf], capture_output=True, text=True, encoding="utf-8", errors="replace")
             .stdout.split("Pages:")[1].split()[0])
     return [norm(subprocess.run(["pdftotext", "-f", str(i), "-l", str(i), pdf, "-"],
-                                capture_output=True, text=True).stdout)
+                                capture_output=True, text=True, encoding="utf-8", errors="replace").stdout)
             for i in range(1, n + 1)], n
 
 
@@ -46,6 +50,7 @@ def main(put):
     except Exception as e:
         print(f"⚠ PDF nije dostupan ({e}); provjera lomljenja preskočena")
         pg, n = [], 0
+    neizmjereno = not pg and len(d.tables) > 0
 
     if pg:
         for k, t in enumerate(d.tables, 1):
@@ -131,9 +136,13 @@ def main(put):
         print("NALAZI:")
         for x_ in nalazi:
             print("  ❌", x_)
-    else:
-        print("✅ nema nalaza")
-    return 1 if nalazi else 0
+        return 1
+    if neizmjereno:
+        print(f"⚠ nema nalaza, ali lomljenje {len(d.tables)} tablica NIJE izmjereno "
+              f"(treba {pdf}); to nije prolaz")
+        return 2
+    print("✅ nema nalaza")
+    return 0
 
 
 if __name__ == "__main__":
