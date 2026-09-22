@@ -48,6 +48,19 @@ class ReceiptTests(unittest.TestCase):
                     dependencies={'claims':state/'claims.jsonl'},view='original_no_revisions',
                     config={'policy':'strict'},code_root=Path(rr.__file__).parents[1])
 
+    def test_local_source_bytes_are_receipt_dependencies(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d); document,state=make_project(root)
+            deps=rr.bound_dependencies(root,state)
+            self.assertIn('source:izvori/synthetic.txt',deps)
+            before=rr.capture_context(root,document=document,dependencies=deps,
+                view='original_no_revisions',config={'policy':'strict'},code_root=Path(rr.__file__).parents[1])
+            (root/'izvori'/'synthetic.txt').write_text('promjena\n',encoding='utf-8')
+            after=rr.capture_context(root,document=document,dependencies=deps,
+                view='original_no_revisions',config={'policy':'strict'},code_root=Path(rr.__file__).parents[1])
+            self.assertNotEqual(before['dependencies']['source:izvori/synthetic.txt']['sha256'],
+                                after['dependencies']['source:izvori/synthetic.txt']['sha256'])
+
     def test_runner_uses_isolated_ledger_snapshot(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d); document,state=make_project(root); seen=[]
