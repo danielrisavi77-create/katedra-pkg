@@ -4,7 +4,7 @@
 > **Ne uređuj ručno.** Nakon izmjene kataloga: `indeks_zamki.py --upisi`.
 > `bin/testovi.sh` pada ako je ovaj indeks zastario.
 
-Unosa: **120** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom: **106** · ograda ne pripada (deklarirano): **17** · **duguje ogradu: 2**
+Unosa: **122** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom: **107** · ograda ne pripada (deklarirano): **18** · **duguje ogradu: 2**
 
 Traži bez učitavanja cijelog kataloga:
 
@@ -140,6 +140,8 @@ sed -n '844,880p' katedra-lite/references/zamke.md   # unos po retku
 | 175 | `os.path.relpath` preko dva diska rušio je `check_rules.py` samo radi ispisa puta | `check_rules.py`, `test_stari_kvarovi.py` | ✅ | 4452 |
 | 176 | Test servisa čitao je JSON kodnom stranicom sustava i ostavljao datoteku otvorenom | `test_service.py` | ✅ | 4469 |
 | 177 | `router_contract.py` je ispisivao put kartice s backslashom, pa je R72 padao samo na Wi… | `router_contract.py`, `SKILL.md`, `index.json` | ✅ | 4486 |
+| 178 | Paralelne sesije uzimale su isti „sljedeći” broj kvara, a sudar se vidio tek pri ručnom… | `provjeri_sudar_kvarova.py`, `SKILL.md`, `test_sudar_kvarova.py` | ✅ | 4505 |
+| 179 | Test symlinka padao je na Windowsu bez ovlasti, pa je lokalni suite uvijek bio crven | `ciljane_izmjene.py` | ⚪ | 4528 |
 
 ## Unosi bez ograde
 

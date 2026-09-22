@@ -1,6 +1,6 @@
 ---
 name: rad-docx
-description: "Motor izrade predajnog .docx-a iz markdown rukopisa: paginacija do fiksne točke, živa polja (TOC/SEQ/REF), nedjeljivi prikazi, sekcije, provjera prije predaje i povratka iz Worda. Aktiviraj na 'izgradi docx iz rukopisa', 'gradi.py', 'provjeri_predaju', 'sadržaj nema brojeve stranica'. Kućni stil daje satelit; plan i audit vodi katedra-lite. v2.4.1."
+description: "Motor izrade predajnog .docx-a iz markdown rukopisa: paginacija do fiksne točke, živa polja (TOC/SEQ/REF), nedjeljivi prikazi, sekcije, provjera prije predaje i povratka iz Worda. Aktiviraj na 'izgradi docx iz rukopisa', 'gradi.py', 'provjeri_predaju', 'sadržaj nema brojeve stranica'. Kućni stil daje satelit; plan i audit vodi katedra-lite. v2.4.2."
 ---
 
 # RAD-DOCX — od rukopisa do predajnog dokumenta

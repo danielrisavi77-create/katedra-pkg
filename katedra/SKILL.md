@@ -1,6 +1,6 @@
 ---
 name: katedra
-description: "Meta-skill za UČENJE iz sesija: kvar, lažni nalaz ili autorova izmjena postaje pravilo, alat ili zakrpa za katedra-lite, rad-audit i rad-docx. Aktiviraj na 'zapiši kvar', 'napravi zakrpu', 'alat je krivo javio', 'nauči iz ove sesije', 'zamke.md'. Ne za plan, pisanje, audit, obranu ili predaju (to je katedra-lite). v2.4.1."
+description: "Meta-skill za UČENJE iz sesija: kvar, lažni nalaz ili autorova izmjena postaje pravilo, alat ili zakrpa za katedra-lite, rad-audit i rad-docx. Aktiviraj na 'zapiši kvar', 'napravi zakrpu', 'alat je krivo javio', 'nauči iz ove sesije', 'zamke.md'. Ne za plan, pisanje, audit, obranu ili predaju (to je katedra-lite). v2.4.2."
 ---
 
 # KATEDRA — skill za učenje
@@ -123,6 +123,8 @@ to pokazuje.
 ```bash
 python3 <SKILL>/scripts/kvar.py <put>/zamke.md --provjeri      # imaju li svi unosi 4 dijela
 python3 <SKILL>/scripts/kvar.py <put>/zamke.md --novi "Naslov" # sljedeći broj + kostur
+git fetch origin main && python3 <SKILL>/scripts/provjeri_sudar_kvarova.py --baza origin/main
+#   ↑ PRIJE commita: drugi PR je možda već uzeo isti broj (kvar 178); CI to provjerava u PR-u
 python3 <SKILL>/scripts/kvar.py dodatak.md --provjeri --nastavak-od 23   # FRAGMENT
 ```
 
