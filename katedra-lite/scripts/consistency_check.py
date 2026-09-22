@@ -186,7 +186,7 @@ def evaluate_claims(claims: list[dict[str, Any]]) -> dict[str, Any]:
 
     findings.sort(key=lambda f: (f["type"], f["anchor"]))
     blocking = sum(1 for f in findings if f["severity"] == "blocking")
-    coverage_status = "sufficient" if len(nodes) >= 2 else "insufficient"
+    coverage_status = "sufficient" if len(nodes) >= 2 and bool(edges) else "insufficient"
     return {
         "schema_version": 1,
         "check_kind": "deterministic_claim_consistency",
