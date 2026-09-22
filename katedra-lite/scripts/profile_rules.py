@@ -541,7 +541,11 @@ def faculty_bundle_sha256(faculty_dir: str | Path, slug: str) -> str:
         rel = _rel(path, root)
         h.update(rel.encode("utf-8"))
         h.update(b"\0")
-        h.update(path.read_bytes())
+        # Git may materialize text JSON as CRLF on Windows even when the
+        # committed content is LF. Admission identity must be OS-stable while
+        # remaining byte-sensitive to every other change.
+        data = path.read_bytes().replace(b"\r\n", b"\n")
+        h.update(data)
         h.update(b"\0")
     return h.hexdigest()
 
