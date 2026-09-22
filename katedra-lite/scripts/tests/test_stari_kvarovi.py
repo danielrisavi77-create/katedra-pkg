@@ -959,7 +959,7 @@ def main():
     check("K160: fpzg-project — rad s 2023a i 2023b nema ni citat bez izvora ni necitiranu jedinicu",
           p160["bez_izvora"] == [] and p160["necitirani"] == [], (kratko(p160), out[-200:]))
 
-    # --- 172: hash bundlea ne ovisi o CRLF-u (autocrlf na Windowsu) ------------------
+    # --- 174: hash bundlea ne ovisi o CRLF-u (autocrlf na Windowsu) ------------------
     import shutil as _sh
     prr172 = modul("profile_rules")
     fak172 = os.path.join(mapa, "fakulteti172")
@@ -971,14 +971,14 @@ def main():
         sirovo = f.read().replace(b"\r\n", b"\n")
     with open(ef, "wb") as f:
         f.write(sirovo.replace(b"\n", b"\r\n"))
-    check("K172: isti profil s CRLF krajevima redaka daje isti bundle hash",
+    check("K174: isti profil s CRLF krajevima redaka daje isti bundle hash",
           prr172.faculty_bundle_sha256(fak172, "efzg") == h_lf, h_lf[:12])
     with open(ef, "wb") as f:
         f.write(sirovo.replace(b"\"slug\"", b"\"slug\" ", 1))
-    check("K172: stvarna izmjena sadržaja i dalje mijenja hash",
+    check("K174: stvarna izmjena sadržaja i dalje mijenja hash",
           prr172.faculty_bundle_sha256(fak172, "efzg") != h_lf)
 
-    # --- 173: ispis puta preko dva diska ne ruši check_rules ------------------------
+    # --- 175: ispis puta preko dva diska ne ruši check_rules ------------------------
     cr173 = modul("check_rules")
     _orig_rel = cr173.os.path.relpath
 
@@ -990,7 +990,7 @@ def main():
         prikaz = cr173.prikaz_puta(os.path.join(mapa, "profil.json"))
     finally:
         cr173.os.path.relpath = _orig_rel
-    check("K173: relpath preko dva diska → apsolutni put, ne ValueError",
+    check("K175: relpath preko dva diska → apsolutni put, ne ValueError",
           os.path.isabs(prikaz) and prikaz.endswith("profil.json"), prikaz)
 
     print("=" * 70)

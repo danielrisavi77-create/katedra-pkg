@@ -1,6 +1,6 @@
 ---
 name: replikacija-pspp
-description: "REPLIKACIJA — neovisna provjera svih brojki iz empirijskog rada u programu GNU PSPP, sa snimkama sučelja i gotovim prilozima za rad. Aktiviraj kad korisnik kaže 'provjeri jesu li brojke točne', 'replikacija', 'neovisna provjera izračuna', 'napravi prilog s ispisom', 'jamovi', 'SPSS', 'PSPP', 'statistički prilog', 'da mogu dokazati da su brojke točne', ili kad katedra u modu 4 (audit) treba empirijsku potvrdu rezultata, odnosno u modu 6 (predaja) prilog s ispisom. Radi neovisno o fakultetu i o kućnom stilu: daje sintaksu, ispis, tablicu usporedbe i snimke prozora. Ne aktiviraj za pisanje teksta ni za formatiranje dokumenta."
+description: "Neovisna provjera brojki iz empirijskog rada u GNU PSPP-u: sintaksa, ispis, tablica usporedbe, snimke sučelja i prilozi za rad. Aktiviraj na 'provjeri jesu li brojke točne', 'replikacija', 'SPSS', 'PSPP', 'jamovi', 'statistički prilog', ili kad katedra-lite u modu 4/6 treba empirijsku potvrdu. Ne za pisanje teksta ni formatiranje. v2.4.1."
 compatibility: "Python 3.11+, python-docx, Pillow. Za izračun: pspp. Za snimke sučelja: psppire, Xvfb, openbox, xdotool, wmctrl, ImageMagick. Sve je dostupno iz apt repozitorija; vidi references/okruzenje.md."
 metadata:
   version: "1.0.0"

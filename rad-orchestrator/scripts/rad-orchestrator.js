@@ -1,4 +1,4 @@
-// rad-orchestrator v1.3.1 — 2026-09-22 (rad_docx: odluke_autora + verify_rewrite --namjerno + revizije.py toc; mail mentora → extract_comments) (v1.3.0 2026-09-05: tvrdi gate: faza se zatvara po gate.py izlaznom kodu i gate.json-u, ne po samoprijavi agenta) (paket se ne mijenja iz workflowa → .katedra/nalazi_paketa.md; lens budget: leće se ponavljaju samo kad se gate promijenio ili su prošli put imale nalaze; args.lens_budget=false isključuje; katedra-pkg <SLUG>_HOME; tolerantan na katedra-lite < v1.9; rad_docx mod)
+// rad-orchestrator v1.4.0 — 2026-09-22 (štednja tokena: tekst rada se ekstrahira jednom u .katedra/rad.txt; dvije mehaničke leće spojene u jednu, effort low, bez čitanja cijelog teksta; mrtav skill fpzg-skill-pisanje zamijenjen popisom iz ucitavanje.py) (v1.3.1 2026-09-22 (rad_docx: odluke_autora + verify_rewrite --namjerno + revizije.py toc; mail mentora → extract_comments)) (v1.3.0 2026-09-05: tvrdi gate: faza se zatvara po gate.py izlaznom kodu i gate.json-u, ne po samoprijavi agenta) (paket se ne mijenja iz workflowa → .katedra/nalazi_paketa.md; lens budget: leće se ponavljaju samo kad se gate promijenio ili su prošli put imale nalaze; args.lens_budget=false isključuje; katedra-pkg <SLUG>_HOME; tolerantan na katedra-lite < v1.9; rad_docx mod)
 export const meta = {
   name: 'rad-orchestrator',
   description: 'Vođa kroz faze rada koji zove STVARNE katedra-lite skripte (stanje_init → plan_state → rukopis → build_docx → gate → napredak); paralelni audit, bidirekcionalni flow, ceka_autora umjesto ping-ponga',
@@ -163,7 +163,7 @@ function promptPisanje() {
 Korisnik piše ${tip} rad na temu "${config.tema}". FAZA: PISANJE (katedra-lite mod 2). Markdown u ${K}/poglavlja/ je IZVOR ISTINE, .docx se iz njega sastavlja.
 
 1. cd ${PROJECT_ROOT}; python3 ${S}/stanje_init.py --set mod=pisanje ; python3 ${S}/ucitavanje.py --mod 2
-2. Pozovi Skill tool sa skill='fpzg-skill-pisanje' (akademski stil, citiranje) — pročitaj i references/pisanje.md i references/razina.md iz katedra-lite.
+2. Pročitaj SAMO ono što je ucitavanje.py ispisao pod MORA SE PROČITATI (jezgra references/pisanje.md, razina, uvjetni dodaci; za FPZG i references/glas_fpzg.md). Stavke pod NE UČITAVAJ SADA otvori tek kad se okidač stvarno dogodi (npr. references/pisanje_dokazi.md prije nove tvrdnje s izvorom). Skill 'fpzg-skill-pisanje' NE postoji: njegov sadržaj je u glas_fpzg.md i pisanje.md.
 3. python3 ${S}/plan_state.py status ; python3 ${S}/plan_state.py next
    Ako ${K}/poglavlja/ ne postoji: python3 ${S}/rukopis.py init  (kostur NN-slug.md iz plana). python3 ${S}/rukopis.py status
 4. Ako su sva potpoglavlja već "napisano" a postoje ODLUKE AUTORA ili kontekst povratka: ovo je REVIZIJA — uredi postojeće .md (Edit) prema odlukama (teza/okvir/definicije/imena/stranice), ne piši ispočetka, i ponovno pokreni check_ai_style nad izmijenjenim datotekama.
@@ -192,6 +192,7 @@ FAZA: AUDIT — priprema (mehanički). Korisnik ima ${tip} rad "${config.tema}".
 4. python3 ${S}/gate.py --faza audit --rad ./rad.docx ${uRegistryju ? `--profil ${K}/resolved_profile.json` : ''} --tip ${tip} --json ${K}/gate.json
    python3 ${S}/nalazi_trag.py zabiljezi --gate ${K}/gate.json
 5. python3 ${S}/nalazi_trag.py analiza --faza audit  (što preživljava kroz krugove)
+6. python3 $RAD_AUDIT_HOME/extract_text.py ./rad.docx > ${K}/rad.txt   (tekst rada JEDNOM; leće čitaju ovu datoteku umjesto da svaka ponovno ekstrahira .docx)
 
 U sazetak stavi: sažetak gate.json (ok/nalaz/preskočeno/pukao, što blokira) i koje su datoteke nalaza nastale u ${K}/ (stil.json, pravila.json, arg.json...).
 U gate_koraci stavi SVAKI korak iz gate.json: naziv, stanje (ok|nalaz|preskoceno|pukao) i otisak = deterministički kratak sažetak nalaza tog koraka (npr. "3 nalaza: font, prored, TOC" — isti nalazi → isti otisak; ok → "ok"). Lens budget po tome odlučuje koje se leće ponavljaju.
@@ -223,10 +224,9 @@ const NALAZ_SCHEMA = {
 
 function auditLensovi() {
   const l = [
-    { naziv: 'Sadržaj i logika', koraci: /argument|teza|logik|plan|dijel|zadat|rubrik|proturje/i, uputa: `Pozovi Skill tool sa skill='rad-audit' (dio o logici/argumentaciji). Pročitaj ${K}/plan.json i ${K}/arg.json ako postoji.`, fokus: 'Prati li argumentacija plan, logičke rupe, teza ↔ zaključak. Nedostaje li poglavlje iz plana → kategorija strukturno.' },
-    { naziv: 'Citati i reference', koraci: /citat|literatur|izvor|referenc|evidence|fusnot|siro/i, uputa: `Pozovi Skill tool sa skill='rad-audit' (dio o citiranju). Pročitaj ${K}/gate.json korake o izvorima/literaturi.`, fokus: 'Tvrdnje bez izvora, [TREBA IZVOR], nedosljedan stil, siročad. Tvrdnja kojoj FALI izvor a agent ga ne smije izmisliti → kategorija treba_autora.' },
-    { naziv: 'Plagijat i AI-tekst', koraci: /generiran|\bai\b|stil|ponavlj|zamk|original|preklap/i, uputa: `Pročitaj ${K}/stil.json ako postoji (check_ai_style) i ${K}/gate.json korak "tragovi generiranog teksta".`, fokus: 'Predvidljive fraze, ponavljanja, generički prijelazi. Uglavnom mehanicko.' },
-    { naziv: 'Formatiranje i jezik', koraci: /pravopis|tipograf|profil|pravil|format|jezik|odloma|prikaz|slik|geometr/i, uputa: `Pročitaj ${K}/gate.json korake pravopis/tipografija/profil i ${K}/pravila.json ako postoji.`, fokus: 'Navodnici, brojevi, jedinice, terminologija. Mehanicko osim ako profil fakulteta traži odluku autora.' }
+    { naziv: 'Sadržaj i logika', koraci: /argument|teza|logik|plan|dijel|zadat|rubrik|proturje/i, cijeliTekst: true, uputa: `Pročitaj ${K}/plan.json i ${K}/arg.json ako postoji (check_argument). Skill rad-audit ne treba: logiku argumenta nijedna njegova faza ne mjeri.`, fokus: 'Prati li argumentacija plan, logičke rupe, teza ↔ zaključak. Nedostaje li poglavlje iz plana → kategorija strukturno.' },
+    { naziv: 'Citati i reference', koraci: /citat|literatur|izvor|referenc|evidence|fusnot|siro/i, cijeliTekst: true, uputa: `Pozovi Skill tool sa skill='rad-audit' (dio o citiranju). Pročitaj ${K}/gate.json korake o izvorima/literaturi.`, fokus: 'Tvrdnje bez izvora, [TREBA IZVOR], nedosljedan stil, siročad. Tvrdnja kojoj FALI izvor a agent ga ne smije izmisliti → kategorija treba_autora.' },
+    { naziv: 'Mehanika: AI-trag, formatiranje, jezik', koraci: /generiran|\bai\b|stil|ponavlj|zamk|original|preklap|pravopis|tipograf|profil|pravil|format|jezik|odloma|prikaz|slik|geometr/i, cijeliTekst: false, effort: 'low', uputa: `Pročitaj ${K}/stil.json (check_ai_style), ${K}/pravila.json ako postoji i ${K}/gate.json korake "tragovi generiranog teksta", pravopis, tipografija, profil. Doslovan citat za nalaz nađi s grep -n u ${K}/rad.txt (ili ${K}/poglavlja/*.md); cijeli tekst NE čitaj.`, fokus: 'Predvidljive fraze, ponavljanja, generički prijelazi; navodnici, brojevi, jedinice, terminologija. Mehanicko osim ako profil fakulteta traži odluku autora.' }
   ]
   if (empirijski) l.push({ naziv: 'Empirijska provjera', koraci: /izracun|brojk|formul|statist|replik|model/i, uputa: `Pozovi Skill tool sa skill='replikacija-pspp'.`, fokus: 'Brojke i statističke tvrdnje: provjerljive i konzistentne? Brojka bez podataka → treba_autora.' })
   return l
@@ -237,7 +237,7 @@ function promptLens(lens, priprema) {
 Sažetak gate prolaza: ${priprema.sazetak.slice(0, 900)}
 
 Ti si SPECIJALIZIRANI AUDIT LENS: **${lens.naziv}**. Samo svoja dimenzija — ostale pokrivaju drugi lensovi paralelno.
-1. cd ${PROJECT_ROOT}; pročitaj ${RAD_DOCX_ULAZ ? 'tekst iz ./rad.docx (python-docx ili ' + S + '/../../rad-audit/scripts/extract_text.py) — stvaran tekst; nalaze veži uz poglavlje/odlomak, ne uz .md datoteku' : 'SVE ' + K + '/poglavlja/*.md (Read) — stvaran tekst, ne pretpostavljaj'}.
+1. cd ${PROJECT_ROOT}; ${lens.cijeliTekst === false ? 'cijeli tekst ne čitaj (v. korak 2); ' : ''}${RAD_DOCX_ULAZ ? 'tekst rada je u ' + K + '/rad.txt (priprema ga je izvukla JEDNOM; ako ne postoji: python3 $RAD_AUDIT_HOME/extract_text.py ./rad.docx > ' + K + '/rad.txt) — nalaze veži uz poglavlje/odlomak, ne uz .md datoteku' : 'rukopis je u ' + K + '/poglavlja/*.md — stvaran tekst, ne pretpostavljaj'}${lens.cijeliTekst === false ? '.' : '; pročitaj ga jednom (Read), bez ponovne ekstrakcije.'}
 2. ${lens.uputa}
 3. ${lens.fokus}
 4. Za svaki nalaz: datoteka, doslovan citat, preporuka, i KATEGORIJA (mehanicko / strukturno / treba_autora). Bez nalaza → prazan niz, ne izmišljaj.
@@ -335,7 +335,7 @@ async function izvrsiAudit(kontekst) {
   const { pokreni, preskoci, razlog } = odlukaBudgeta(lensovi, priprema)
   log(`🔎 lens budget (${razlog}): pokrećem ${pokreni.length}/${lensovi.length}${preskoci.length ? ' — preskačem: ' + preskoci.map((l) => l.naziv).join(', ') : ''}`)
   const rez = pokreni.length ? await parallel(pokreni.map((l) => () => agent(promptLens(l, priprema),
-    { label: `Lens: ${l.naziv}`, phase: 'Audit', schema: NALAZ_SCHEMA, agentType: 'general-purpose' }))) : []
+    { label: `Lens: ${l.naziv}`, phase: 'Audit', schema: NALAZ_SCHEMA, agentType: 'general-purpose', ...(l.effort ? { effort: l.effort } : {}) }))) : []
   const valid = rez.filter(Boolean)
   const nalaziPoLensu = {}
   for (const l of pokreni) nalaziPoLensu[l.naziv] = []

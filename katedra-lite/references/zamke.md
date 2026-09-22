@@ -4376,9 +4376,58 @@ token ne blokira i ispisuje se s razlogom. Nenavedeni i dalje blokira. Token bez
 odbija. Na stvarnom paru: 20 brojki i 4 citatna ključa navedena s razlogom, preostalih 7
 ostaje ✗ dok se ne navedu. Ograda: K5 (3 provjere).
 
+## 172. Orkestrator u fazi pisanja zove skill koji ne postoji od v1.9
+
+**Simptom.** Agent faze PISANJE u `rad-orchestrator.js` (redak 166) dobiva uputu
+„Pozovi Skill tool sa skill='fpzg-skill-pisanje'". Taj alias je u v1.9 pretvoren u
+`references/glas_fpzg.md` i `references/pisanje.md` i više ne postoji kao skill, pa svaki
+agent pisanja troši poziv na pogrešku i onda nagađa što je trebao pročitati.
+
+```
+$ grep -o "skill='[^']*'" rad-orchestrator/scripts/rad-orchestrator.js | sort -u
+skill='fpzg-skill-pisanje'      ← nema fpzg-skill-pisanje/SKILL.md u paketu
+skill='katedra-lite'
+skill='rad-audit'
+skill='replikacija-pspp'
+```
+
+**Uzrok.** Preimenovanje aliasa (v1.9) mijenjalo je reference i `mapa.md`, ali ništa nije
+provjeravalo stringove u Workflow skripti.
+
+**Popravak.** Korak 2 faze pisanja čita točno ono što `ucitavanje.py --mod 2` ispiše pod
+MORA SE PROČITATI (za FPZG to uključuje `glas_fpzg.md`). R74 u `test_router_contract.py`
+pada ako skripta zove skill kojeg nema u paketu. Mjera: sa starom skriptom R74 ✗, s novom ✓.
+
+**Gdje.** `rad-orchestrator/scripts/rad-orchestrator.js` (v1.4.0), `katedra-lite/scripts/tests/test_router_contract.py`.
+
+## 173. Vjerodajnica u URL-u prolazila je contract jer je provjera gledala samo router
+
+**Simptom.** `runtime.md` zabranjuje GitHub token u URL-u, naredbi ili skillu, a
+`router_contract.py` to provjerava. Ipak je `rad-orchestrator/SKILL.md` nosio
+`export KATEDRA_PKG_URL_TOKEN="UPIŠI_URL_S_TOKENOM"   # https://<token>@github.com/...`
+uz zeleni contract, i to u bloku bootstrapa od ~1,5 KB koji se učitavao pri svakom
+pokretanju skilla.
+
+**Uzrok.** `FORBIDDEN_ROUTER_FRAGMENTS` se primjenjivao samo na `katedra-lite/SKILL.md`.
+
+**Popravak.** Zabrana vjerodajnice i granica opisa (≤ 500 znakova, jer se opis učitava u
+svakoj sesiji) vrijede za svaki `*/SKILL.md` paketa. Bootstrap je premješten u
+`rad-orchestrator/scripts/bootstrap.sh`, koji URL s vjerodajnicom odbija:
+
+```
+$ KATEDRA_PKG_URL="https://abc@github.com/x/y.git" . bootstrap.sh
+⛔ KATEDRA_PKG_URL nosi vjerodajnicu u URL-u; ne koristi se (runtime.md)
+```
+
+Mjera: na 2.3.0 contract s proširenom provjerom daje 6 nalaza (opisi 550–738 znakova) i
+token u kartici; poslije 0. R72/R73 u `test_router_contract.py`.
+
+**Gdje.** `katedra-lite/scripts/router_contract.py`, `rad-orchestrator/SKILL.md`,
+`rad-orchestrator/scripts/bootstrap.sh`.
+
 ---
 
-## 172. Hash fakultetskog bundlea hashirao je krajeve redaka, pa je registry na Windowsu bio „stale”
+## 174. Hash fakultetskog bundlea hashirao je krajeve redaka, pa je registry na Windowsu bio „stale”
 
 Na Linux CI-ju `profile_registry.py --check` prolazi, na Windows runneru i na Danielovu računalu
 (`core.autocrlf=true`) pada — nad istim commitom:
@@ -4396,11 +4445,11 @@ profil. Obitelj kvara 148 (`relative_to` s backslashom): artefakt ovisi o OS-u g
 Popravak: hashira se sadržaj s `\r\n` → `\n`. Na Linuxu se hash ne mijenja (nema CR-a), pa
 postojeći katalog vrijedi bez ponovne admisije.
 
-Ograda: `test_stari_kvarovi.py` K172 — kopija `references/fakulteti`, `efzg.json` prepisan s CRLF-om daje isti hash; stvarna izmjena sadržaja daje drugi. Mutacija: `read_bytes()` bez normalizacije obara prvu provjeru. Windows CI job (sada obavezan) vrti `profile_registry.py --check` kao skupinu.
+Ograda: `test_stari_kvarovi.py` K174 — kopija `references/fakulteti`, `efzg.json` prepisan s CRLF-om daje isti hash; stvarna izmjena sadržaja daje drugi. Mutacija: `read_bytes()` bez normalizacije obara prvu provjeru. Windows CI job (sada obavezan) vrti `profile_registry.py --check` kao skupinu.
 
 ---
 
-## 173. `os.path.relpath` preko dva diska rušio je `check_rules.py` samo radi ispisa puta
+## 175. `os.path.relpath` preko dva diska rušio je `check_rules.py` samo radi ispisa puta
 
 Windows runner drži repo na `D:`, a test profil u temp mapi na `C:`. Redak koji samo ispisuje
 put profila rušio je cijelu provjeru pravila:
@@ -4413,11 +4462,11 @@ ValueError: path is on mount 'C:', start on mount 'D:'
 
 Popravak: `prikaz_puta()` — relativno kad je moguće, inače apsolutni put.
 
-Ograda: `test_stari_kvarovi.py` K173 — `os.path.relpath` zamijenjen funkcijom koja baca ValueError kao na dva diska; `prikaz_puta` vraća apsolutni put. Mutacija: `except ValueError` uklonjen → test pada s ValueError.
+Ograda: `test_stari_kvarovi.py` K175 — `os.path.relpath` zamijenjen funkcijom koja baca ValueError kao na dva diska; `prikaz_puta` vraća apsolutni put. Mutacija: `except ValueError` uklonjen → test pada s ValueError.
 
 ---
 
-## 174. Test servisa čitao je JSON kodnom stranicom sustava i ostavljao datoteku otvorenom
+## 176. Test servisa čitao je JSON kodnom stranicom sustava i ostavljao datoteku otvorenom
 
 `service/tests/test_service.py` je radio `json.load(open(put))`: na Windows runneru to čita
 cp1252, a nezatvorena datoteka zaključa temp mapu, pa pada i čišćenje:
@@ -4431,3 +4480,22 @@ Obitelj kvara 159 (encoding), ovaj put u `open()`, ne u `subprocess`. Popravak: 
 `encoding="utf-8"` i `with`.
 
 Ograda: sam `test_write_katedra_creates_state_profile_chapters` na Windows CI jobu, koji je od ovog commita obavezan (`continue-on-error` uklonjen).
+
+---
+
+## 177. `router_contract.py` je ispisivao put kartice s backslashom, pa je R72 padao samo na Windowsu
+
+Kvar 173 (v2.4.0) proširio je contract na sve kartice i dodao R72: kartica satelita s
+vjerodajnicom mora pasti i nalaz mora imenovati `satelit/SKILL.md`. Na Windowsu:
+
+```
+✗ FAIL   R72: vjerodajnica u URL-u u kartici satelita pada
+❌ satelit\SKILL.md: vjerodajnica u URL-u: 'KATEDRA_PKG_URL_TOKEN'
+```
+
+`rel = card.relative_to(root)` daje `WindowsPath`, a f-string ga ispisuje s `\`. Treći put ista
+obitelj (kvar 148 `index.json`, kvar 127 `drift.py`): put iz `pathlib`-a ide u izlaz bez `.as_posix()`.
+
+Popravak: `card.relative_to(root).as_posix()`.
+
+Ograda: `test_router_contract.py` R72 na Windows CI jobu (obavezan od kvara 176). Mutacija: `.as_posix()` uklonjen → R72 pada lokalno na Windowsu.

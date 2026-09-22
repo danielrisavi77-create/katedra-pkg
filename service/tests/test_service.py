@@ -13,7 +13,7 @@ HINT = {"label": "FPZG diplomski", "status": "verified", "citation": "fpzg", "wo
 
 
 def _json(put):
-    """Kvar 174: `json.load(open(put))` čita kodnom stranicom sustava (cp1252 na Windows
+    """Kvar 176: `json.load(open(put))` čita kodnom stranicom sustava (cp1252 na Windows
     runneru → UnicodeDecodeError) i ostavlja datoteku otvorenu, pa brisanje temp mape
     pada s WinError 32. Uvijek utf-8, uvijek zatvoreno."""
     with open(put, encoding="utf-8") as f:

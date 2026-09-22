@@ -1,6 +1,6 @@
 ---
 name: katedra-lite
-description: "Kopilot i orkestrator za akademske radove na hrvatskom: plan, pisanje, poboljšanje, audit, provjera citata prema popisu literature, mentorovi komentari i usporedba verzija, provjera DOCX metapodataka prije predaje, provjera hipoteza i njihovih presuda, proturječja između dijelova rada, obrana, predaja i povratak iz Worda. Koristi quick path za male zahvate nad pruženim tekstom, a full path za završne/diplomske radove, izvore, brojke, dokumente i predaju. Stanje vodi u .katedra/, a motore delegira satelitima rad-audit, rad-docx, fakultetskim profilima i replikaciji brojki. v2.3.1."
+description: "Kopilot za akademske radove na hrvatskom: plan, pisanje, poboljšanje, audit, provjera citata prema literaturi, mentorovi komentari i usporedba verzija, provjera DOCX metapodataka, provjera hipoteza i presuda, proturječja među dijelovima rada, obrana, predaja, povratak iz Worda. Quick path za male zahvate nad danim tekstom, full path za završne/diplomske, izvore, brojke i predaju. Stanje u .katedra/, motori u satelitima. v2.4.1."
 ---
 
 # KATEDRA-LITE — thin router za akademske radove

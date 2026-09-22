@@ -178,7 +178,7 @@ raspodjela izgleda uredno, ali tekst se raspada.
 > Ovo je bilo u routeru (`SKILL.md` § 2) do v1.7.
 > Tijek jednog moda ne treba biti u datoteci koja se učitava u svakoj poruci.
 
-`pisanje.md` + `stil_pipeline.md`. Neprihvaćene Track Changes → `revizije.py prihvati` prvo (0.7a), inače dijagnoza čita krnj tekst. Redoslijed je obavezan: izmjeri (`check_ai_style.py`, `check_paragraphs.py`) → ukloni tikove → poveži → prelomi predugo → geometrija odlomaka. Nakon svakog koraka ponovno izmjeri i pokreni `verify_rewrite.py`. **Nikad sve odjednom.** Kroz cijeli zahvat: **identičan skup citata i brojki**. Hrpa strukturnih pomaka odjednom → prvo `zamjerke.py grupiraj --po mjesto` (karta premještanja, `pisanje.md` §1.5). Zatvaranje zamjerki: `zamjerke.py resolve`/`provjeri`. Vizualni prikaz izmjena: `revizije.py redline`.
+`pisanje.md` + `stil_pipeline.md`. Neprihvaćene Track Changes → `revizije.py prihvati` prvo (0.7a), inače dijagnoza čita krnj tekst. Redoslijed je obavezan: izmjeri (`check_ai_style.py`, `check_paragraphs.py`) → ukloni tikove → poveži → prelomi predugo → geometrija odlomaka. Nakon svakog koraka ponovno izmjeri i pokreni `verify_rewrite.py`. **Nikad sve odjednom.** Kroz cijeli zahvat: **identičan skup citata i brojki**. Hrpa strukturnih pomaka odjednom → prvo `zamjerke.py grupiraj --po mjesto` (karta premještanja, `pisanje_dokument.md` §1.5). Zatvaranje zamjerki: `zamjerke.py resolve`/`provjeri`. Vizualni prikaz izmjena: `revizije.py redline`.
 
 ---
 

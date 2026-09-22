@@ -1840,7 +1840,7 @@ def ispis(iz, rad, tip):
 # ---------------------------------------------------------------------- main
 
 def prikaz_puta(put):
-    """Put za ispis: relativno na cwd kad je moguće. Kvar 173: na Windowsu `relpath`
+    """Put za ispis: relativno na cwd kad je moguće. Kvar 175: na Windowsu `relpath`
     između dva diska (repo na D:, temp na C:) baca ValueError i ruši cijeli alat —
     a ispis puta nije razlog da provjera ne proradi."""
     try:
