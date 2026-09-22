@@ -72,6 +72,25 @@ def main() -> int:
         "nedostaju sidra: " + ", ".join(nedostaje) if nedostaje else "",
     )
 
+    # R75: live routing PR-a #58 (2026-09-22) izmjeren je 24/24; zadrži
+    # izravna sidra koja su stabilizirala četiri bučne akademske namjere.
+    kriticna_sidra = {
+        "predajna verzija po pravilima": ("predajna verzija", "pravilima fakulteta"),
+        "presuda/provjera hipoteza": ("provjera hipoteza", "presude"),
+        "DOCX metapodaci prije slanja": (".docx", "metapodataka", "prije slanja"),
+        "proturječja Rezultati/Rasprava": ("proturječja između rezultata i rasprave",),
+    }
+    nedostaje_kriticno = [
+        naziv for naziv, fraze in kriticna_sidra.items()
+        if not all(fraza in opis for fraza in fraze)
+    ]
+    ok &= check(
+        "R75: live-routing sidra PR-a #58 ostaju u v2.4 kartici",
+        not nedostaje_kriticno,
+        "nedostaju izravna sidra: " + ", ".join(nedostaje_kriticno)
+        if nedostaje_kriticno else "",
+    )
+
     # Contract must detect a stale package tag independently of the real repo.
     import tempfile
     with tempfile.TemporaryDirectory() as d:
