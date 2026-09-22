@@ -318,3 +318,8 @@ bila kvar (v. `zamke.md`), pa ga se pokreće nakon što je popis omeđen.
 ## Vezani pregled (opt-in)
 
 Za audit/predaju može se uključiti `--bound-review --view original_no_revisions`. Tada `review_receipt.py` veže evidence/consistency/reviewer rezultate uz aktualni artifact-manifest zapis i hashove ledgera. Rezultat vrijedi samo za navedeni opseg `ledger_evidence_consistency`; `whole_document` ostaje false i ne zamjenjuje završno ljudsko čitanje, vizualni ni administrativni preflight. Stari samostalni alati ostaju dostupni.
+
+
+### Ugovori review artefakata
+
+`scripts/review_contracts.py` je zajednički validator za postojeće evidence i consistency JSON izvještaje. Prije agregacije provjerava njihove postojeće sheme i međusobno slaganje brojača, tako da malformed ili nepotpun izvještaj ne može postati čista reviewer leća. Ne procjenjuje istinitost akademske tvrdnje.
