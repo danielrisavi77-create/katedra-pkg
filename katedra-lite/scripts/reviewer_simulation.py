@@ -76,7 +76,31 @@ def simulate(
             })
 
     if evidence_gate is not None:
-        for row in evidence_gate.get("matrix", []):
+        if not evidence_gate["passed"]:
+            per_lens["evidence"].append({
+                "priority": "high",
+                "code": "evidence:gate_failed",
+                "question": "Strict evidence gate nije prošao; odsutnost retka u matrici nije dokaz prolaza.",
+            })
+        for i, reason in enumerate(evidence_gate["preconditions"], 1):
+            per_lens["evidence"].append({
+                "priority": "high",
+                "code": f"evidence:precondition:{i}",
+                "question": f"Neispunjen preduvjet evidence gatea: {reason}",
+            })
+        if evidence_gate["policy"] == "advisory":
+            per_lens["evidence"].append({
+                "priority": "medium",
+                "code": "evidence:advisory_only",
+                "question": "Evidence provjera je advisory; ne predstavlja strict prolaz.",
+            })
+            if evidence_gate["summary"]["would_block"] > 0:
+                per_lens["evidence"].append({
+                    "priority": "high",
+                    "code": "evidence:would_block",
+                    "question": "Advisory provjera sadrži tvrdnje koje bi strict politika blokirala.",
+                })
+        for row in evidence_gate["matrix"]:
             if isinstance(row, dict) and row.get("gate_status") == "block":
                 cid = str(row.get("claim_id") or "claim")
                 reasons = "; ".join(str(x) for x in row.get("reasons", []))
