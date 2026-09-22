@@ -5,6 +5,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import artifact_state
 import review_receipt as rr
+from review_fixtures import make_project
 
 class ReceiptTests(unittest.TestCase):
     def test_E05_document_drift_is_rejected(self):
@@ -31,5 +32,19 @@ class ReceiptTests(unittest.TestCase):
             claims.write_text('B\n',encoding='utf-8')
             after=rr.capture_context(root,**args)
             self.assertNotEqual(before['dependencies']['claims']['sha256'],after['dependencies']['claims']['sha256'])
+
+    def test_fresh_bundle_runs_real_producers(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d); document,state=make_project(root)
+            code,receipt=rr.run_bundle(root,document=document,state_dir=state,
+                view='original_no_revisions',config={'policy':'strict'},code_root=Path(rr.__file__).parents[1])
+            self.assertEqual(code,0)
+            self.assertEqual(receipt['status'],'pass')
+            self.assertFalse(receipt['coverage']['whole_document'])
+            document.write_bytes(document.read_bytes()+b'x')
+            with self.assertRaises(ValueError):
+                rr.capture_context(root,document=document,
+                    dependencies={'claims':state/'claims.jsonl'},view='original_no_revisions',
+                    config={'policy':'strict'},code_root=Path(rr.__file__).parents[1])
 
 if __name__=='__main__': unittest.main()
