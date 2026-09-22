@@ -407,7 +407,8 @@ def main():
         check("K175: admission bundle hash je jednak za LF i CRLF checkout",
               lf_hash == crlf_hash, (lf_hash, crlf_hash))
     finally:
-        shutil.rmtree(root174)
+        import shutil as _shutil
+        _shutil.rmtree(root174)
 
     # --- 28: izlazni kod iz toga SMIJE LI simbol blokirati, ne iz broja simbola --
     # Ugovor: kod je 1 točno kad postoji ❌ (broj_krsenja > 0); sama ⚠ daje 0.
