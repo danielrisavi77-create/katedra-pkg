@@ -51,13 +51,14 @@ class ReceiptTests(unittest.TestCase):
     def test_runner_uses_isolated_ledger_snapshot(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d); document,state=make_project(root); seen=[]
+            real_run=rr._run
             def fake_run(argv,cwd):
                 seen.append(list(argv))
                 out=None
                 if '--out' in argv:
                     out=Path(argv[argv.index('--out')+1])
                 # Let real commands run: assertion is on paths after call collection.
-                return rr._run_real(argv,cwd)
+                return real_run(argv,cwd)
             with patch.object(rr,'_run',side_effect=fake_run):
                 rr.run_bundle(root,document=document,state_dir=state,
                     view='original_no_revisions',config={'policy':'strict'},code_root=Path(rr.__file__).parents[1])
