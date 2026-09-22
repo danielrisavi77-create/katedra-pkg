@@ -24,6 +24,15 @@ FORBIDDEN_ROUTER_FRAGMENTS = (
     "access denied by the git proxy",
     "https://<token>@",
 )
+# Vjerodajnica u URL-u ne smije stajati ni u jednoj kartici paketa, ne samo u routeru:
+# rad-orchestrator/SKILL.md ju je nosio do v2.4 iako runtime.md to zabranjuje.
+FORBIDDEN_ANY_CARD_FRAGMENTS = (
+    "KATEDRA_PKG_URL_TOKEN",
+    "https://<token>@",
+)
+# Opis (description) se učitava u SVAKOJ sesiji, i onoj koja s radovima nema veze.
+# Granica je štednja konteksta, ne stil: povijest verzija ide u PROMJENE, ne u opis.
+MAX_DESCRIPTION_CHARS = 500
 MAX_ROUTER_CHARS = 24000
 DESCRIPTION_VERSION_RE = re.compile(r"\sv(\d+\.\d+\.\d+)\.\"?\s*$", re.M)
 
@@ -84,6 +93,18 @@ def validate(root: Path) -> list[str]:
     for claim in forbidden_claims:
         if claim in router:
             findings.append(f"zastarjela globalna tvrdnja ostala je u routeru: {claim}")
+
+    for card in sorted(root.glob("*/SKILL.md")):
+        text = card.read_text(encoding="utf-8")
+        rel = card.relative_to(root)
+        for token in FORBIDDEN_ANY_CARD_FRAGMENTS:
+            if token in text:
+                findings.append(f"{rel}: vjerodajnica u URL-u: {token!r}")
+        dm = re.search(r'^description:\s*"?(.*?)"?\s*$', text, re.M)
+        if dm and len(dm.group(1)) > MAX_DESCRIPTION_CHARS:
+            findings.append(
+                f"{rel}: description ima {len(dm.group(1))} znakova; limit {MAX_DESCRIPTION_CHARS}"
+            )
 
     return findings
 

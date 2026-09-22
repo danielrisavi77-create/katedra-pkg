@@ -1,3 +1,13 @@
+# v2.4.0 — štednja tokena: jezgra pisanja, jeftiniji audit u orkestratoru, kraći opisi (22. 9. 2026.)
+
+Povod: izmjereni run orkestratora troši 815 k do 1,17 M tokena (`rad-orchestrator/tests/README.md`), a mod 2 učitava ~25 k tokena štiva prije prve rečenice. Ništa ispod ne mijenja HARD/GATE pravila; mijenja se samo KADA se štivo učitava.
+
+* **`pisanje.md` podijeljen: jezgra 25 853 → 14 535 B.** Izdvojeno bez gubitka (provjereno: 0 izgubljenih redaka izvornika) u `references/pisanje_dokument.md` (§0 detalj, §0b, §1.5, §3.0b, redline, lanac zahvata) i `references/pisanje_dokazi.md` (§2 statusi izvora, A–X, §2.0b, §2.1, B13). Brojevi odjeljaka ostaju isti, u jezgri stoje putokazi. `ucitavanje.json`: oba dodatka su `na_zahtjev` u modu 2 i 3, a `pisanje_dokazi.md` je obavezan čim postoji `claims.jsonl`. Mjereno `ucitavanje.py`: mod 2 73 230 → 61 756 B, mod 3 62 959 → 51 494 B (≈ 3,8 k tokena manje po sesiji pisanja).
+* **rad-orchestrator v1.4.0.** (a) tekst rada se ekstrahira JEDNOM u `.katedra/rad.txt` (priprema, korak 6), leće ga čitaju umjesto da svaka ponovno ekstrahira `.docx`; (b) leće „Plagijat i AI-tekst" i „Formatiranje i jezik" spojene u jednu mehaničku leću, `effort: low`, koja cijeli tekst NE čita nego gate/stil/pravila JSON i `grep -n` za citat (4 → 3 leće, s empirijom 5 → 4); (c) leća „Sadržaj i logika" više ne učitava skill rad-audit (nijedna njegova faza ne mjeri logiku argumenta). Uštedu treba izmjeriti stvarnim Workflow runom na fixtureima; ovdje je potvrđena samo sintaksa (`node --check`) i smoke bez Workflowa.
+* **Kvar 172 — mrtav skill `fpzg-skill-pisanje` u fazi pisanja orkestratora.** Ograda R74.
+* **Kvar 173 — token u kartici rad-orchestratora uz zeleni contract.** Bootstrap premješten u `rad-orchestrator/scripts/bootstrap.sh` (bez tokena, URL s vjerodajnicom odbija); kartica 12 802 → 10 761 B. `router_contract.py` provjerava vjerodajnicu i duljinu opisa (≤ 500) na svim karticama. Ograde R72, R73.
+* **Opisi svih 7 kartica: 4 396 → 2 515 znakova** (opis se učitava u svakoj sesiji). Povijest verzija izbačena iz opisa; sidra live routinga (R71) zadržana.
+
 # v2.3.0 — učenje sa završnog rada (Baltazar Zaprešić, primjedbe mentorice mailom, 22. 9. 2026.)
 
 Patch `fac0ee5` napravljen je na 2.0.0/2.0.1; spojen na 2.2.0. Brojevi prenumerirani jer su 161–166 (katedra-lite) i 13–20 (rad-audit) već zauzeti: katedra-lite 161–165 → **167–171**, rad-audit 13–16 → **21–24**. Test-skupine R42–R45 zadržane (na 2.2.0 zadnja je R41).

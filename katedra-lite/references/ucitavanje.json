@@ -71,7 +71,7 @@
    "obavezno": [
     {
      "ref": "references/pisanje.md",
-     "zasto": "protokol pisanja i self-check"
+     "zasto": "jezgra: rukopis, odlomak, struktura, citatni oblik, stil, self-check"
     }
    ],
    "uvjetno": [
@@ -109,9 +109,24 @@
      "ref": "references/glas_fpzg.md",
      "uvjet": "fakultet:fpzg",
      "zasto": "kućni glas FPZG-a: citatni dijalekt (Prezime, godina: str), propisi s NN, šablone koje se ne pišu, pragovi dvotočke/crtice"
+    },
+    {
+     "ref": "references/pisanje_dokazi.md",
+     "uvjet": "ima:claims.jsonl",
+     "zasto": "projekt vodi claim ledger: tvrdnja ulazi u tekst samo preko strict evidence gatea"
     }
    ],
    "na_zahtjev": [
+    {
+     "ref": "references/pisanje_dokazi.md",
+     "okidac": "nova tvrdnja s izvorom ulazi u tekst, verificiraju se izvori, mentor traži produbljivanje, ili se prepisuje cijeli .docx",
+     "zasto": "statusi verify_sources, taksonomija A–X, evidence/claim ledger, B13 rewrite gate; citatni oblik je u jezgri"
+    },
+    {
+     "ref": "references/pisanje_dokument.md",
+     "okidac": "sastavlja se .docx, mentor traži strukturne pomake, piše se sažetak, traži se redline ili više zahvata odjednom",
+     "zasto": "tko radi dokument (FPZG → fpzg-diplomski), karta premještanja, sažetak protiv rada, lanac zahvata"
+    },
     {
      "ref": "references/vjestine.md",
      "okidac": "treba izraditi .docx ili pozvati satelit",
@@ -156,9 +171,25 @@
      "ref": "references/glas_fpzg.md",
      "uvjet": "fakultet:fpzg",
      "zasto": "popravak stila na FPZG radu mjeri se i kućnim pragovima; bez njih se dvotočke i šablone ne vide"
+    },
+    {
+     "ref": "references/pisanje_dokazi.md",
+     "uvjet": "ima:claims.jsonl",
+     "zasto": "projekt vodi claim ledger: tvrdnja ulazi u tekst samo preko strict evidence gatea"
     }
    ],
-   "na_zahtjev": []
+   "na_zahtjev": [
+    {
+     "ref": "references/pisanje_dokazi.md",
+     "okidac": "nova tvrdnja s izvorom ulazi u tekst, verificiraju se izvori, mentor traži produbljivanje, ili se prepisuje cijeli .docx",
+     "zasto": "statusi verify_sources, taksonomija A–X, evidence/claim ledger, B13 rewrite gate; citatni oblik je u jezgri"
+    },
+    {
+     "ref": "references/pisanje_dokument.md",
+     "okidac": "sastavlja se .docx, mentor traži strukturne pomake, piše se sažetak, traži se redline ili više zahvata odjednom",
+     "zasto": "tko radi dokument (FPZG → fpzg-diplomski), karta premještanja, sažetak protiv rada, lanac zahvata"
+    }
+   ]
   },
   "4": {
    "naziv": "Audit",
