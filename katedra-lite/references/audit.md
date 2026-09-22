@@ -313,3 +313,8 @@ python3 <KATEDRA_SKILL>/scripts/sigurni_popravci_hr.py rad.docx --izlaz rad-ispr
 Samo popravci koji ne mogu promijeniti značenje (razmaci, navodnici, nedjeljivi
 razmak uz mjerne jedinice). Piše u novu datoteku. Granica popisa literature mu je
 bila kvar (v. `zamke.md`), pa ga se pokreće nakon što je popis omeđen.
+
+
+## Vezani pregled (opt-in)
+
+Za audit/predaju može se uključiti `--bound-review --view original_no_revisions`. Tada `review_receipt.py` veže evidence/consistency/reviewer rezultate uz aktualni artifact-manifest zapis i hashove ledgera. Rezultat vrijedi samo za navedeni opseg `ledger_evidence_consistency`; `whole_document` ostaje false i ne zamjenjuje završno ljudsko čitanje, vizualni ni administrativni preflight. Stari samostalni alati ostaju dostupni.
