@@ -649,3 +649,32 @@ Ograda koja se izgovara: mjeri se **keširana** vrijednost, a Word je osvježava
 netko otvori dokument i pokrene Update Field. Alat zato ne tvrdi da će brojevi ostati
 točni, nego da su točni u datoteci koja se predaje. Izlazni kod 2 znači da se nije dalo
 izmjeriti (nema `pdftotext`, nema polja) i to nije isto što i prolaz.
+
+## 27. Dodjela `p.text` uklanja run-formatiranje pri ciljanoj doradi
+
+**Simptom.** U sesiji ciljane dorade upotrijebljena je zamjena cijelog odlomka radi
+kratke ispravke akademskog naziva. Mehanizam je reproduciran na sintetičkoj ćeliji:
+`magistra` je podebljana, ostatak je u kurzivu; nakon dodjele `p.text` dva čvora
+`w:rPr` nestaju. To nije tvrdnja da je sav format privatnog izvornika izgubljen.
+
+**Uzrok.** Odlomak je zamijenjen kao običan tekst umjesto promjene odabranih
+`w:t` čvorova. Globalna zamjena još bi zamijenila istu riječ u pogrešnoj rubrici.
+Sama jednakost broja stranica i prisutnost novog teksta ne otkrivaju taj kvar.
+
+**Popravak.** `scripts/ciljane_izmjene.py` provodi eksplicitan plan vezan uz hash
+ulaza, odabire točan odlomak i čuva `w:pPr`/`w:rPr`. Akademski zahvat provjerava
+kontekst stečenog naziva naspram dokumentacijske rubrike. Nejasan/mješovit run,
+revizije ili nepodržana granica ne dobivaju tihu zamjenu. Nakon pisanja ponovno se
+čita izlaz i uspoređuje s planom; vizualni pregled nije zamijenjen strukturnim PASS-om.
+
+**Gdje.** `scripts/tests/test_ciljane_izmjene.py`, osobito
+`test_legacy_paragraph_assignment_reproduces_run_loss` i negativne kontrole opsega:
+
+```text
+Sintetička ćelija prije:                 2 w:rPr čvora
+Ista ćelija nakon legacy p.text:         0 w:rPr čvorova
+Ista ćelija nakon ciljane zamjene:       2 w:rPr čvora
+```
+
+Test koristi samo izmišljene podatke. Cijeli privatni rad nije testni fixture;
+njegova naslovnica ni fakultetska praksa nisu postali univerzalno pravilo.

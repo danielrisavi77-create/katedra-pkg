@@ -158,6 +158,14 @@ Na novom Full-path projektu zatim zasij os dijelova i razinu rada prema referenc
 
 Puna semantika HARD/GATE/SIGNAL: `references/prioriteti.md`.
 
+### Ciljani zahvat u postojećem Wordu
+
+DOCX je cilj izmjene; priložena fotografija je vizualna referenca, ne zamjena za rad.
+Izlaz ostaje uređivi DOCX; podatke, logotip i potpis ne preuzimaj iz tuđeg primjera.
+Prije zahvata razdvoji stečeni naziv osobe od naziva koji opisuje dokumentacijska rubrika.
+Ograničeni zahvat veži uz hash ulaza, odobreni opseg i provjeru konačne datoteke:
+`references/ciljane_izmjene.md`. Nepotvrđen audio nije potvrđena mentorova uputa.
+
 ## 5. Track Changes
 
 Ne tretiraj `accept all` kao korisnikovu sadržajnu odluku.

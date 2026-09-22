@@ -158,7 +158,19 @@ Izlazni kod 1 = **ne predaje se**. Provjerava, po redu težine:
 | `references/polja.md` | `TOC`, `PAGEREF`, `REF`, zabilješke, dvije varijante |
 | `references/prikazi.md` | natpis/izvor kao nedjeljiv blok, unakrsne reference i hrvatska deklinacija |
 | `references/brojke.md` | `model.json`, osnovica zaokruživanja, crna lista, komponente zadatka |
-| `references/zamke.md` | 26 stvarnih kvarova: `docx-js`, python-docx, LibreOffice, matplotlib, mjerenje, provenijencija stranica, autor-godina uparivanje |
+| `references/zamke.md` | 27 stvarnih kvarova: `docx-js`, python-docx, LibreOffice, matplotlib, mjerenje, provenijencija stranica, autor-godina uparivanje |
+
+## Ciljani zahvat u već postojećem DOCX-u
+
+Za izričito ograničenu doradu bez ponovne izgradnje koristi `scripts/ciljane_izmjene.py`.
+`inspect` izlaže indekse i hash; `apply` provodi odobreni plan uz snapshot;
+`verify` provjerava izlaz protiv toga plana. Podržani su obični tekstualni segmenti,
+akademski nazivi u prepoznatim rubrikama i prvi naslovni blok sa zasebnim ručnim
+prijelomom. Ostali dijelovi paketa ostaju byte-identični. Složen slučaj se odbija,
+ne spljoštava. To nije automatski prijenos izgleda s fotografije ni dokaz paginacije.
+
+Ugovor, ograničenja i sintetički testovi: `references/ciljane_izmjene.md`.
+Za dokument nastao iz rukopisa trajnu izmjenu vrati i u njegov izvor prije sljedeće gradnje.
 
 ## Paket i slanje
 
@@ -180,7 +192,7 @@ prema izvornoj veličini. Nikad nije tihi dio `gradi.py`.
 
 ## Željezna pravila
 
-1. **Word je izlaz, ne radna površina.** Ručna izmjena u `.docx`-u gubi se pri sljedećoj
+1. **Kod izgradnje iz rukopisa Word je izlaz, ne radna površina.** Ručna izmjena u `.docx`-u gubi se pri sljedećoj
    izgradnji. Ako je nešto potrebno mijenjati, mijenja se rukopis, profil ili model.
 2. **Nijedna brojka se ne upisuje na dva mjesta.** Jedan izvor, pa zamjena `{{}}`.
 3. **Mjeri, ne pretpostavljaj.** Paginacija, lomljenje prikaza i širina slike provjeravaju

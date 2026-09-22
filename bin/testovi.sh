@@ -54,6 +54,8 @@ pokreni "rad-audit: regresije" \
   python3 "$KORIJEN/rad-audit/scripts/tests/test_all.py"
 pokreni "rad-audit: bolesni rad mora pasti" \
   python3 "$KORIJEN/rad-audit/scripts/tests/test_bolesni.py"
+pokreni "rad-docx: ciljane izmjene" \
+  python3 "$KORIJEN/rad-docx/scripts/tests/test_ciljane_izmjene.py"
 pokreni "katedra-lite: gate" \
   python3 "$KORIJEN/katedra-lite/scripts/tests/test_gate.py"
 pokreni "katedra: registar kvarova" python3 "$KORIJEN/katedra/scripts/tests/test_kvar.py"
