@@ -1777,13 +1777,21 @@ def skrati(s, n):
     return s if sirina(s) <= n else s[:n - 1] + "…"
 
 
+def _display_path(path):
+    """Best-effort display path; relpath can fail across Windows drives."""
+    try:
+        return os.path.relpath(path)
+    except ValueError:
+        return str(path)
+
+
 def ispis(iz, rad, tip):
     p = iz.profil
     print("=" * 78)
     print(f"PRAVILA FAKULTETA — {p.get('naziv', p.get('slug', '?'))}")
     print("=" * 78)
     print(f"rad: {rad}")
-    print(f"tip rada: {tip} · profil: {os.path.relpath(iz.put_profila)}")
+    print(f"tip rada: {tip} · profil: {_display_path(iz.put_profila)}")
     print(f"izvor pravila: {iz.izvor}")
     if iz.advisory:
         print()
