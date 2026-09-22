@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse, hashlib, json, subprocess, sys, uuid
+import argparse, hashlib, json, shutil, subprocess, sys, uuid
 from datetime import datetime, timezone
 from pathlib import Path
 HERE=Path(__file__).resolve().parent
@@ -65,9 +65,26 @@ def run_bundle(project_root,*,document,state_dir,view,config,code_root):
     deps={"claims":state/"claims.jsonl","evidence":state/"evidence.jsonl","sources":state/"izvori.json"}
     before=capture_context(root,document=document,dependencies=deps,view=view,config=config,code_root=code_root)
     run=root/".katedra"/"reviews"/uuid.uuid4().hex; run.mkdir(parents=True)
+    inputs=run/"inputs"; snap_state=inputs/".katedra"; snap_state.mkdir(parents=True)
+    snap_deps={name:snap_state/path.name for name,path in deps.items()}
+    for name,path in deps.items():
+        shutil.copy2(path,snap_deps[name])
+    # Preserve project-relative source paths used by the evidence ledger.
+    for line in snap_deps["evidence"].read_text(encoding="utf-8").splitlines():
+        if not line.strip(): continue
+        row=json.loads(line); sp=str(row.get("source_path") or "")
+        if not sp: continue
+        src=Path(sp)
+        if src.is_absolute():
+            raise ValueError("bound review ne prihvaća apsolutni/vanjski source_path; ponovi ingest unutar projekta")
+        source=(root/src).resolve()
+        try: rel=source.relative_to(root)
+        except ValueError as exc: raise ValueError("source_path izlazi iz projekta") from exc
+        if not source.is_file(): raise ValueError(f"nedostaje source datoteka: {sp}")
+        target=inputs/rel; target.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(source,target)
     reports={k:run/f"{k}.json" for k in ("evidence","consistency","reviewer")}; codes={}
-    codes["evidence"]=_run([sys.executable,str(HERE/"evidence_gate.py"),"--claims",str(deps["claims"]),"--evidence",str(deps["evidence"]),"--sources",str(deps["sources"]),"--policy","strict","--out",str(reports["evidence"])],root)
-    codes["consistency"]=_run([sys.executable,str(HERE/"consistency_check.py"),"--claims",str(deps["claims"]),"--out",str(reports["consistency"])],root)
+    codes["evidence"]=_run([sys.executable,str(HERE/"evidence_gate.py"),"--claims",str(snap_deps["claims"]),"--evidence",str(snap_deps["evidence"]),"--sources",str(snap_deps["sources"]),"--policy","strict","--out",str(reports["evidence"])],inputs)
+    codes["consistency"]=_run([sys.executable,str(HERE/"consistency_check.py"),"--claims",str(snap_deps["claims"]),"--out",str(reports["consistency"])],inputs)
     codes["reviewer"]=_run([sys.executable,str(HERE/"reviewer_simulation.py"),"--evidence-gate",str(reports["evidence"]),"--consistency",str(reports["consistency"]),"--out",str(reports["reviewer"])],root) if reports["evidence"].is_file() and reports["consistency"].is_file() else 2
     after=capture_context(root,document=document,dependencies=deps,view=view,config=config,code_root=code_root)
     receipt=make_receipt(before,after,reports=reports,exit_codes=codes); atomic_write_json(str(run/"receipt.json"),receipt,sidro=str(root))
