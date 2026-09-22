@@ -193,7 +193,7 @@ def koraci(faza: str, c: dict) -> list[Korak]:
         ]
 
     if faza == "audit":
-        return [
+        steps = [
             _ucitavanje(faza, kat),
             _revizije(rad, kat),
             Korak("motor", "razrješavanje motora rad-audit",
@@ -302,6 +302,19 @@ def koraci(faza: str, c: dict) -> list[Korak]:
                   blokira=False,
                   zasto="ide ZADNJI: agregira artefakte koje su prethodni koraci napisali"),
         ]
+        if c.get("bound_review"):
+            steps = [k for k in steps if k.kid != "dosljednost"]
+            bound = Korak(
+                "vezani_pregled", "vezani evidence/consistency pregled",
+                _k("review_receipt.py", "run",
+                   "--project-root", c.get("project_root") or os.getcwd(),
+                   "--rad", rad, "--kat", kat,
+                   "--view", c.get("view") or "original_no_revisions"),
+                treba=[rad, claims, evidence, izvori], blokira=True,
+                zasto="opt-in receipt veže rezultat uz točne bajtove i svježe izvršenje")
+            insert_at = next((i for i,k in enumerate(steps) if k.kid == "rubrika"), len(steps))
+            steps.insert(insert_at, bound)
+        return steps
 
     # predaja
     return [
@@ -540,6 +553,10 @@ def zakljucak(rezultati: list[dict],
     izuzet imenom kroz ``--dopusti-preskok korak=razlog``. Razlog se upisuje u
     izvještaj, pa preskok ostaje vidljiv i poslije sesije.
     """
+    if not rezultati:
+        return 1, {"ok": 0, "nalaz": 0, "preskoceno": 0, "pukao": 0,
+                   "blokira": [], "nepokrenuto": ["nema_provjera"],
+                   "preskok_dopusten": {}, "neprimjenjivo": [], "iskljuceno": {}}
     dop = dopusteni or {}
     br = lambda s: sum(1 for r in rezultati if r["stanje"] == s)  # noqa: E731
     blokirajuci = [r for r in rezultati
@@ -576,6 +593,9 @@ def main(argv=None) -> int:
     ap.add_argument("--kat")
     ap.add_argument("--json", dest="kao_json", metavar="PUT",
                     help="zapiši puni izvještaj")
+    ap.add_argument("--bound-review", action="store_true",
+                    help="audit/predaja: veži review uz točne bajtove i svježe izvršenje")
+    ap.add_argument("--view", choices=("original_no_revisions","accepted_copy","rejected_copy"))
     ap.add_argument("--suho", action="store_true",
                     help="ispiši što bi se pokrenulo, bez pokretanja")
     ap.add_argument("--dopusti-preskok", dest="dopusti_preskok", action="append",
@@ -600,7 +620,16 @@ def main(argv=None) -> int:
         if not os.path.isabs(args.profil) else args.profil,
         "tip": args.tip,
         "kat": kat,
+        "project_root": korijen,
+        "bound_review": args.bound_review,
+        "view": args.view,
     }
+    if args.bound_review and args.faza not in ("audit", "predaja"):
+        print("❌ --bound-review vrijedi samo za audit/predaja", file=sys.stderr)
+        return 2
+    if args.bound_review and not args.view:
+        print("❌ --bound-review traži --view", file=sys.stderr)
+        return 2
 
     iskljuceni: dict[str, str] = {}
     for stavka in args.iskljuci:
