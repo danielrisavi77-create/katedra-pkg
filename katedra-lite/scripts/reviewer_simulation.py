@@ -12,6 +12,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from review_contracts import load_report, validate_report
+
 LENS_ORDER = ("argument", "evidence", "consistency", "mentor")
 
 
@@ -58,6 +60,10 @@ def simulate(
     consistency: dict[str, Any] | None = None,
     mentor_feedback: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    if evidence_gate is not None:
+        validate_report("evidence", evidence_gate)
+    if consistency is not None:
+        validate_report("consistency", consistency)
     per_lens: dict[str, list[dict[str, str]]] = {k: [] for k in LENS_ORDER}
 
     if argument is not None:
@@ -191,8 +197,8 @@ def main() -> int:
     try:
         payload = simulate(
             argument=_load_optional(args.argument, "argument report"),
-            evidence_gate=_load_optional(args.evidence_gate, "evidence gate report"),
-            consistency=_load_optional(args.consistency, "consistency report"),
+            evidence_gate=(load_report(args.evidence_gate, "evidence") if args.evidence_gate else None),
+            consistency=(load_report(args.consistency, "consistency") if args.consistency else None),
             mentor_feedback=_load_optional(args.mentor_feedback, "mentor feedback"),
         )
     except (OSError, ValueError) as exc:
