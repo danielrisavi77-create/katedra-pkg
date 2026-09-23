@@ -59,7 +59,7 @@ def main() -> int:
         "provjera citata/literature": ("provjer", "citat", "literatur"),
         "mentorove povratne izmjene": ("mentor",),
         "provjera DOCX metapodataka": ("provjer", "docx", "metapod"),
-        "provjera/presuda hipoteza": ("hipotez",),
+        "provjera/presuda hipoteza": ("jesu li hipoteze", "presuđen"),
         "unutarnja proturječja rada": ("proturječ",),
     }
     nedostaje = [
