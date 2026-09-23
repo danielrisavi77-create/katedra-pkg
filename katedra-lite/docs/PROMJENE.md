@@ -2132,3 +2132,11 @@ obuhvat, status i ulogu brojke te sastavnice, osnovice i aritmetiku. Čuvaju v1 
 bez proširivanja njihova ugovora. Neizvjesne vrijednosti i nepoznata pripadnost skupu
 traže pregled. Ne dokazuju istinitost interpretacije izvora. Regresije i stvarni CLI
 testovi nalaze se u test_numeric_semantics.py i test_semantic_integration.py.
+
+## 2026-09-23 — Delivery C: ovisnosti i opseg zaključivanja (kandidat)
+
+Read-only claim_inference provjerava deklarirani DAG tvrdnji, prenosi potrebu pregleda
+s promijenjene premise, odvaja nepoznato od odsutnog i ograničava deklarirani opseg
+uzorka/certifikata. Uvodi opt-in epistemic-review u postojeći verify_rewrite; signali
+ne predstavljaju automatsku potvrdu uzročnosti ili prava. Nema automatskog mijenjanja
+kriterija uzorka ni sadržaja. Regresije: test_claim_inference.py i test_inference_integration.py.

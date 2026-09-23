@@ -332,3 +332,10 @@ kontekst uz postojeće ledgere; `scripts/numeric_semantics.py` daje ograničen i
 nalaz. `gate.py --inference-context ... --view ...` uključuje blokirajući korak u audit
 ili predaju. Bez uključivanja legacy put ostaje isti; odsutni novi kontekst nije tvrdnja
 odnosno dokaz da je cijeli rukopis semantički provjeren.
+
+### Ovisnosti i zaključivanje (Delivery C, opt-in)
+
+`references/claim_inference.md` dokumentira `scripts/claim_inference.py`: tipizirane
+veze tvrdnji, promjenu premise, kriterije uzorka i opseg dokaza. Uključivanje preko
+`gate.py --claim-inference-context ... --view ...` ne mijenja legacy put. Podaci koje
+je recenzent upisao u kontekst nisu neovisno potvrđene činjenice.

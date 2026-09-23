@@ -138,6 +138,15 @@ def _semantic_steps(c: dict) -> list[Korak]:
                "--out", os.path.join(c["kat"], "numeric_semantics.json")),
             treba=[c["rad"], path, os.path.join(c["kat"], "claims.jsonl"), os.path.join(c["kat"], "evidence.jsonl")],
             zasto="opseg/jedinica/razdoblje i status mjerenja; nedostajući kontekst nije prolaz"))
+    if c.get("claim_inference_context"):
+        path = c["claim_inference_context"]
+        steps.append(Korak(
+            "claim_inference", "ovisnosti tvrdnji i opseg zaključivanja",
+            _k("claim_inference.py", "--context", path, "--project-root", c.get("project_root") or os.getcwd(),
+               "--rad", c["rad"], "--kat", c["kat"], "--view", c.get("view") or "original_no_revisions",
+               "--out", os.path.join(c["kat"], "claim_inference.json")),
+            treba=[c["rad"], path, os.path.join(c["kat"], "claims.jsonl"), os.path.join(c["kat"], "evidence.jsonl")],
+            zasto="promijenjena premisa, nepokriven zaključak ili neizmjeren pregled nisu prolaz"))
     return steps
 
 
@@ -623,6 +632,7 @@ def main(argv=None) -> int:
     ap.add_argument("--kat")
     ap.add_argument("--json", dest="kao_json", metavar="PUT",
                     help="zapiši puni izvještaj")
+    ap.add_argument("--claim-inference-context", help="opt-in claim dependency and inference-scope sidecar")
     ap.add_argument("--inference-context", help="opt-in typed numeric annotation sidecar")
     ap.add_argument("--bound-review", action="store_true",
                     help="audit/predaja: veži review uz točne bajtove i svježe izvršenje")
@@ -654,9 +664,10 @@ def main(argv=None) -> int:
         "project_root": korijen,
         "bound_review": args.bound_review,
         "view": args.view,
+        "claim_inference_context": (os.path.abspath(os.path.join(korijen,args.claim_inference_context)) if args.claim_inference_context else None),
         "inference_context": (os.path.abspath(os.path.join(korijen,args.inference_context)) if args.inference_context else None),
     }
-    if args.inference_context and (args.faza not in ("audit", "predaja") or not args.view):
+    if (args.inference_context or args.claim_inference_context) and (args.faza not in ("audit", "predaja") or not args.view):
         print("❌ --inference-context traži audit/predaja i eksplicitni --view", file=sys.stderr)
         return 2
     if args.bound_review and args.faza not in ("audit", "predaja"):

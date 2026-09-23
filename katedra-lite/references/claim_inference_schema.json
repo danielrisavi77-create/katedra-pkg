@@ -1,0 +1,486 @@
+{
+  "type": "object",
+  "properties": {
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "claim_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "reviewed_text_sha256": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidence_state": {
+            "enum": [
+              "confirmed",
+              "contradicted",
+              "unknown"
+            ]
+          },
+          "reviewer": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000
+            },
+            "maxItems": 10000,
+            "uniqueItems": true
+          },
+          "units": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                },
+                "maxItems": 10000,
+                "uniqueItems": true
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "assertion": {
+            "enum": [
+              "descriptive",
+              "absence",
+              "causal",
+              "generalised",
+              "complement"
+            ]
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "complement_of": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "scope_evidence_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000
+            },
+            "maxItems": 10000,
+            "uniqueItems": true
+          },
+          "independent_review": {
+            "type": "object",
+            "properties": {
+              "claim_sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "evidence_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                },
+                "maxItems": 10000,
+                "uniqueItems": true
+              },
+              "reviewer": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "claim_sha256",
+              "evidence_ids",
+              "reviewer"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "claim_id",
+          "reviewed_text_sha256",
+          "evidence_state",
+          "reviewer",
+          "evidence_ids",
+          "units",
+          "assertion",
+          "category",
+          "complement_of",
+          "as_of",
+          "scope_evidence_id",
+          "features"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 10000
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "link_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "premise": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "conclusion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "kind": {
+            "enum": [
+              "supports",
+              "generalises",
+              "causal",
+              "complement",
+              "absence"
+            ]
+          },
+          "reviewed_premise_sha256": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reviewer": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "causal_basis": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "evidence_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  },
+                  "reviewer": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "evidence_id",
+                  "reason",
+                  "reviewer"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "link_id",
+          "premise",
+          "conclusion",
+          "kind",
+          "reviewed_premise_sha256",
+          "reviewer",
+          "causal_basis"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 30000
+    },
+    "criteria": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "criterion_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "required_state": {
+            "const": "confirmed"
+          },
+          "source_locator": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "criterion_id",
+          "description",
+          "required_state",
+          "source_locator"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 1000
+    },
+    "cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "status": {
+            "enum": [
+              "included",
+              "pilot"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "observations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "criterion_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                },
+                "state": {
+                  "enum": [
+                    "confirmed",
+                    "contradicted",
+                    "unknown"
+                  ]
+                }
+              },
+              "required": [
+                "criterion_id",
+                "state"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 10000
+          }
+        },
+        "required": [
+          "case_id",
+          "status",
+          "reason",
+          "observations"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 10000
+    },
+    "evidence_scopes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "scope_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "kind": {
+            "enum": [
+              "certificate",
+              "regulation",
+              "report"
+            ]
+          },
+          "evidence_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "holder": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "units": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000
+            },
+            "maxItems": 10000,
+            "uniqueItems": true
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000
+            },
+            "maxItems": 10000,
+            "uniqueItems": true
+          },
+          "valid_from": {
+            "type": "string",
+            "format": "date"
+          },
+          "valid_until": {
+            "type": "string",
+            "format": "date"
+          },
+          "locator": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "reviewer": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "scope_id",
+          "kind",
+          "evidence_id",
+          "holder",
+          "subject",
+          "units",
+          "features",
+          "valid_from",
+          "valid_until",
+          "locator",
+          "reviewer"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 10000
+    },
+    "required_claim_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2000
+      },
+      "maxItems": 10000,
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "nodes",
+    "links",
+    "criteria",
+    "cases",
+    "evidence_scopes",
+    "required_claim_ids"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "katedra-claim-inference-v1"
+}
