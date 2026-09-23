@@ -2124,3 +2124,11 @@ odnose na izvršive provjere, ne tvrdnju o dostupnosti privatnog dokumenta.
 Postojeći K160 nije prepisan; HKS promjene nose K161/K162. HKS profil ostaje
 `nepotvrdeno` jer izvorni PDF nije provjeren u ovoj integraciji. Stari 24×3
 live artefakt nije dokaz za ovaj kod; potreban je novi exact-head rezultat.
+
+## 2026-09-23 — Delivery B: semantika brojki (kandidat)
+
+Novi opt-in sidecar i numeric_semantics provjeravaju vrijednost, jedinicu, razdoblje,
+obuhvat, status i ulogu brojke te sastavnice, osnovice i aritmetiku. Čuvaju v1 ledgere
+bez proširivanja njihova ugovora. Neizvjesne vrijednosti i nepoznata pripadnost skupu
+traže pregled. Ne dokazuju istinitost interpretacije izvora. Regresije i stvarni CLI
+testovi nalaze se u test_numeric_semantics.py i test_semantic_integration.py.

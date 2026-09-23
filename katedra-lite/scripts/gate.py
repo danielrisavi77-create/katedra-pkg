@@ -126,6 +126,21 @@ def _revizije(rad, kat):
                  zasto="ekstrakcija nad praćenim izmjenama mjeri tekst koji ne postoji")
 
 
+def _semantic_steps(c: dict) -> list[Korak]:
+    """Explicit opt-in; absent context never changes legacy project behavior."""
+    steps = []
+    if c.get("inference_context"):
+        path = c["inference_context"]
+        steps.append(Korak(
+            "numeric_semantics", "značenje brojki i dopušteni izračuni",
+            _k("numeric_semantics.py", "--context", path, "--project-root", c.get("project_root") or os.getcwd(),
+               "--rad", c["rad"], "--kat", c["kat"], "--view", c.get("view") or "original_no_revisions",
+               "--out", os.path.join(c["kat"], "numeric_semantics.json")),
+            treba=[c["rad"], path, os.path.join(c["kat"], "claims.jsonl"), os.path.join(c["kat"], "evidence.jsonl")],
+            zasto="opseg/jedinica/razdoblje i status mjerenja; nedostajući kontekst nije prolaz"))
+    return steps
+
+
 def koraci(faza: str, c: dict) -> list[Korak]:
     """Popis koraka za fazu. Redoslijed je ugovor, ne preporuka."""
     rad, pdf, profil, tip, kat = c["rad"], c["pdf"], c["profil"], c["tip"], c["kat"]
@@ -314,6 +329,8 @@ def koraci(faza: str, c: dict) -> list[Korak]:
                 zasto="opt-in receipt veže rezultat uz točne bajtove i svježe izvršenje")
             insert_at = next((i for i,k in enumerate(steps) if k.kid == "rubrika"), len(steps))
             steps.insert(insert_at, bound)
+        insert_at = next((i for i,k in enumerate(steps) if k.kid == "rubrika"), len(steps))
+        steps[insert_at:insert_at] = _semantic_steps(c)
         return steps
 
     # predaja
@@ -432,6 +449,7 @@ def koraci(faza: str, c: dict) -> list[Korak]:
             treba=[rad, claims, evidence, izvori], blokira=True,
             zasto="opt-in receipt veže rezultat uz točne bajtove i svježe izvršenje")
         steps.append(bound)
+    steps.extend(_semantic_steps(c))
     return steps
 
 
@@ -605,6 +623,7 @@ def main(argv=None) -> int:
     ap.add_argument("--kat")
     ap.add_argument("--json", dest="kao_json", metavar="PUT",
                     help="zapiši puni izvještaj")
+    ap.add_argument("--inference-context", help="opt-in typed numeric annotation sidecar")
     ap.add_argument("--bound-review", action="store_true",
                     help="audit/predaja: veži review uz točne bajtove i svježe izvršenje")
     ap.add_argument("--view", choices=("original_no_revisions","accepted_copy","rejected_copy"))
@@ -635,7 +654,11 @@ def main(argv=None) -> int:
         "project_root": korijen,
         "bound_review": args.bound_review,
         "view": args.view,
+        "inference_context": (os.path.abspath(os.path.join(korijen,args.inference_context)) if args.inference_context else None),
     }
+    if args.inference_context and (args.faza not in ("audit", "predaja") or not args.view):
+        print("❌ --inference-context traži audit/predaja i eksplicitni --view", file=sys.stderr)
+        return 2
     if args.bound_review and args.faza not in ("audit", "predaja"):
         print("❌ --bound-review vrijedi samo za audit/predaja", file=sys.stderr)
         return 2

@@ -73,6 +73,10 @@ pokreni "zakrpa: regresije citata, profila i inventara" \
   python3 "$KORIJEN/rad-audit/scripts/tests/test_zakrpa_release.py"
 pokreni "katedra-lite: HKS-FZS regresije" \
   python3 "$KORIJEN/katedra-lite/scripts/tests/test_hks_fzs.py"
+pokreni "katedra-lite: numeric semantics B" \
+  python3 "$KORIJEN/katedra-lite/scripts/tests/test_numeric_semantics.py"
+pokreni "katedra-lite: semantic integration" \
+  python3 "$KORIJEN/katedra-lite/scripts/tests/test_semantic_integration.py"
 pokreni "katedra-lite: review status" \
   python3 "$KORIJEN/katedra-lite/scripts/tests/test_review_status.py"
 pokreni "katedra-lite: review coverage" \

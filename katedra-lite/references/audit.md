@@ -323,3 +323,12 @@ Za audit/predaju može se uključiti `--bound-review --view original_no_revision
 ### Ugovori review artefakata
 
 `scripts/review_contracts.py` je zajednički validator za postojeće evidence i consistency JSON izvještaje. Prije agregacije provjerava njihove postojeće sheme i međusobno slaganje brojača, tako da malformed ili nepotpun izvještaj ne može postati čista reviewer leća. Ne procjenjuje istinitost akademske tvrdnje.
+
+### Značenje brojki (Delivery B, opt-in)
+
+Za usporedbu input/output, kapaciteta/ostvarenja, godina, osnovica i sastavnica slijedi
+`references/numeric_semantics.md`. `scripts/inference_context.py` veže zaseban tipizirani
+kontekst uz postojeće ledgere; `scripts/numeric_semantics.py` daje ograničen i mjerljiv
+nalaz. `gate.py --inference-context ... --view ...` uključuje blokirajući korak u audit
+ili predaju. Bez uključivanja legacy put ostaje isti; odsutni novi kontekst nije tvrdnja
+odnosno dokaz da je cijeli rukopis semantički provjeren.
