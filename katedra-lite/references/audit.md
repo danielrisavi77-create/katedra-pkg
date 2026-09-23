@@ -323,3 +323,27 @@ Za audit/predaju može se uključiti `--bound-review --view original_no_revision
 ### Ugovori review artefakata
 
 `scripts/review_contracts.py` je zajednički validator za postojeće evidence i consistency JSON izvještaje. Prije agregacije provjerava njihove postojeće sheme i međusobno slaganje brojača, tako da malformed ili nepotpun izvještaj ne može postati čista reviewer leća. Ne procjenjuje istinitost akademske tvrdnje.
+
+### Značenje brojki (Delivery B, opt-in)
+
+Za usporedbu input/output, kapaciteta/ostvarenja, godina, osnovica i sastavnica slijedi
+`references/numeric_semantics.md`. `scripts/inference_context.py` veže zaseban tipizirani
+kontekst uz postojeće ledgere; `scripts/numeric_semantics.py` daje ograničen i mjerljiv
+nalaz. `gate.py --inference-context ... --view ...` uključuje blokirajući korak u audit
+ili predaju. Bez uključivanja legacy put ostaje isti; odsutni novi kontekst nije tvrdnja
+odnosno dokaz da je cijeli rukopis semantički provjeren.
+
+### Ovisnosti i zaključivanje (Delivery C, opt-in)
+
+`references/claim_inference.md` dokumentira `scripts/claim_inference.py`: tipizirane
+veze tvrdnji, promjenu premise, kriterije uzorka i opseg dokaza. Uključivanje preko
+`gate.py --claim-inference-context ... --view ...` ne mijenja legacy put. Podaci koje
+je recenzent upisao u kontekst nisu neovisno potvrđene činjenice.
+
+### Završna isporuka (Delivery D, opt-in)
+
+`gate.py --delivery-manifest ...` poziva vlasnički
+`rad-docx/scripts/delivery_integrity.py` u auditu/predaji. Referenca je
+`rad-docx/references/delivery_integrity.md`: posljednji DOCX/PDF/PNG bajtovi,
+paritet sadržaja, imenovani metadata scope i pregled svih stranica. Bez rendera i
+izričitog vizualnog pregleda nema konačnog PASS-a. To nije semantička ovjera rada.

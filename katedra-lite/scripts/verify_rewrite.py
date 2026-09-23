@@ -287,7 +287,7 @@ def _citati(put, stil, odlomci, celije, fusnote):
     return _nfc_counter(c)
 
 
-def usporedi(prije_p, poslije_p, zahvat='geometrija', citatni_stil='autor-godina', namjerno=None):
+def usporedi(prije_p, poslije_p, zahvat='geometrija', citatni_stil='autor-godina', namjerno=None, epistemic_review=False):
     o_a, m_a = H.ucitaj(prije_p, ukljuci_tablice=True)
     o_b, m_b = H.ucitaj(poslije_p, ukljuci_tablice=True)
     o_a, m_a = [_nfc(x) for x in o_a], [_nfc(x) for x in m_a]
@@ -455,6 +455,12 @@ def usporedi(prije_p, poslije_p, zahvat='geometrija', citatni_stil='autor-godina
     else:
         nalazi.append(("ok", f"odlomaka: {len(o_a)}, nepromijenjeno", []))
 
+    if epistemic_review:
+        from claim_inference import epistemic_signals
+        for signal in epistemic_signals(t_a, t_b):
+            nalazi.append(("review", signal["code"] + ": potreban pregled opsega/sigurnosti tvrdnje",
+                           ["PRIJE: " + signal["before"], "POSLIJE: " + signal["after"]]))
+
     # --- higijena
     ravni = t_b.count('"')
     if ravni:
@@ -472,6 +478,8 @@ def main():
     ap.add_argument("--citatni-stil", choices=C.CITATION_STYLES,
                     help="citatni stil; nadjačava profil.citiranje.stil")
     ap.add_argument("--profil", help="resolved profile JSON s citiranje.stil")
+    ap.add_argument("--epistemic-review", action="store_true",
+                    help="pojačana sigurnost/opseg tvrdnje vraća review-required (2), ne dokaz neistinitosti")
     ap.add_argument("--evidence-gate", action="store_true",
                     help="strict B13 claim/evidence gate prije prihvaćanja rewritea")
     ap.add_argument("--claims", help="claim ledger JSONL; default <state>/.katedra/claims.jsonl")
@@ -525,14 +533,15 @@ def main():
         namjerno[token.strip()] = razlog.strip()
 
     blokira = 0
+    pregled = 0
     gubitak = 0
     for i in range(0, len(args.datoteke), 2):
         a, b = args.datoteke[i], args.datoteke[i + 1]
         print("=" * 72)
         print(f"{os.path.basename(a)}  →  {os.path.basename(b)}   [zahvat: {args.zahvat}]")
         print("=" * 72)
-        for razina, poruka, det in usporedi(a, b, args.zahvat, citatni_stil, namjerno):
-            znak = {"ok": "✓", "!": "⚠", "x": "✗", "info": "·"}[razina]
+        for razina, poruka, det in usporedi(a, b, args.zahvat, citatni_stil, namjerno, args.epistemic_review):
+            znak = {"ok": "✓", "!": "⚠", "x": "✗", "info": "·", "review": "?"}[razina]
             print(f"  {znak} {poruka}")
             for d in det:
                 print(f"      {d}")
@@ -540,6 +549,8 @@ def main():
                     gubitak += 1
             if razina == "x":
                 blokira += 1
+            elif razina == "review":
+                pregled += 1
         print()
 
     print("=" * 72)
@@ -547,12 +558,14 @@ def main():
     # prijaviti izgubljenu rečenicu — brojač blokada je odvojen od tvrdnje o sadržaju
     if blokira:
         print(f"REZULTAT: ✗ {blokira} blokirajućih nalaza — NE primjenjuj prepisano")
+    elif pregled:
+        print(f"REZULTAT: potreban semantički pregled ({pregled}); nije dokaz pogrešne tvrdnje niti odobrenje prepisivanja")
     elif gubitak:
         print("REZULTAT: ⚠ nema blokirajućih nalaza, ali rečenice su prijavljene kao "
               "IZGUBLJENE — provjeri ih prije primjene")
     else:
         print("REZULTAT: ✓ nema blokirajućih nalaza — prepisano je sigurno primijeniti")
-    return 1 if blokira else 0
+    return 1 if blokira else 2 if pregled else 0
 
 
 if __name__ == "__main__":

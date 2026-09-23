@@ -214,3 +214,11 @@ sam pokvario.
 izmijenjenog dijela**, i to se vodi kao korak u planu zadatka, ne kao dobra volja.
 Povezano s pravilom 31 i dijelom `citanje_tijela`.
 
+
+### Epistemološki opseg (Delivery C)
+
+Kod provjere stilskog prepisivanja dodaj `verify_rewrite.py --epistemic-review` uz
+postojeće zastavice. Porast sigurnosti ili širenje uzorka daje pregled-potreban (2),
+ne tvrdnju da je zaključak netočan. Ne može se popraviti uklanjanjem tog koraka ili
+ručno zelenim izvještajem; obnovi provjeru izvora i tvrdnje kada je promjena sadržajna.
+Detalji i negativne kontrole: `references/claim_inference.md`.

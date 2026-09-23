@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "bindings": {
+    "document": {
+      "artifact_id": "artifact-example",
+      "version_id": "version-example",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "claims_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+    "evidence_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+    "sources_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+    "source_files": {},
+    "view": "original_no_revisions"
+  },
+  "facts": [
+    {
+      "fact_id": "a",
+      "claim_id": "claim-a",
+      "origin": "source",
+      "evidence_id": "evidence-a",
+      "locator": "table 1, row a",
+      "value": {
+        "kind": "exact",
+        "amount": "450"
+      },
+      "unit": "t",
+      "metric": "waste",
+      "period": "2023",
+      "scope": {
+        "organisation": "Example",
+        "population": "all-sites",
+        "geography": "region-X"
+      },
+      "measure_status": "actual",
+      "flow_role": "input",
+      "denominator": null,
+      "members": [
+        "kitchen"
+      ],
+      "category": null,
+      "complement_of": null,
+      "review": {
+        "decision": "verified",
+        "reviewer": "synthetic reviewer"
+      }
+    },
+    {
+      "fact_id": "b",
+      "claim_id": "claim-b",
+      "origin": "source",
+      "evidence_id": "evidence-b",
+      "locator": "table 1, row b",
+      "value": {
+        "kind": "exact",
+        "amount": "150"
+      },
+      "unit": "t",
+      "metric": "waste",
+      "period": "2023",
+      "scope": {
+        "organisation": "Example",
+        "population": "all-sites",
+        "geography": "region-X"
+      },
+      "measure_status": "actual",
+      "flow_role": "input",
+      "denominator": null,
+      "members": [
+        "green"
+      ],
+      "category": null,
+      "complement_of": null,
+      "review": {
+        "decision": "verified",
+        "reviewer": "synthetic reviewer"
+      }
+    },
+    {
+      "fact_id": "total",
+      "claim_id": "claim-total",
+      "origin": "derived",
+      "evidence_id": null,
+      "locator": null,
+      "value": {
+        "kind": "exact",
+        "amount": "600"
+      },
+      "unit": "t",
+      "metric": "waste",
+      "period": "2023",
+      "scope": {
+        "organisation": "Example",
+        "population": "all-sites",
+        "geography": "region-X"
+      },
+      "measure_status": "actual",
+      "flow_role": "input",
+      "denominator": null,
+      "members": [
+        "kitchen",
+        "green"
+      ],
+      "category": null,
+      "complement_of": null,
+      "review": {
+        "decision": "verified",
+        "reviewer": "synthetic reviewer"
+      }
+    }
+  ],
+  "derivations": [
+    {
+      "derivation_id": "d1",
+      "operation": "sum",
+      "inputs": [
+        "a",
+        "b"
+      ],
+      "result": "total",
+      "tolerance": {
+        "absolute": "0",
+        "reason": "",
+        "reviewer": ""
+      }
+    }
+  ],
+  "required_fact_ids": [
+    "a",
+    "b",
+    "total"
+  ],
+  "required_derivation_ids": [
+    "d1"
+  ]
+}
