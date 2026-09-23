@@ -58,7 +58,7 @@ def main() -> int:
     sidra = {
         "provjera citata/literature": ("provjer", "citat", "literatur"),
         "mentorove povratne izmjene": ("mentor",),
-        "provjera DOCX metapodataka": ("provjer", "docx", "metapod"),
+        "provjera DOCX metapodataka": ("provjeri metapodatke", ".docx-a", "prije slanja"),
         "provjera/presuda hipoteza": ("jesu li hipoteze", "presuđen"),
         "unutarnja proturječja rada": ("proturječ",),
     }
