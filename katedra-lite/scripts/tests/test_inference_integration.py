@@ -35,6 +35,16 @@ class InferenceIntegrationTests(unittest.TestCase):
             result=IC.read_json(out)
             self.assertTrue(result['affected_claim_ids'])
 
+    def test_inference_report_never_overwrites_source_bytes(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);doc,state,sidecar=project(root);source=root/'izvori'/'synthetic.txt'
+            original=source.read_bytes()
+            cmd=[sys.executable,str(Path(ci.__file__)),'--context',str(sidecar),'--project-root',str(root),
+                 '--rad',str(doc),'--kat',str(state),'--view','original_no_revisions','--out',str(source)]
+            r=subprocess.run(cmd,capture_output=True,text=True,encoding='utf-8',timeout=30)
+            self.assertEqual(r.returncode,2,r.stdout+r.stderr)
+            self.assertEqual(source.read_bytes(),original)
+
     def test_claim_gate_is_opt_in_and_blocks_when_inputs_missing(self):
         c={'rad':'rad.docx','pdf':None,'profil':'p.json','tip':'zavrsni','kat':'.katedra'}
         for phase in ('audit','predaja'):

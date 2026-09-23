@@ -146,6 +146,26 @@ class InferenceTests(unittest.TestCase):
         node['features']=['process'];node['as_of']='2025-01-01'
         self.assertEqual(self.report(c,cl,ev)['status'],'review_required')
 
+    def test_unlinked_certificate_cannot_authorise_scope(self):
+        c,cl,ev=example()
+        c['inference']['evidence_scopes']=[{'scope_id':'cert','kind':'certificate','evidence_id':'eb',
+            'holder':'Example','subject':'Waste','units':['case1','case2'],'features':['process'],
+            'valid_from':'2022-01-01','valid_until':'2024-12-31','locator':'section 1','reviewer':'R'}]
+        c['inference']['nodes'][0].update(scope_evidence_id='cert',as_of='2023-01-01',features=['process'])
+        self.assertEqual(self.report(c,cl,ev)['status'],'review_required')
+
+    def test_declared_causal_assertion_requires_causal_review_link(self):
+        c,cl,ev=example();c['inference']['nodes'][1]['assertion']='causal'
+        self.assertEqual(self.report(c,cl,ev)['status'],'review_required')
+
+    def test_unrelated_dirty_claim_does_not_invalidate_independent_review(self):
+        c,cl,ev=example();cl['a']['text']='Changed premise'
+        cl['d']={'claim_id':'d','text':'Unrelated fact','evidence':[{'evidence_id':'eb','relation':'supports'}]}
+        n=deepcopy(c['inference']['nodes'][1]);n.update(claim_id='d',reviewed_text_sha256=sh(cl['d']['text']),evidence_state='unknown')
+        c['inference']['nodes'].append(n);c['inference']['required_claim_ids'].append('d')
+        c['inference']['nodes'][1]['independent_review']={'claim_sha256':sh(cl['b']['text']),'evidence_ids':['eb'],'reviewer':'R2'}
+        self.assertEqual(self.report(c,cl,ev)['affected_claim_ids'],['a','d'])
+
     def test_epistemic_strengthening_only_is_signal(self):
         m=self.module()
         signals=m.epistemic_signals('Podaci mogu upućivati na povezanost.', 'Podaci dokazuju uzročnost.')

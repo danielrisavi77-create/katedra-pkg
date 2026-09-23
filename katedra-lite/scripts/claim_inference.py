@@ -65,6 +65,8 @@ def evaluate(data: dict, claims: dict, evidence: dict, *, initial_findings: list
         return IC.result_report('katedra_claim_inference',findings,{'declared_claims':0,'reviewed_links':0},affected_claim_ids=[])
     nodes={n['claim_id']:n for n in inf['nodes']}
     dirty=set()
+    incoming={cid:[] for cid in nodes}
+    for edge in inf['links']: incoming[edge['conclusion']].append(edge)
 
     def add(code,severity,ids,message):
         findings.append({'code':code,'severity':severity,'ids':list(ids),'message':message})
@@ -85,6 +87,9 @@ def evaluate(data: dict, claims: dict, evidence: dict, *, initial_findings: list
             add('missing_claim','unmeasured',[cid],'Claim is absent from current ledger'); dirty.add(cid);continue
         if n['reviewed_text_sha256']!=IC.sha_text(claims[cid]['text']) or not n['reviewer']:
             add('changed_or_unreviewed_claim','review_required',[cid],'Current claim text has no matching review');dirty.add(cid)
+        required_kind={'causal':'causal','generalised':'generalises','complement':'complement','absence':'absence'}.get(n['assertion'])
+        if required_kind and not any(e['kind']==required_kind for e in incoming[cid]):
+            add('inference_review_missing','review_required',[cid],'Declared inference needs an explicit typed review link');dirty.add(cid)
         if n['evidence_state']!='confirmed':
             add('evidence_not_confirmed','review_required',[cid],f"Recorded evidence state is {n['evidence_state']}, not confirmation");dirty.add(cid)
         if not has_support(cid,n['evidence_ids']):
@@ -103,7 +108,12 @@ def evaluate(data: dict, claims: dict, evidence: dict, *, initial_findings: list
         if not r or cid not in claims or r['claim_sha256']!=IC.sha_text(claims[cid]['text']): return False
         if not has_support(cid,r['evidence_ids']): return False
         # A reuse of the invalidated premise's evidence is not an independent proof.
-        invalid_eids={eid for i in dirty for eid in nodes[i]['evidence_ids'] if i!=cid}
+        ancestors=set(); pending=[e['premise'] for e in incoming[cid]]
+        while pending:
+            ancestor=pending.pop()
+            if ancestor not in ancestors:
+                ancestors.add(ancestor);pending.extend(e['premise'] for e in incoming[ancestor])
+        invalid_eids={eid for i in dirty & ancestors for eid in nodes[i]['evidence_ids']}
         return not (set(r['evidence_ids']) & invalid_eids)
 
     for e in inf['links']:
@@ -142,7 +152,7 @@ def evaluate(data: dict, claims: dict, evidence: dict, *, initial_findings: list
         if not sid: continue
         scope=scopes[sid]
         current=n['as_of']
-        invalid=(scope['evidence_id'] not in evidence or current is None or n['units'] is None or
+        invalid=(not has_support(cid,[scope['evidence_id']]) or current is None or n['units'] is None or
                  not set(n['units'] or [])<=set(scope['units']) or not set(n['features'])<=set(scope['features']))
         if current is not None:
             invalid=invalid or not scope['valid_from']<=current<=scope['valid_until']
@@ -230,8 +240,8 @@ def main():
     for name in ('context','project-root','rad','kat','view','out'): ap.add_argument('--'+name,required=True)
     a=ap.parse_args()
     try:
-        if Path(a.out).resolve() in {Path(a.context).resolve(),Path(a.rad).resolve()} or Path(a.out).name in {'claims.jsonl','evidence.jsonl','izvori.json'}:
-            raise ValueError('Output aliases a review input')
+        IC.assert_safe_report_output(a.out, project_root=a.project_root, state_dir=a.kat,
+                                     document=a.rad, sidecar=a.context, kind='katedra_claim_inference')
         r=evaluate_file(a.context,project_root=a.project_root,document=a.rad,state_dir=a.kat,view=a.view)
         IC.save_report(a.out,r);print(f"{r['status']}: declared inference scope; human judgments remain explicit")
         return IC.exit_code(r)
