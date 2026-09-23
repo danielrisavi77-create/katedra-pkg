@@ -2,7 +2,7 @@
 """E11–E18: declared inference scope and transitive freshness with controls."""
 from copy import deepcopy
 import hashlib
-import importlib
+import importlib.util
 import json
 from pathlib import Path
 import sys
