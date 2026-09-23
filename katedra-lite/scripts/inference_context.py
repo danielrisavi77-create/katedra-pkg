@@ -146,7 +146,7 @@ def binding_findings(data: dict, current: dict, claims: dict, evidence: dict) ->
                     actual_source is None or actual_source != row.get('source_sha256')):
                 findings.append({'code':'stale_evidence','severity':'stale','ids':[f['fact_id']],
                                  'message':'Evidence text or local source no longer matches its stored fingerprint'})
-            links = {r['evidence_id'] for r in claims[cid].get('evidence',[])}
+            links = {r['evidence_id'] for r in claims[cid].get('evidence',[]) if r.get('relation') == 'supports'}
             if eid not in links:
                 findings.append({'code':'evidence_not_linked','severity':'unmeasured','ids':[f['fact_id']],
                                  'message':'Numeric source is not linked by the existing claim ledger'})
@@ -164,6 +164,23 @@ def result_report(kind: str, findings: list[dict], coverage: dict, **extra: Any)
 
 def exit_code(report: dict) -> int:
     return 0 if report['status']=='pass' else 1 if report['status']=='blocked' else 2
+
+
+def assert_safe_report_output(path, *, project_root, state_dir, document, sidecar, kind):
+    """A report may replace its own earlier report, never a bound input or an arbitrary file."""
+    out = Path(path)
+    protected = [Path(document), Path(sidecar), *bound_dependencies(project_root, state_dir).values(),
+                 Path(project_root)/'.katedra'/'artifacts.json', Path(state_dir)/'stanje.json',
+                 Path(state_dir)/'resolved_profile.json']
+    if out.suffix != '.json' or out.is_symlink() or out.resolve() in {p.resolve() for p in protected}:
+        raise ValueError('Report path aliases an input or is not a JSON report')
+    if out.exists():
+        for candidate in protected:
+            if candidate.exists() and out.samefile(candidate):
+                raise ValueError('Report path is a hardlink to a bound input')
+        previous = read_json(out)
+        if not isinstance(previous, dict) or previous.get('kind') != kind:
+            raise ValueError("Refusing to overwrite a file that is not this tool report")
 
 
 def save_report(path: str | Path, report: dict) -> None:

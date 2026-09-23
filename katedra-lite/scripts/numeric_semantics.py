@@ -193,10 +193,9 @@ def main():
     a=ap.parse_args()
     try:
         r=evaluate_file(a.context,project_root=a.project_root,document=a.rad,state_dir=a.kat,view=a.view)
-        # Never overwrite an input with its report.
         out=Path(a.out).resolve()
-        if out in {Path(x).resolve() for x in (a.context,a.rad)} or out.name in {'claims.jsonl','evidence.jsonl','izvori.json'}:
-            raise ValueError('Report path aliases a review input')
+        IC.assert_safe_report_output(a.out, project_root=a.project_root, state_dir=a.kat,
+                                     document=a.rad, sidecar=a.context, kind='katedra_numeric_semantics')
         IC.save_report(out,r); print(f"{r['status']}: declared numeric scope only"); return IC.exit_code(r)
     except (OSError,ValueError) as exc:
         print(f'Numeric review not measured: {exc}'); return 2

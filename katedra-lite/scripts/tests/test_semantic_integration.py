@@ -43,6 +43,31 @@ class IntegrationTests(unittest.TestCase):
             self.assertEqual(r.returncode,2,r.stdout+r.stderr)
             self.assertEqual(json.loads(out.read_text(encoding='utf-8'))['status'],'stale')
 
+    def test_report_output_cannot_overwrite_any_bound_source(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);doc,state,sidecar=project(root)
+            source=root/'izvori'/'synthetic.txt'; original=source.read_bytes()
+            for module in ('numeric_semantics.py',):
+                with self.subTest(module=module):
+                    cmd=[sys.executable,str(Path(numeric.__file__).parent/module),'--project-root',str(root),
+                         '--rad',str(doc),'--kat',str(state),'--context',str(sidecar),
+                         '--view','original_no_revisions','--out',str(source)]
+                    result=subprocess.run(cmd,capture_output=True,text=True,encoding='utf-8',timeout=30)
+                    self.assertEqual(result.returncode,2,result.stdout+result.stderr)
+                    self.assertEqual(source.read_bytes(),original)
+
+    def test_context_only_evidence_cannot_support_numeric_source(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);doc,state,sidecar=project(root)
+            rows=IC.read_ledger(state/'claims.jsonl')
+            for row in rows:
+                for link in row['evidence']: link['relation']='contextualizes'
+            (state/'claims.jsonl').write_text(''.join(json.dumps(r)+'\n' for r in rows),encoding='utf-8')
+            context=IC.read_json(sidecar);context['bindings']=IC.capture_bindings(root,doc,state,'original_no_revisions')
+            sidecar.write_text(json.dumps(context),encoding='utf-8')
+            r=numeric.evaluate_file(sidecar,project_root=root,document=doc,state_dir=state,view='original_no_revisions')
+            self.assertNotEqual(r['status'],'pass')
+
     def test_missing_context_no_fake_pass(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d); doc,state,sidecar=project(root); sidecar.unlink()
