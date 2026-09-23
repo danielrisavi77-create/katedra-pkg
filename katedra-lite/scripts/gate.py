@@ -147,6 +147,14 @@ def _semantic_steps(c: dict) -> list[Korak]:
                "--out", os.path.join(c["kat"], "claim_inference.json")),
             treba=[c["rad"], path, os.path.join(c["kat"], "claims.jsonl"), os.path.join(c["kat"], "evidence.jsonl")],
             zasto="promijenjena premisa, nepokriven zaključak ili neizmjeren pregled nisu prolaz"))
+    if c.get("delivery_manifest"):
+        path = c["delivery_manifest"]
+        steps.append(Korak(
+            "delivery_integrity", "konačna DOCX isporuka i svježi vizualni dokaz",
+            ["<RAD_DOCX>/scripts/delivery_integrity.py", "check", "--manifest", path,
+             "--project-root", c.get("project_root") or os.getcwd(), "--rad", c["rad"]],
+            treba=[c["rad"], path], satelit="rad-docx",
+            zasto="imenovani pregled svih stranica mora pripadati zadnjim DOCX/PDF/PNG bajtovima"))
     return steps
 
 
@@ -633,6 +641,7 @@ def main(argv=None) -> int:
     ap.add_argument("--json", dest="kao_json", metavar="PUT",
                     help="zapiši puni izvještaj")
     ap.add_argument("--claim-inference-context", help="opt-in claim dependency and inference-scope sidecar")
+    ap.add_argument("--delivery-manifest", help="opt-in rad-docx final delivery and render evidence")
     ap.add_argument("--inference-context", help="opt-in typed numeric annotation sidecar")
     ap.add_argument("--bound-review", action="store_true",
                     help="audit/predaja: veži review uz točne bajtove i svježe izvršenje")
@@ -663,10 +672,14 @@ def main(argv=None) -> int:
         "kat": kat,
         "project_root": korijen,
         "bound_review": args.bound_review,
+        "delivery_manifest": (os.path.abspath(os.path.join(korijen,args.delivery_manifest)) if args.delivery_manifest else None),
         "view": args.view,
         "claim_inference_context": (os.path.abspath(os.path.join(korijen,args.claim_inference_context)) if args.claim_inference_context else None),
         "inference_context": (os.path.abspath(os.path.join(korijen,args.inference_context)) if args.inference_context else None),
     }
+    if args.delivery_manifest and args.faza not in ("audit", "predaja"):
+        print("--delivery-manifest vrijedi samo u audit/predaja", file=sys.stderr)
+        return 2
     if (args.inference_context or args.claim_inference_context) and (args.faza not in ("audit", "predaja") or not args.view):
         print("❌ --inference-context traži audit/predaja i eksplicitni --view", file=sys.stderr)
         return 2

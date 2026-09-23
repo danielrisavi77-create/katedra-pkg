@@ -2140,3 +2140,11 @@ s promijenjene premise, odvaja nepoznato od odsutnog i ograničava deklarirani o
 uzorka/certifikata. Uvodi opt-in epistemic-review u postojeći verify_rewrite; signali
 ne predstavljaju automatsku potvrdu uzročnosti ili prava. Nema automatskog mijenjanja
 kriterija uzorka ni sadržaja. Regresije: test_claim_inference.py i test_inference_integration.py.
+
+## 2026-09-23 — Delivery D kandidat i završne B/C ograde
+
+Opt-in `--delivery-manifest` spaja završni audit sa satelitskim DOCX dokazom.
+B/C izlazi ne mogu prepisati vezani izvor, ledger, dokument ni proizvoljnu datoteku.
+Kontekstualni dokaz ne postaje `supports`; certifikat mora biti stvarno povezan s
+tvrdnjom. Ponovna provjera neovisnog dokaza ne ovisi o nepovezanoj grani tvrdnji.
+Promjene ne mijenjaju fakultetske profile, izdanje paketa ni live routing pragove.
