@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """E07–E11, E19–E20: executable numeric meaning, not citation truth."""
 from copy import deepcopy
-import importlib
+import importlib.util
 import json
 from pathlib import Path
 import sys
