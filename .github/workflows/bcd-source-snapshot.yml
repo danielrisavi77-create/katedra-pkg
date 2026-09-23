@@ -1,0 +1,38 @@
+name: BCD pinned source snapshot
+on:
+  push:
+    branches: [work/bcd-source-20260923]
+    paths: [.github/workflows/bcd-source-snapshot.yml]
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 5871c46256391838e025bfa794d871d66a924a23
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Archive only pinned tracked source and Git objects
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = 5871c46256391838e025bfa794d871d66a924a23
+          test "$(git rev-parse HEAD^{tree})" = 1ecae70cf47d8563503ed1f051ea50845eba0c13
+          git archive --format=tar.gz -o "$RUNNER_TEMP/source.tar.gz" HEAD
+          git bundle create "$RUNNER_TEMP/source.bundle" HEAD
+          git rev-parse HEAD > "$RUNNER_TEMP/source-revision.txt"
+          git rev-parse HEAD^{tree} >> "$RUNNER_TEMP/source-revision.txt"
+          cd "$RUNNER_TEMP"
+          sha256sum source.tar.gz source.bundle > source-sha256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: katedra-bcd-pinned-source
+          path: |
+            ${{ runner.temp }}/source.tar.gz
+            ${{ runner.temp }}/source.bundle
+            ${{ runner.temp }}/source-revision.txt
+            ${{ runner.temp }}/source-sha256.txt
+          if-no-files-found: error
+          retention-days: 3
