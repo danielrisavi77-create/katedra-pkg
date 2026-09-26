@@ -66,12 +66,25 @@ pokreni "katedra: registar kvarova" python3 "$KORIJEN/katedra/scripts/tests/test
 pokreni "katedra: provjera tvrdnji" python3 "$KORIJEN/katedra/scripts/tests/test_zakrpa.py"
 pokreni "katedra: verzija i oznake" python3 "$KORIJEN/katedra/scripts/tests/test_verzija.py"
 pokreni "katedra: granica routera" python3 "$KORIJEN/katedra/scripts/tests/test_router_granice.py"
+pokreni "katedra: sudar brojeva kvarova" python3 "$KORIJEN/katedra/scripts/tests/test_sudar_kvarova.py"
 pokreni "paket: svi routeri ispod granice" python3 "$KORIJEN/katedra/scripts/router_granice.py" "$KORIJEN"
 pokreni "katedra: oznaka verzije = VERSION" python3 "$KORIJEN/katedra/scripts/verzija.py" --provjeri
 pokreni "zakrpa: regresije citata, profila i inventara" \
   python3 "$KORIJEN/rad-audit/scripts/tests/test_zakrpa_release.py"
 pokreni "katedra-lite: HKS-FZS regresije" \
   python3 "$KORIJEN/katedra-lite/scripts/tests/test_hks_fzs.py"
+pokreni "katedra-lite: inference scope C" \
+  python3 "$KORIJEN/katedra-lite/scripts/tests/test_claim_inference.py"
+pokreni "katedra-lite: inference integration" \
+  python3 "$KORIJEN/katedra-lite/scripts/tests/test_inference_integration.py"
+pokreni "rad-docx: delivery integrity D" \
+  python3 "$KORIJEN/rad-docx/scripts/tests/test_delivery_integrity.py"
+pokreni "katedra-lite: delivery integration D" \
+  python3 "$KORIJEN/katedra-lite/scripts/tests/test_delivery_integration.py"
+pokreni "katedra-lite: numeric semantics B" \
+  python3 "$KORIJEN/katedra-lite/scripts/tests/test_numeric_semantics.py"
+pokreni "katedra-lite: semantic integration" \
+  python3 "$KORIJEN/katedra-lite/scripts/tests/test_semantic_integration.py"
 pokreni "katedra-lite: review status" \
   python3 "$KORIJEN/katedra-lite/scripts/tests/test_review_status.py"
 pokreni "katedra-lite: review coverage" \

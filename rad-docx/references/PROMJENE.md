@@ -31,3 +31,10 @@ Izlazni kod 1 na regresiju ili nestali obvezni dio.
 
 **`provjeri_predaju.py` je sada korak gatea**, a ne naredba koje se agent morao sjetiti
 (v. `katedra-lite/references/zamke.md`, kvar 60).
+
+## 2026-09-23 — Delivery D kandidat: konačni bajtovi i vizualni dokaz
+
+Dodani `scripts/delivery_integrity.py`, strogi manifesti i sintetičke regresije.
+Odvojeni sadržajni paritet, geometrijski rizici, imenovani metadata scope i stvarni
+render/pregled svih stranica. Bez implicitnog prihvaćanja revizija ili automatskog
+vizualnog PASS-a. Potpun opis ograničenja: `references/delivery_integrity.md`.

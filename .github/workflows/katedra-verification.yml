@@ -40,6 +40,14 @@ jobs:
       - name: Run full Katedra suite
         run: bash bin/testovi.sh
 
+      # Kvar 178: paralelne sesije uzimaju isti „sljedeći” broj kvara. Sudar se vidi ovdje,
+      # u PR-u, a ne tek pri ručnom spajanju.
+      - name: Kvar numbers do not collide with main
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --no-tags --depth=1 origin main
+          python katedra/scripts/provjeri_sudar_kvarova.py --baza FETCH_HEAD
+
       - name: Upload suite log
         if: always()
         uses: actions/upload-artifact@v4
@@ -57,7 +65,6 @@ jobs:
     name: Full package test suite (Windows)
     runs-on: windows-latest
     timeout-minutes: 40
-    continue-on-error: true
     defaults:
       run:
         shell: bash

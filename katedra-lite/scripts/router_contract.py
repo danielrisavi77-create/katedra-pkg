@@ -96,7 +96,8 @@ def validate(root: Path) -> list[str]:
 
     for card in sorted(root.glob("*/SKILL.md")):
         text = card.read_text(encoding="utf-8")
-        rel = card.relative_to(root)
+        # Kvar 177: relative_to daje WindowsPath → „satelit\SKILL.md” u nalazu; ispis je uvijek s „/”.
+        rel = card.relative_to(root).as_posix()
         for token in FORBIDDEN_ANY_CARD_FRAGMENTS:
             if token in text:
                 findings.append(f"{rel}: vjerodajnica u URL-u: {token!r}")

@@ -4424,3 +4424,121 @@ token u kartici; poslije 0. R72/R73 u `test_router_contract.py`.
 
 **Gdje.** `katedra-lite/scripts/router_contract.py`, `rad-orchestrator/SKILL.md`,
 `rad-orchestrator/scripts/bootstrap.sh`.
+
+---
+
+## 174. Hash fakultetskog bundlea hashirao je krajeve redaka, pa je registry na Windowsu bio „stale”
+
+Na Linux CI-ju `profile_registry.py --check` prolazi, na Windows runneru i na Danielovu računalu
+(`core.autocrlf=true`) pada — nad istim commitom:
+
+```
+$ profile_registry.py --check                (Windows, autocrlf=true, main 434c67a)
+❌ admission bundle hash stale za efzg: pokreni faculty_scale_gate.py ponovno …   [2]
+efzg: katalog b41a5ea63a · sirovi bajtovi 665dd49874 · LF-normalizirano b41a5ea63a
+fpzg: katalog ad9c88d913 · sirovi bajtovi 0b73cc7235 · LF-normalizirano ad9c88d913
+```
+
+`faculty_bundle_sha256` je hashirao `read_bytes()`; checkout s CRLF-om daje druge bajtove za isti
+profil. Obitelj kvara 148 (`relative_to` s backslashom): artefakt ovisi o OS-u generiranja.
+
+Popravak: hashira se sadržaj s `\r\n` → `\n`. Na Linuxu se hash ne mijenja (nema CR-a), pa
+postojeći katalog vrijedi bez ponovne admisije.
+
+Ograda: `test_stari_kvarovi.py` K174 — kopija `references/fakulteti`, `efzg.json` prepisan s CRLF-om daje isti hash; stvarna izmjena sadržaja daje drugi. Mutacija: `read_bytes()` bez normalizacije obara prvu provjeru. Windows CI job (sada obavezan) vrti `profile_registry.py --check` kao skupinu.
+
+---
+
+## 175. `os.path.relpath` preko dva diska rušio je `check_rules.py` samo radi ispisa puta
+
+Windows runner drži repo na `D:`, a test profil u temp mapi na `C:`. Redak koji samo ispisuje
+put profila rušio je cijelu provjeru pravila:
+
+```
+K28: letter — alat je napisao JSON (nije pukao)   ✗ FAIL
+  File "<frozen ntpath>", line 796, in relpath
+ValueError: path is on mount 'C:', start on mount 'D:'
+```
+
+Popravak: `prikaz_puta()` — relativno kad je moguće, inače apsolutni put.
+
+Ograda: `test_stari_kvarovi.py` K175 — `os.path.relpath` zamijenjen funkcijom koja baca ValueError kao na dva diska; `prikaz_puta` vraća apsolutni put. Mutacija: `except ValueError` uklonjen → test pada s ValueError.
+
+---
+
+## 176. Test servisa čitao je JSON kodnom stranicom sustava i ostavljao datoteku otvorenom
+
+`service/tests/test_service.py` je radio `json.load(open(put))`: na Windows runneru to čita
+cp1252, a nezatvorena datoteka zaključa temp mapu, pa pada i čišćenje:
+
+```
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x8d in position 679
+PermissionError: [WinError 32] … '…\\.katedra\\stanje.json'
+```
+
+Obitelj kvara 159 (encoding), ovaj put u `open()`, ne u `subprocess`. Popravak: `_json()` s
+`encoding="utf-8"` i `with`.
+
+Ograda: sam `test_write_katedra_creates_state_profile_chapters` na Windows CI jobu, koji je od ovog commita obavezan (`continue-on-error` uklonjen).
+
+---
+
+## 177. `router_contract.py` je ispisivao put kartice s backslashom, pa je R72 padao samo na Windowsu
+
+Kvar 173 (v2.4.0) proširio je contract na sve kartice i dodao R72: kartica satelita s
+vjerodajnicom mora pasti i nalaz mora imenovati `satelit/SKILL.md`. Na Windowsu:
+
+```
+✗ FAIL   R72: vjerodajnica u URL-u u kartici satelita pada
+❌ satelit\SKILL.md: vjerodajnica u URL-u: 'KATEDRA_PKG_URL_TOKEN'
+```
+
+`rel = card.relative_to(root)` daje `WindowsPath`, a f-string ga ispisuje s `\`. Treći put ista
+obitelj (kvar 148 `index.json`, kvar 127 `drift.py`): put iz `pathlib`-a ide u izlaz bez `.as_posix()`.
+
+Popravak: `card.relative_to(root).as_posix()`.
+
+Ograda: `test_router_contract.py` R72 na Windows CI jobu (obavezan od kvara 176). Mutacija: `.as_posix()` uklonjen → R72 pada lokalno na Windowsu.
+
+---
+
+## 178. Paralelne sesije uzimale su isti „sljedeći” broj kvara, a sudar se vidio tek pri ručnom spajanju
+
+22. 9. 2026. tri puta: Lanin patch (161–165 protiv #52 i 2.2.0), 2.4.0 (172–173 protiv #65) i
+#65 sam. Svaka sesija računa `kvar.py --sljedeci` nad svojom kopijom kataloga; unutar jedne
+datoteke numeracija je ispravna, pa `kvar.py --provjeri` prolazi. Sudar je otkrivalo ručno
+spajanje, a jednom je prenumeracija `sed`-om u opisu PR-a broj promijenila dvaput (172→174→176).
+
+```
+$ provjeri_sudar_kvarova.py  (kontrolni primjer: Lanin patch fac0ee5 prema 2.2.0)
+sudari: [161, 162, 163, 164, 165]
+$ provjeri_sudar_kvarova.py --baza origin/main --grana origin/feat/targeted-docx-safety-verified
+✅ nijedan broj kvara ne sudara se s origin/main
+```
+
+Popravak: `katedra/scripts/provjeri_sudar_kvarova.py` — isti broj s drugim naslovom u bazi je
+sudar, uz prijedlog prvog slobodnog broja; raspon (`98–104.`) pokriva svaki broj u sebi.
+CI korak na svakom PR-u (`--baza` = svježe dohvaćen `main`); `katedra/SKILL.md` traži provjeru
+prije commita.
+
+Ograda: `katedra/scripts/tests/test_sudar_kvarova.py` (R-S1–R-S7, skupina „katedra: sudar brojeva kvarova”) — isti naslov nije sudar, drugi jest, broj unutar raspona jest, CRLF nije, CLI nad pravim git repoom vraća 1 s prijedlogom, nedostupna baza je 2. Mutacija: uvjet `b[n] != k[n]` → `False` obara R-S3, R-S4 i R-S6.
+
+---
+
+## 179. Test symlinka padao je na Windowsu bez ovlasti, pa je lokalni suite uvijek bio crven
+
+`test_dangling_output_symlink_not_followed` stvara symlink; Windows bez Developer Mode to ne
+dopušta:
+
+```
+OSError: [WinError 1314] A required privilege is not held by the client
+❌ rad-docx: ciljane izmjene (izlazni kod 1)
+```
+
+Na CI runneru ovlast postoji, pa je test ondje prolazio; lokalno je jedna od tri „poznate”
+crvene skupine, a stalno crvena skupina uči čitatelja da crveno ignorira (pravilo 20 obrnuto).
+
+Popravak: `OSError` pri stvaranju symlinka je `skipTest` s razlogom „NIJE izmjerena ovdje; mjeri je CI”.
+Sama zaštita u `ciljane_izmjene.py` nije dirana; na CI-ju (Linux i Windows) test i dalje radi.
+
+Ograda: nema — ograda je sam test na CI-ju; ovaj unos samo mijenja pad bez ovlasti u imenovani preskok.

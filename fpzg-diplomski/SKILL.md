@@ -1,6 +1,6 @@
 ---
 name: fpzg-diplomski
-description: "Izrada predajnog .docx-a po kućnom stilu FPZG-a iz markdown rukopisa: unakrsne reference, numeracija stranica, popisi prikaza, fusnote, grafikoni. Aktiviraj za završni/diplomski na FPZG-u ('sredi formatiranje po FPZG-u', 'predajna verzija', 'popis tablica') ili kad katedra-lite u modu 2/6 ima profil fpzg. Ne za druge fakultete. v2.4.0."
+description: "Izrada predajnog .docx-a po kućnom stilu FPZG-a iz markdown rukopisa: unakrsne reference, numeracija stranica, popisi prikaza, fusnote, grafikoni. Aktiviraj za završni/diplomski na FPZG-u ('sredi formatiranje po FPZG-u', 'predajna verzija', 'popis tablica') ili kad katedra-lite u modu 2/6 ima profil fpzg. Ne za druge fakultete. v2.4.2."
 compatibility: "Python 3.11+, python-docx, pandas, numpy, matplotlib, scipy. Za render i provjeru prijeloma: pandoc, LibreOffice, Poppler (pdftotext, pdfinfo, pdftoppm). Font Liberation Serif (metrički istovjetan Times New Romanu)."
 metadata:
   version: "1.2.0"
