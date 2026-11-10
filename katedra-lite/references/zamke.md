@@ -4542,3 +4542,27 @@ Popravak: `OSError` pri stvaranju symlinka je `skipTest` s razlogom „NIJE izmj
 Sama zaštita u `ciljane_izmjene.py` nije dirana; na CI-ju (Linux i Windows) test i dalje radi.
 
 Ograda: nema — ograda je sam test na CI-ju; ovaj unos samo mijenja pad bez ovlasti u imenovani preskok.
+
+---
+
+## 180. Neadmitiran profil na disku javljao se kao „nema profila”
+
+`profile_resolver.py --fakultet libertas` na seminarskom radu (10. 11. 2026.):
+
+```
+❌ nema profila/rute za „libertas“. Dostupni fakulteti: efzg, fpzg
+```
+
+`references/fakulteti/libertas.json` postoji (status `nepotvrdeno`), ali nije admitiran u
+registry, pa ruta ne postoji. Neadmisija je namjerna (`razvoj.md`), kriva je poruka: tvrdi da
+profila nema i ne kaže izlaz. Put do `--profil-datoteka` tražio se čitanjem koda, a agent s
+manje strpljenja bi formatirao bez profila, po zadanim vrijednostima.
+
+Popravak: kad ruta ne postoji, `resolve_route` pregleda `<slug>.json` datoteke u mapi
+fakulteta (slug, naziv, aliasi, normalizirano kao rute). Pogodak daje poruku s imenom
+datoteke, statusom, točnom naredbom `--profil-datoteka <put>` i uputom na admisiju.
+Nepostojeći fakultet i dalje dobiva „nema profila/rute”. Politika admisije nije dirana.
+
+Ograda: `scripts/tests/test_profil_ruta.py` (skupina „katedra-lite: neadmitiran profil”):
+slug i puni naziv daju savjet, nepostojeći fakultet staru poruku, admitirani `fpzg` prolazi,
+savjetovana naredba s `--profil-datoteka` prolazi. Baseline izlazni kod 1 → 0.
