@@ -678,3 +678,54 @@ Ista ćelija nakon ciljane zamjene:       2 w:rPr čvora
 
 Test koristi samo izmišljene podatke. Cijeli privatni rad nije testni fixture;
 njegova naslovnica ni fakultetska praksa nisu postali univerzalno pravilo.
+
+## 28. Numerirani naslov popisa tablica brojao se kao tijelo rada
+
+**Simptom.** Uredan seminarski rad (Libertas, 10. 11. 2026.) s dvije tablice i naslovom
+„9. POPIS TABLICA" dobio je blokirajuću grešku i upozorenje da popisa nema:
+
+```
+❌ numeracija „Tablica” nije neprekinuta: [1, 2, 1, 2] (očekivano [1, 2, 3, 4])
+ℹ️ „Tablica”: 4 u tijelu, popis prikaza nije nađen ili je prazan — provjeri Update Field
+```
+
+**Uzrok.** Granica popisnog dijela tražila je `^popis\s+…`, pa naslov s rednim brojem nije
+otvarao popis i njegove stavke („Tablica 1. …") brojane su kao natpisi tijela. Ista datoteka
+za kraj tijela (`KRAJ_TIJELA`) redni broj već dopušta („8. LITERATURA"), pa su dvije granice
+istog dokumenta bile nedosljedne. Lažni nalaz koji blokira predaju; zaobilaznica je bila
+preimenovati naslov radi alata.
+
+**Popravak.** Oba uzorka granice popisa (početak i povratak na literaturu/priloge/sažetak)
+dopuštaju opcionalni redni broj `\d+(\.\d+)*\.?`. Negativna kontrola: popis s jednom
+stavkom manje i dalje daje „popis prikaza ne odgovara tijelu" i izlazni kod 1.
+
+**Gdje.** `scripts/provjeri_predaju.py` (blok „Kvar 86"); ograda
+`scripts/tests/test_provjeri_predaju_popis.py`, skupina `Kvar28NumeriraniPopis`. Na
+stvarnom radu: `❌ GREŠKE (1)` → `✅ nijedna greška`. Dopuna iz recenzije PR-a #73: stavka
+statičnog sadržaja („9. POPIS TABLICA<TAB>6", `sadrzaj.py --oblik staticni`) nije granica
+dijela, inače popis počne prije tijela i rupa [1, 3] u tijelu prolazi tiho; ograda
+`test_stavka_staticnog_sadrzaja_nije_naslov_popisa`.
+
+## 29. Prored iz stila nije se vidio, a krivi prored u stilu prolazio je tiho
+
+**Simptom.** Isti rad ima prored 1,5 zadan u stilu Normal, ne na svakom odlomku. Provjera je
+javila `⚠ prored nije zadan ni na odlomcima ni u stilu — nasljeđuje se iz predloška`, iako je
+stil to izrijekom nosio. Obrnuti slučaj je tiši i gori: stil s proredom 1,0 nije davao
+nikakav nalaz.
+
+**Uzrok.** Mjerio se samo izravni format odlomka (`p.paragraph_format.line_spacing`). Svaki
+odlomak bez izravnog proreda bio je `None`, pa `_prevladava` nije imao uzorak. Varijabla
+`u_stilu` se računala, ali se nigdje nije koristila. Komentar uz `_prevladava` već je tražio
+da se `None` prije predaje razriješi u naslijeđenu vrijednost; za prored to nije bilo
+napravljeno.
+
+**Popravak.** `_efektivno(p, atr, dd)` razrješava lanac odlomak → stil → bazni stilovi →
+`docDefaults/pPrDefault`, kako Word primjenjuje vrijednost. Izravni format i dalje ima
+prednost pred stilom.
+
+**Gdje.** `scripts/provjeri_predaju.py`, `_efektivno` i blok „prored"; ograda
+`test_provjeri_predaju_popis.py`, skupina `Kvar29ProredUStilu` (stil 1,5 bez nalaza; stil
+1,0 → `prored je 1,00, profil traži 1,5`; odlomak 1,0 nad stilom 1,5 → greška; lanac od
+sedam baznih stilova). Lanac se prati po `style_id`, ne po `id()` proxyja, jer python-docx
+za svaki `base_style` vraća novi objekt čiji id može ponovno doći: lanac se prekidao i
+vraćao docDefaults 1,15 (recenzija PR-a #73). Baseline 4/6 testova crveno → 9/9.

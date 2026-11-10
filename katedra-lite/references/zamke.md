@@ -4542,3 +4542,52 @@ Popravak: `OSError` pri stvaranju symlinka je `skipTest` s razlogom „NIJE izmj
 Sama zaštita u `ciljane_izmjene.py` nije dirana; na CI-ju (Linux i Windows) test i dalje radi.
 
 Ograda: nema — ograda je sam test na CI-ju; ovaj unos samo mijenja pad bez ovlasti u imenovani preskok.
+
+---
+
+## 180. Neadmitiran profil na disku javljao se kao „nema profila”
+
+`profile_resolver.py --fakultet libertas` na seminarskom radu (10. 11. 2026.):
+
+```
+❌ nema profila/rute za „libertas“. Dostupni fakulteti: efzg, fpzg
+```
+
+`references/fakulteti/libertas.json` postoji (status `nepotvrdeno`), ali nije admitiran u
+registry, pa ruta ne postoji. Neadmisija je namjerna (`razvoj.md`), kriva je poruka: tvrdi da
+profila nema i ne kaže izlaz. Put do `--profil-datoteka` tražio se čitanjem koda, a agent s
+manje strpljenja bi formatirao bez profila, po zadanim vrijednostima.
+
+Popravak: kad ruta ne postoji, `resolve_route` pregleda `<slug>.json` datoteke u mapi
+fakulteta (slug, naziv, aliasi, normalizirano kao rute). Pogodak daje poruku s imenom
+datoteke, statusom, točnom naredbom `--profil-datoteka <put>` i uputom na admisiju.
+Nepostojeći fakultet i dalje dobiva „nema profila/rute”. Politika admisije nije dirana.
+
+Ograda: `scripts/tests/test_profil_ruta.py` (skupina „katedra-lite: neadmitiran profil”):
+slug i puni naziv daju savjet, nepostojeći fakultet staru poruku, admitirani `fpzg` prolazi,
+savjetovana naredba s `--profil-datoteka` prolazi. Baseline izlazni kod 1 → 0.
+
+---
+
+## 181. Kartica nije imenovala skraćivanje rada, pa upit o opsegu nije okidao skill
+
+Live trigger eval na PR-u #73 (10. 11. 2026.), CI job 130163638607:
+
+```
+❌ [DA ] —                       0%  Ovaj završni rad ima 79 stranica, a smije 50. Što da kra
+23/24 izmjerenih pitanja točno (96%)
+```
+
+Na prethodnom commitu isti upit je bio 2/3, a u committanom `evals/trigger_rezultat.json`
+na `main` stopa je 0,33 i `prolaz: false`. Upit je granični jer opis kartice nabraja plan,
+audit, citate, obranu i predaju, ali nijednom riječju ne spominje opseg ni skraćivanje rada,
+pa model odgovara izravno. Razlika među commitima nije dirala opis; okidanje je samo šum
+oko praga 0,5.
+
+Popravak: opis kartice imenuje „skraćivanje rada na dopušteni broj stranica”, a prostor
+(granica 500 znakova) dobiven je brisanjem rečenice „Stanje u .katedra/, motori u
+satelitima.”, koja ništa ne usmjerava. 468 → 470 znakova.
+
+Ograda: `test_router_contract.py`, R71, novo sidro „skraćivanje na dopušteni opseg”
+(`skraćivanje rada` + `broj stranica`): na starom opisu ✗, na novom ✓. Samo okidanje mjeri
+live eval u CI-ju; sidro čuva da formulacija ne ispadne iz kartice.

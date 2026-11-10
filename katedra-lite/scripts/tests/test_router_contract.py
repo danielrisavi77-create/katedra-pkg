@@ -61,6 +61,10 @@ def main() -> int:
         "provjera DOCX metapodataka": ("provjeri metapodatke", ".docx-a", "prije slanja"),
         "provjera/presuda hipoteza": ("jesu li hipoteze", "presuđen"),
         "unutarnja proturječja rada": ("proturječ",),
+        # PR #73, live eval 10. 11. 2026.: „79 stranica, a smije 50. Što da kratim?"
+        # okinuo je 0/3 (main ima 0,33 u trigger_rezultat.json), jer kartica
+        # skraćivanje opsega uopće nije imenovala.
+        "skraćivanje na dopušteni opseg": ("skraćivanje rada", "broj stranica"),
     }
     nedostaje = [
         naziv for naziv, tokeni in sidra.items()

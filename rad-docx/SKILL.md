@@ -1,6 +1,6 @@
 ---
 name: rad-docx
-description: "Motor izrade predajnog .docx-a iz markdown rukopisa: paginacija do fiksne točke, živa polja (TOC/SEQ/REF), nedjeljivi prikazi, sekcije, provjera prije predaje i povratka iz Worda. Aktiviraj na 'izgradi docx iz rukopisa', 'gradi.py', 'provjeri_predaju', 'sadržaj nema brojeve stranica'. Kućni stil daje satelit; plan i audit vodi katedra-lite. v2.4.2."
+description: "Motor izrade predajnog .docx-a iz markdown rukopisa: paginacija do fiksne točke, živa polja (TOC/SEQ/REF), nedjeljivi prikazi, sekcije, provjera prije predaje i povratka iz Worda. Aktiviraj na 'izgradi docx iz rukopisa', 'gradi.py', 'provjeri_predaju', 'sadržaj nema brojeve stranica'. Kućni stil daje satelit; plan i audit vodi katedra-lite. v2.4.3."
 ---
 
 # RAD-DOCX — od rukopisa do predajnog dokumenta
@@ -158,7 +158,7 @@ Izlazni kod 1 = **ne predaje se**. Provjerava, po redu težine:
 | `references/polja.md` | `TOC`, `PAGEREF`, `REF`, zabilješke, dvije varijante |
 | `references/prikazi.md` | natpis/izvor kao nedjeljiv blok, unakrsne reference i hrvatska deklinacija |
 | `references/brojke.md` | `model.json`, osnovica zaokruživanja, crna lista, komponente zadatka |
-| `references/zamke.md` | 27 stvarnih kvarova: `docx-js`, python-docx, LibreOffice, matplotlib, mjerenje, provenijencija stranica, autor-godina uparivanje |
+| `references/zamke.md` | 29 stvarnih kvarova: `docx-js`, python-docx, LibreOffice, matplotlib, mjerenje, provenijencija stranica, autor-godina uparivanje |
 
 ## Ciljani zahvat u već postojećem DOCX-u
 

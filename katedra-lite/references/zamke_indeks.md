@@ -4,7 +4,7 @@
 > **Ne uređuj ručno.** Nakon izmjene kataloga: `indeks_zamki.py --upisi`.
 > `bin/testovi.sh` pada ako je ovaj indeks zastario.
 
-Unosa: **122** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom: **107** · ograda ne pripada (deklarirano): **18** · **duguje ogradu: 2**
+Unosa: **124** (isti broj javlja `kvar.py --provjeri`) · uz njih 5 nenumeriranih odjeljaka · s ogradom: **109** · ograda ne pripada (deklarirano): **18** · **duguje ogradu: 2**
 
 Traži bez učitavanja cijelog kataloga:
 
@@ -142,6 +142,8 @@ sed -n '844,880p' katedra-lite/references/zamke.md   # unos po retku
 | 177 | `router_contract.py` je ispisivao put kartice s backslashom, pa je R72 padao samo na Wi… | `router_contract.py`, `SKILL.md`, `index.json` | ✅ | 4486 |
 | 178 | Paralelne sesije uzimale su isti „sljedeći” broj kvara, a sudar se vidio tek pri ručnom… | `provjeri_sudar_kvarova.py`, `SKILL.md`, `test_sudar_kvarova.py` | ✅ | 4505 |
 | 179 | Test symlinka padao je na Windowsu bez ovlasti, pa je lokalni suite uvijek bio crven | `ciljane_izmjene.py` | ⚪ | 4528 |
+| 180 | Neadmitiran profil na disku javljao se kao „nema profila” | `libertas.json`, `razvoj.md`, `test_profil_ruta.py` | ✅ | 4548 |
+| 181 | Kartica nije imenovala skraćivanje rada, pa upit o opsegu nije okidao skill | `trigger_rezultat.json`, `test_router_contract.py` | ✅ | 4572 |
 
 ## Unosi bez ograde
 

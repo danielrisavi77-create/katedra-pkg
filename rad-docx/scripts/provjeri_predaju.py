@@ -291,6 +291,36 @@ def _iz_docdefaults(docx_put):
     return (m.group(0) if m else ""), styles
 
 
+def _efektivno(p, atr, dd=""):
+    """Stvarno primijenjeno svojstvo odlomka (kvar 29): izravni format, pa stil
+    i njegovi bazni stilovi, pa docDefaults. `None` samo ako nigdje nije zadano."""
+    v = getattr(p.paragraph_format, atr)
+    if v is not None:
+        return v
+    s = p.style
+    # Identitet po style_id, ne po id(): python-docx za svaki `base_style` vraća
+    # novi proxy, pa id() oslobođenog proxyja može doći ponovno i lanac se
+    # prekine prerano (Codex P2 na PR #73; ograda test_lanac_baznih_stilova).
+    vidjeni = set()
+    while s is not None and s.style_id not in vidjeni:
+        vidjeni.add(s.style_id)
+        v = getattr(s.paragraph_format, atr)
+        if v is not None:
+            return v
+        s = s.base_style
+    if atr in ("line_spacing", "line_spacing_rule") and dd:
+        m = re.search(r'<w:pPrDefault>.*?<w:spacing\b[^>]*\bw:line="(\d+)"([^>]*)', dd, re.S)
+        if m:
+            pravilo = re.search(r'w:lineRule="(\w+)"', m.group(0))
+            pravilo = pravilo.group(1) if pravilo else "auto"
+            if atr == "line_spacing_rule":
+                return {"auto": "MULTIPLE", "exact": "EXACTLY", "atLeast": "AT_LEAST"}.get(pravilo, pravilo)
+            if pravilo == "auto":
+                return round(int(m.group(1)) / 240, 2)
+            return docx.shared.Twips(int(m.group(1)))
+    return None
+
+
 def provjeri_format(P, docx_put, d, profil):
     sec = d.sections[0]
     if round(sec.page_width.cm, 1) != 21.0 or round(sec.page_height.cm, 1) != 29.7:
@@ -321,8 +351,12 @@ def provjeri_format(P, docx_put, d, profil):
     # Provjera samo po docDefaults zato lažno prijavljuje da proreda nema.
     trazeni = fmt.get("prored")
     if trazeni:
-        prored, udio = _prevladava([p.paragraph_format.line_spacing for p in odlomci])
-        pravila, _ = _prevladava([str(p.paragraph_format.line_spacing_rule)
+        # Kvar 29: vrijednost se razrješava kroz lanac odlomak → stil → bazni stil →
+        # docDefaults, kako ju Word primjenjuje. Prije se čitao samo izravni
+        # format odlomka, pa je prored 1,5 zadan u stilu Normal javljen kao
+        # „nije zadan ni na odlomcima ni u stilu", a krivi prored u stilu prolazio tiho.
+        prored, udio = _prevladava([_efektivno(p, "line_spacing", dd) for p in odlomci])
+        pravila, _ = _prevladava([str(_efektivno(p, "line_spacing_rule", dd))
                                   for p in odlomci])
         u_stilu = ('w:line="%d"' % round(trazeni * 240)) in styles
         if prored is None:
@@ -536,10 +570,21 @@ def provjeri_prikaze(P, d, prelomi_put):
         if isinstance(el, Table):
             continue
         t = el.text.strip()
-        if re.match(r"(?i)^popis\s+(tablica|grafikona|slika|prikaza)", t):
+        # Kvar 28: naslov popisa smije nositi redni broj („9. POPIS TABLICA"), kao
+        # što ga KRAJ_TIJELA već dopušta za „8. LITERATURA". Bez toga su stavke
+        # popisa brojane kao natpisi tijela: „[1, 2, 1, 2]" je dalo blokirajuću
+        # grešku na urednom radu s dvije tablice.
+        # Stavka sadržaja („9. POPIS TABLICA<TAB>6", kako ih sadrzaj.py piše u
+        # statičnom obliku) nije granica dijela: inače popis „počne" prije tijela
+        # i rupa u numeraciji tijela prolazi tiho (Codex P2 na PR #73).
+        stil = (el.style.name or "").lower() if getattr(el, "style", None) is not None else ""
+        stavka_sadrzaja = bool(re.search(r"\t\s*\d+\s*$", el.text)) or stil.startswith("toc")
+        if not stavka_sadrzaja and re.match(
+                r"(?i)^(?:\d+(?:\.\d+)*\.?\s+)?popis\s+(tablica|grafikona|slika|prikaza)", t):
             u_popisnom_dijelu = True
             continue
-        if re.match(r"(?i)^(literatura|prilo(g|zi)|sa[žz]etak|summary)\b", t):
+        if not stavka_sadrzaja and re.match(
+                r"(?i)^(?:\d+(?:\.\d+)*\.?\s+)?(literatura|prilo(g|zi)|sa[žz]etak|summary)\b", t):
             u_popisnom_dijelu = False
         m = NATPIS.match(t)
         if not m:

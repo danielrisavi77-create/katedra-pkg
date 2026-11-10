@@ -79,6 +79,10 @@ pokreni "katedra-lite: inference integration" \
   python3 "$KORIJEN/katedra-lite/scripts/tests/test_inference_integration.py"
 pokreni "rad-docx: delivery integrity D" \
   python3 "$KORIJEN/rad-docx/scripts/tests/test_delivery_integrity.py"
+pokreni "rad-docx: popis i prored u provjeri predaje" \
+  python3 "$KORIJEN/rad-docx/scripts/tests/test_provjeri_predaju_popis.py"
+pokreni "katedra-lite: neadmitiran profil" \
+  python3 "$KORIJEN/katedra-lite/scripts/tests/test_profil_ruta.py"
 pokreni "katedra-lite: delivery integration D" \
   python3 "$KORIJEN/katedra-lite/scripts/tests/test_delivery_integration.py"
 pokreni "katedra-lite: numeric semantics B" \
