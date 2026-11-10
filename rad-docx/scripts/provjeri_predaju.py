@@ -298,9 +298,12 @@ def _efektivno(p, atr, dd=""):
     if v is not None:
         return v
     s = p.style
+    # Identitet po style_id, ne po id(): python-docx za svaki `base_style` vraća
+    # novi proxy, pa id() oslobođenog proxyja može doći ponovno i lanac se
+    # prekine prerano (Codex P2 na PR #73; ograda test_lanac_baznih_stilova).
     vidjeni = set()
-    while s is not None and id(s) not in vidjeni:
-        vidjeni.add(id(s))
+    while s is not None and s.style_id not in vidjeni:
+        vidjeni.add(s.style_id)
         v = getattr(s.paragraph_format, atr)
         if v is not None:
             return v
@@ -571,10 +574,17 @@ def provjeri_prikaze(P, d, prelomi_put):
         # što ga KRAJ_TIJELA već dopušta za „8. LITERATURA". Bez toga su stavke
         # popisa brojane kao natpisi tijela: „[1, 2, 1, 2]" je dalo blokirajuću
         # grešku na urednom radu s dvije tablice.
-        if re.match(r"(?i)^(?:\d+(?:\.\d+)*\.?\s+)?popis\s+(tablica|grafikona|slika|prikaza)", t):
+        # Stavka sadržaja („9. POPIS TABLICA<TAB>6", kako ih sadrzaj.py piše u
+        # statičnom obliku) nije granica dijela: inače popis „počne" prije tijela
+        # i rupa u numeraciji tijela prolazi tiho (Codex P2 na PR #73).
+        stil = (el.style.name or "").lower() if getattr(el, "style", None) is not None else ""
+        stavka_sadrzaja = bool(re.search(r"\t\s*\d+\s*$", el.text)) or stil.startswith("toc")
+        if not stavka_sadrzaja and re.match(
+                r"(?i)^(?:\d+(?:\.\d+)*\.?\s+)?popis\s+(tablica|grafikona|slika|prikaza)", t):
             u_popisnom_dijelu = True
             continue
-        if re.match(r"(?i)^(?:\d+(?:\.\d+)*\.?\s+)?(literatura|prilo(g|zi)|sa[žz]etak|summary)\b", t):
+        if not stavka_sadrzaja and re.match(
+                r"(?i)^(?:\d+(?:\.\d+)*\.?\s+)?(literatura|prilo(g|zi)|sa[žz]etak|summary)\b", t):
             u_popisnom_dijelu = False
         m = NATPIS.match(t)
         if not m:

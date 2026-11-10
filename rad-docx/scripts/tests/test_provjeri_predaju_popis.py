@@ -18,8 +18,13 @@ from docx.shared import Pt
 SKRIPTA = Path(__file__).resolve().parents[1] / "provjeri_predaju.py"
 
 
-def napravi(put, naslov_popisa="9. POPIS TABLICA", prored_u_stilu=True, prored_na_odlomku=None):
+def napravi(put, naslov_popisa="9. POPIS TABLICA", prored_u_stilu=True, prored_na_odlomku=None,
+            staticni_sadrzaj=False, brojevi=(1, 2)):
     d = Document()
+    if staticni_sadrzaj:
+        # sadrzaj.py --oblik staticni piše stavke kao obične odlomke „naslov<TAB>broj"
+        for stavka in ("1. UVOD\t1", "8. LITERATURA\t5", f"{naslov_popisa}\t6"):
+            d.add_paragraph(stavka)
     if prored_u_stilu:
         d.styles["Normal"].paragraph_format.line_spacing = 1.5
     d.add_heading("1. UVOD", level=1)
@@ -27,7 +32,7 @@ def napravi(put, naslov_popisa="9. POPIS TABLICA", prored_u_stilu=True, prored_n
         p = d.add_paragraph(f"Odlomak tijela broj {i + 1} s dovoljno teksta da ga ograda tijela uzme u mjerenje proreda.")
         if prored_na_odlomku is not None:
             p.paragraph_format.line_spacing = prored_na_odlomku
-    for n, ime in ((1, "Prva tablica"), (2, "Druga tablica")):
+    for n, ime in zip(brojevi, ("Prva tablica", "Druga tablica")):
         d.add_paragraph(f"Tablica {n}. {ime}", style="Caption")
         t = d.add_table(rows=2, cols=2)
         t.cell(0, 0).text, t.cell(0, 1).text = "A", "B"
@@ -79,6 +84,22 @@ class Kvar28NumeriraniPopis(unittest.TestCase):
         self.assertEqual(kod, 1)
 
 
+    def test_stavka_staticnog_sadrzaja_nije_naslov_popisa(self):
+        # Codex P2 na PR #73: „9. POPIS TABLICA<TAB>6" u statičnom sadržaju ne smije
+        # otvoriti popis prije tijela, inače rupa u numeraciji tijela prolazi tiho.
+        put = self.tmp / "staticni.docx"
+        napravi(put, "9. POPIS TABLICA", staticni_sadrzaj=True, brojevi=(1, 3))
+        kod, izlaz = pokreni(put, self.profil)
+        self.assertIn("nije neprekinuta: [1, 3]", izlaz, izlaz)
+
+    def test_staticni_sadrzaj_uredan_rad_bez_nalaza(self):
+        put = self.tmp / "staticni_uredan.docx"
+        napravi(put, "9. POPIS TABLICA", staticni_sadrzaj=True)
+        kod, izlaz = pokreni(put, self.profil)
+        self.assertNotIn("nije neprekinuta", izlaz, izlaz)
+        self.assertNotIn("popis prikaza nije nađen", izlaz, izlaz)
+
+
 class Kvar29ProredUStilu(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
@@ -101,6 +122,32 @@ class Kvar29ProredUStilu(unittest.TestCase):
         d.save(put)
         kod, izlaz = pokreni(put, self.profil)
         self.assertIn("prored je 1,00, profil traži 1,5", izlaz, izlaz)
+
+    def test_lanac_baznih_stilova(self):
+        # Codex P2 na PR #73: prored zadan tek u dalekom baznom stilu mora se naći
+        # kroz cijeli lanac, i krivi i dobar.
+        from docx.enum.style import WD_STYLE_TYPE
+        for vrijednost, ocekuj_gresku in ((1.0, True), (1.5, False)):
+            put = self.tmp / f"lanac_{vrijednost}.docx"
+            napravi(put, prored_u_stilu=False)
+            d = Document(put)
+            baza = d.styles.add_style("Baza", WD_STYLE_TYPE.PARAGRAPH)
+            baza.paragraph_format.line_spacing = vrijednost
+            prethodni = baza
+            for i in range(6):
+                s_ = d.styles.add_style(f"Razina{i}", WD_STYLE_TYPE.PARAGRAPH)
+                s_.base_style = prethodni
+                prethodni = s_
+            for p in d.paragraphs:
+                if p.text.startswith("Odlomak tijela"):
+                    p.style = prethodni
+            d.save(put)
+            kod, izlaz = pokreni(put, self.profil)
+            if ocekuj_gresku:
+                self.assertIn("prored je 1,00, profil traži 1,5", izlaz, izlaz)
+            else:
+                self.assertNotIn("prored nije zadan", izlaz, izlaz)
+                self.assertNotIn("prored je", izlaz, izlaz)
 
     def test_odlomak_ima_prednost_pred_stilom(self):
         put = self.tmp / "odlomak.docx"

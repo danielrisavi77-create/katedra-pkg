@@ -701,7 +701,10 @@ stavkom manje i dalje daje „popis prikaza ne odgovara tijelu" i izlazni kod 1.
 
 **Gdje.** `scripts/provjeri_predaju.py` (blok „Kvar 86"); ograda
 `scripts/tests/test_provjeri_predaju_popis.py`, skupina `Kvar28NumeriraniPopis`. Na
-stvarnom radu: `❌ GREŠKE (1)` → `✅ nijedna greška`.
+stvarnom radu: `❌ GREŠKE (1)` → `✅ nijedna greška`. Dopuna iz recenzije PR-a #73: stavka
+statičnog sadržaja („9. POPIS TABLICA<TAB>6", `sadrzaj.py --oblik staticni`) nije granica
+dijela, inače popis počne prije tijela i rupa [1, 3] u tijelu prolazi tiho; ograda
+`test_stavka_staticnog_sadrzaja_nije_naslov_popisa`.
 
 ## 29. Prored iz stila nije se vidio, a krivi prored u stilu prolazio je tiho
 
@@ -722,5 +725,7 @@ prednost pred stilom.
 
 **Gdje.** `scripts/provjeri_predaju.py`, `_efektivno` i blok „prored"; ograda
 `test_provjeri_predaju_popis.py`, skupina `Kvar29ProredUStilu` (stil 1,5 bez nalaza; stil
-1,0 → `prored je 1,00, profil traži 1,5`; odlomak 1,0 nad stilom 1,5 → greška). Baseline
-4/6 testova crveno → 6/6.
+1,0 → `prored je 1,00, profil traži 1,5`; odlomak 1,0 nad stilom 1,5 → greška; lanac od
+sedam baznih stilova). Lanac se prati po `style_id`, ne po `id()` proxyja, jer python-docx
+za svaki `base_style` vraća novi objekt čiji id može ponovno doći: lanac se prekidao i
+vraćao docDefaults 1,15 (recenzija PR-a #73). Baseline 4/6 testova crveno → 9/9.
