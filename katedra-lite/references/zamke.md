@@ -4566,3 +4566,28 @@ Nepostojeći fakultet i dalje dobiva „nema profila/rute”. Politika admisije 
 Ograda: `scripts/tests/test_profil_ruta.py` (skupina „katedra-lite: neadmitiran profil”):
 slug i puni naziv daju savjet, nepostojeći fakultet staru poruku, admitirani `fpzg` prolazi,
 savjetovana naredba s `--profil-datoteka` prolazi. Baseline izlazni kod 1 → 0.
+
+---
+
+## 181. Kartica nije imenovala skraćivanje rada, pa upit o opsegu nije okidao skill
+
+Live trigger eval na PR-u #73 (10. 11. 2026.), CI job 130163638607:
+
+```
+❌ [DA ] —                       0%  Ovaj završni rad ima 79 stranica, a smije 50. Što da kra
+23/24 izmjerenih pitanja točno (96%)
+```
+
+Na prethodnom commitu isti upit je bio 2/3, a u committanom `evals/trigger_rezultat.json`
+na `main` stopa je 0,33 i `prolaz: false`. Upit je granični jer opis kartice nabraja plan,
+audit, citate, obranu i predaju, ali nijednom riječju ne spominje opseg ni skraćivanje rada,
+pa model odgovara izravno. Razlika među commitima nije dirala opis; okidanje je samo šum
+oko praga 0,5.
+
+Popravak: opis kartice imenuje „skraćivanje rada na dopušteni broj stranica”, a prostor
+(granica 500 znakova) dobiven je brisanjem rečenice „Stanje u .katedra/, motori u
+satelitima.”, koja ništa ne usmjerava. 468 → 470 znakova.
+
+Ograda: `test_router_contract.py`, R71, novo sidro „skraćivanje na dopušteni opseg”
+(`skraćivanje rada` + `broj stranica`): na starom opisu ✗, na novom ✓. Samo okidanje mjeri
+live eval u CI-ju; sidro čuva da formulacija ne ispadne iz kartice.
