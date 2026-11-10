@@ -1,5 +1,10 @@
 # PROMJENE — rad-docx
 
+# v2.4.3 — dva lažna nalaza u provjeri predaje (Libertas seminarski, 10. 11. 2026.)
+
+* **Kvar 28 — naslov popisa s rednim brojem.** Granica popisnog dijela dopušta „9. POPIS TABLICA" (kao što `KRAJ_TIJELA` već dopušta „8. LITERATURA"). Stvarni rad: `❌ GREŠKE (1)` → `✅ nijedna greška`. Granica: provjerava se samo tekst naslova, ne stil.
+* **Kvar 29 — efektivni prored.** `_efektivno()` razrješava odlomak → stil → bazni stil → `pPrDefault`. Upozorenje „prored nije zadan" na radu s 1,5 u stilu nestaje; krivi prored u stilu sada je greška. Ograda `scripts/tests/test_provjeri_predaju_popis.py` (9 testova). Iz recenzije PR-a #73 dodano: stavka statičnog sadržaja nije granica popisa, a lanac baznih stilova prati se po `style_id`.
+
 # v1.9.3 — provjera koja nije postojala i greška koja to nije
 
 * **Kvar 25 — `str(None)` je niska „None".** Kad prored nigdje nije zadan, `_prevladava`

@@ -700,6 +700,22 @@ def resolve_route(query: str, *, faculty_dir: str | Path) -> dict[str, str]:
     matches = [r for r in registry.get("rute", []) if _norm(r.get("alias")) == wanted]
     if not matches:
         available = ", ".join(f["slug"] for f in registry.get("fakulteti", []))
+        # Kvar 180: profil postoji na disku, ali nije admitiran u registry. Poruka
+        # „nema profila" tada laže i ne kaže izlaz, pa se put do --profil-datoteka
+        # tražio čitanjem koda (Libertas, seminarski, 10. 11. 2026.).
+        for path in _faculty_profile_paths(Path(faculty_dir)):
+            try:
+                kandidat = load_profile(path)
+            except ProfileRuleError:
+                continue
+            imena = [kandidat.get("slug"), kandidat.get("naziv"), *(kandidat.get("aliasi") or [])]
+            if wanted in {_norm(x) for x in imena if x}:
+                raise ProfileRuleError(
+                    f"profil za „{query}“ postoji ({path.name}, status: "
+                    f"{kandidat.get('status', 'nepotvrdeno')}), ali nije admitiran u registry. "
+                    f"Savjetodavni rad bez admisije: --profil-datoteka {path}. "
+                    f"Admisija: references/razvoj.md. Admitirani fakulteti: {available}"
+                )
         raise ProfileRuleError(f"nema profila/rute za „{query}“. Dostupni fakulteti: {available}")
     contexts = {json.dumps(r.get("context", {}), sort_keys=True, ensure_ascii=False) for r in matches}
     if len(contexts) != 1:

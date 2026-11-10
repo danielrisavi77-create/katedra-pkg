@@ -1,3 +1,11 @@
+# v2.4.3 — učenje sa seminarskog rada (Libertas, 10. 11. 2026.)
+
+Rad je sastavljen iz PDF-a („Microsoft Print to PDF", tekstni sloj bez č/ć/đ) u Word sa živim sadržajem po profilu `libertas.json`. Tri nalaza, sva izmjerena na tom radu; ograde u `bin/testovi.sh`.
+
+* **Kvar 180 (katedra-lite) — neadmitiran profil javljao se kao „nema profila".** `profile_resolver.py --fakultet libertas` sada imenuje `libertas.json`, njegov status i točnu naredbu `--profil-datoteka`; politika admisije nije dirana. Ograda `test_profil_ruta.py`, baseline izlaz 1 → 0 (5/5).
+* **rad-docx kvar 28 — numerirani „9. POPIS TABLICA" brojao se kao tijelo.** Lažna blokirajuća greška `[1, 2, 1, 2]` na urednom radu. Na stvarnom radu `❌ GREŠKE (1)` → `✅ nijedna greška`; negativna kontrola (popis kraći od tijela) i dalje pada.
+* **rad-docx kvar 29 — prored iz stila.** Provjera je čitala samo izravni format odlomka: 1,5 u stilu Normal javljen je kao „nije zadan", a 1,0 u stilu prolazio je tiho. Sada lanac odlomak → stil → bazni stil → docDefaults. Ograda `test_provjeri_predaju_popis.py`, baseline 2/6 → 6/6; recenzija PR-a #73 dodala je tri testa (statični sadržaj, lanac baznih stilova), 9/9.
+
 # v2.4.0 — štednja tokena: jezgra pisanja, jeftiniji audit u orkestratoru, kraći opisi (22. 9. 2026.)
 
 Povod: izmjereni run orkestratora troši 815 k do 1,17 M tokena (`rad-orchestrator/tests/README.md`), a mod 2 učitava ~25 k tokena štiva prije prve rečenice. Ništa ispod ne mijenja HARD/GATE pravila; mijenja se samo KADA se štivo učitava.
